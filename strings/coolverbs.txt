@@ -1,0 +1,5 @@
+walker
+slayer
+smasher
+stalker
+teacher
