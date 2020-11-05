@@ -11,7 +11,9 @@ class CreatureFactory:
     def generateAdventurer(self):
         data = {
             'name': NameFactory.generateRandom(),
+            'type': 'adventurer',
             'job': self.randomClass(),
+            'stock': self.randomStock(),
             'str': dice.Dice.d(3, 6),
             'dex': dice.Dice.d(3, 6),
             'con': dice.Dice.d(3, 6),
@@ -25,6 +27,10 @@ class CreatureFactory:
     @classmethod
     def randomClass(self):
         return random.choice(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Rogue', 'Ranger', 'Sorceror', 'Warlock', 'Wizard'])
+
+    @classmethod
+    def randomStock(self):
+        return random.choice(['Human', 'Elf', 'Half-Elf', 'Dwarf', 'Halfling', 'Ork', 'Half-Ork', 'Gnome', 'Aasimar', 'Tiefling', 'Genasi'])
 
 
 
@@ -101,7 +107,6 @@ if __name__ == "__main__":
     print('Random Adventurer Test')
     for i in range(1,12):
         print(CreatureFactory.generateAdventurer())    
-
 
     # for i in range(1,10):
 

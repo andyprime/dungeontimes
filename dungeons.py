@@ -34,7 +34,9 @@ class Creature:
     def __init__(self, properties):
         self.id = str(uuid.uuid1())
         self.name = properties.get('name', 'baddata')
+        self.type = properties.get('type', 'baddata')
         self.job = properties.get('job', 'baddata')
+        self.stock = properties.get('stock', 'baddata')
 
         self.str = properties.get('str', 'baddata')
         self.dex = properties.get('dex', 'baddata')
@@ -44,4 +46,4 @@ class Creature:
         self.cha = properties.get('cha', 'baddata')
 
     def __str__(self):
-        return self.name + '; A ' + self.job + '\n Str: ' + str(self.str) + ', Dex: ' + str(self.dex) + ', Con: ' + str(self.con) + ', Int: ' + str(self.int) + ', Wis: ' + str(self.wis) + ', Cha: ' + str(self.cha)
+        return self.name + '; ' + self.stock + ' ' + self.job + '\n Str: ' + str(self.str) + ', Dex: ' + str(self.dex) + ', Con: ' + str(self.con) + ', Int: ' + str(self.int) + ', Wis: ' + str(self.wis) + ', Cha: ' + str(self.cha)

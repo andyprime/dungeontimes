@@ -16,6 +16,7 @@ class StringsTool:
 
     def load(self):
         # TODO: make sure there's no whitespace lines
+        # TODO: remove comment lines
         lines = open(self.fileName).read().splitlines()
         self.values = lines
         self.loaded = True
