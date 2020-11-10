@@ -5,6 +5,38 @@ import dice
 import strings
 
 
+class DungeonFactory:
+
+    @classmethod
+    def generateDungeon(self):
+        rooms = []
+
+        # build rooms
+        for i in range(1,11):
+            rooms.append(self.generateRoom(i))
+
+        print('Generated {} rooms'.format(len(rooms)))
+
+        # populate rooms
+
+        # connect rooms
+
+        for room in rooms:
+            print(room)
+
+
+    @classmethod
+    def generateRoom(self, num):
+        r = dungeons.Room(num)
+        
+        r.style = random.choice(['natural cavern', 'crystal cavern', 'hand-carved stonework', 'drywall finished', 'partially worked'])
+        r.size = random.choice(['huge', 'spacious', 'comfortable', 'cramped', 'echoing'])
+
+
+        return r
+
+
+
 class CreatureFactory:
 
     @classmethod
@@ -32,6 +64,14 @@ class CreatureFactory:
     def randomStock(self):
         return random.choice(['Human', 'Elf', 'Half-Elf', 'Dwarf', 'Halfling', 'Ork', 'Half-Ork', 'Gnome', 'Aasimar', 'Tiefling', 'Genasi'])
 
+
+    @classmethod
+    def randomHumanoid(self):
+        return random.choice(['Bandit', 'Ork', 'Goblin', 'Gnoll', 'Kua Toa', 'Dark Dwarf', 'Dark Elf', 'Morlock', 'Lizardman', 'Troglodyte'])
+
+    @classmethod
+    def generateMonster(self):
+        return dungeons.Creature(data)
 
 
 class NameFactory:
@@ -101,12 +141,15 @@ class NameFactory:
         return strings.BasicLastNames.random()
 
 
-
 if __name__ == "__main__":
 
-    print('Random Adventurer Test')
-    for i in range(1,12):
-        print(CreatureFactory.generateAdventurer())    
+    print('Random Dungeon Test')
+    print(DungeonFactory.generateDungeon())    
+
+
+    # print('Random Adventurer Test')
+    # for i in range(1,12):
+    #     print(CreatureFactory.generateAdventurer())    
 
     # for i in range(1,10):
 
