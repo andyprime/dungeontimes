@@ -1,5 +1,7 @@
 import uuid
 
+import dice
+
 class Dungeon:
 
     rooms = []
@@ -60,5 +62,8 @@ class Creature:
         self.maxhp = self.con
         self.currenthp = self.maxhp
 
+    def generateInitiative(self):
+        return dice.Dice.d(1,20)
+
     def __str__(self):
-        return self.name + '; ' + self.stock + ' ' + self.job + '\n Str: ' + str(self.str) + ', Dex: ' + str(self.dex) + ', Con: ' + str(self.con) + ', Int: ' + str(self.int) + ', Wis: ' + str(self.wis) + ', Cha: ' + str(self.cha)
+        return self.name + ', ' + self.stock + ' ' + self.job + '; S: ' + str(self.str) + ', D: ' + str(self.dex) + ', C: ' + str(self.con) + ', I: ' + str(self.int) + ', W: ' + str(self.wis) + ', C: ' + str(self.cha)

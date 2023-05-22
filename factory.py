@@ -40,7 +40,7 @@ class DungeonFactory:
 class CreatureFactory:
 
     @classmethod
-    def generateAdventurer(self):
+    def randomAdventurer(self):
         data = {
             'name': NameFactory.generateRandom(),
             'type': 'adventurer',
@@ -61,6 +61,10 @@ class CreatureFactory:
         return random.choice(['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Paladin', 'Rogue', 'Ranger', 'Sorceror', 'Warlock', 'Wizard'])
 
     @classmethod
+    def randomMonsterJob(self):
+        return random.choice(['Brute', 'Warlord', 'Hedge Wizard', 'Skulker', 'Minion', 'Grunt'])
+
+    @classmethod
     def randomStock(self):
         return random.choice(['Human', 'Elf', 'Half-Elf', 'Dwarf', 'Halfling', 'Ork', 'Half-Ork', 'Gnome', 'Aasimar', 'Tiefling', 'Genasi'])
 
@@ -70,7 +74,20 @@ class CreatureFactory:
         return random.choice(['Bandit', 'Ork', 'Goblin', 'Gnoll', 'Kua Toa', 'Dark Dwarf', 'Dark Elf', 'Morlock', 'Lizardman', 'Troglodyte'])
 
     @classmethod
-    def generateMonster(self):
+    def randomMonster(self):
+        data = {
+            'name': NameFactory.generateRandom(),
+            'type': 'monster',
+            'job': self.randomMonsterJob(),
+            'stock': self.randomHumanoid(),
+            'str': dice.Dice.d(3, 6),
+            'dex': dice.Dice.d(3, 6),
+            'con': dice.Dice.d(3, 6),
+            'int': dice.Dice.d(3, 6),
+            'wis': dice.Dice.d(3, 6),
+            'cha': dice.Dice.d(3, 6),
+        }
+
         return dungeons.Creature(data)
 
 
