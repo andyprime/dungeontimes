@@ -13,6 +13,10 @@ class Dice:
             return total
 
 
+    @classmethod
+    def between(self, low, high):
+        return random.randint(low, high)
+
 if __name__ == "__main__":
 
 

@@ -14,8 +14,8 @@ class Team:
 
     def randomMember(self, alive=None):
 
-        options = self.members
-
+        # TODO: this copy might get expensive but right now its convenient
+        options = self.members.copy()
 
         c1 = len(options)
         if alive:
@@ -106,10 +106,11 @@ class Battle:
 
 
         # TODO: I think the isAlive filtering in random member is destroying the member lists
+        print('hmmm')
         print([len(x.members) for x in self.teams.values()])
 
 
-            
+
     def processAction(self, actor, action):
         # for now we'll just do basic ass dex checks
         target = action['target']
@@ -121,7 +122,7 @@ class Battle:
 
             descriptor = '{} attacked {} with a sword or something, dealing {} damage. They are now {}'.format(actor.name, target.name, damage, target.status())
         else:
-            descriptor = '{} attacked {} with a sword or something, but missed'.format(actor.name, target.name,)
+            descriptor = '{} attacked {} with a sword or something, but missed'.format(actor.name, target.name)
 
         print(descriptor)
 
@@ -165,9 +166,8 @@ if __name__ == "__main__":
         b.addParticipant('monster', factory.CreatureFactory.randomMonster())
 
     for i in range(4):
-        b.addParticipant('adventurer', factory.CreatureFactory.randomAdventurer()) 
-        
+        b.addParticipant('adventurer', factory.CreatureFactory.randomAdventurer())
 
     b.start()
 
-    print('Ok, done.')   
+    print('Ok, done.')
