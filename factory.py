@@ -33,19 +33,21 @@ class DungeonFactoryAlpha:
     # percent chance the tree maintains same carve direction when available
     CHANCE_MAINTAIN_DIRECTION = 80
 
+    # percent chance that an extra connection will become a doorway instead of closed
+    # this prevents the dungeon from being too linear
+    CHANCE_EXTRA_DOORWAY = 5
+
     @classmethod
     def generateDungeon(self):
 
 
         dungeon = dungeons.Dungeon()
 
-
-
-        self.header('Stage 1')
+        self.header('Stage 0: Blank Slate')
         dungeon.initiateGrid(self.DEFAULT_HEIGHT, self.DEFAULT_WIDTH)
         dungeon.prettyPrint()
 
-        self.header('Stage 2')
+        self.header('Stage 1: Carve Rooms')
         room_attempts = 0
         while dungeon.roomCount() < self.MAX_ROOMS and room_attempts < self.MAX_ROOM_ATTEMPTS:
             room = self.generateRoom()
@@ -66,7 +68,9 @@ class DungeonFactoryAlpha:
         print()
         dungeon.prettyPrint()
 
-        self.header('Passage Carving')
+        self.header('Stage 2: Passage Carving')
+
+        treeCount = 0
 
         for i in range(1, dungeon.height() - 1):
             for j in range(1, dungeon.width() - 1):
@@ -75,14 +79,184 @@ class DungeonFactoryAlpha:
 
                 if dungeon.isSafeCarvable(cursor):
 
-                    print('Ok lets go! {}'.format(cursor))
+
+                    treeCount += 1
+
+                    # print('Starting new tree at {}'.format(cursor))
 
                     self.startGrowingTree(cursor, dungeon)
 
+                    dungeon.newRegion()
+
+        print()
         dungeon.prettyPrint()
+
+        print('Tree count: {}'.format(treeCount))
+
+
+        self.header('Stage 3: Connections')
+
+        print()
+        dungeon.regionPrint()
+
+        # sub step 1: label connectors
+        # Just loop through all uncarved squares and label them if they border two distinct regions
+
+
+        # just a handy lookup map so we don't gotta fuss about finding them later
+        # cell -> list of adjacent regions region
+        connectorCells = {}
+
+        for i in range(1, dungeon.height() - 1):
+            for j in range(1, dungeon.width() - 1):
+
+                cursor = dungeon.getCell(i, j)
+
+                if cursor.type == dungeons.Cell.SOLID:
+                    e = dungeon.getCell(*cursor.east()).region
+                    w = dungeon.getCell(*cursor.west()).region
+
+                    n = dungeon.getCell(*cursor.north()).region
+                    s = dungeon.getCell(*cursor.south()).region
+
+                    if (e != None and w != None and e != w):
+                        cursor.type = dungeons.Cell.CONNECTOR
+                        connectorCells[(i, j)] = [e, w]
+                    elif n != None and s != None and n != s:
+                        cursor.type = dungeons.Cell.CONNECTOR
+                        connectorCells[(i, j)] = [n, s]
+
+
+        print('After connector creation')
+        dungeon.regionPrint()
+
+        # sub step 2: pick a random starting room
+        roomCursor = random.choice(dungeon.rooms)
+        # that room's region will eventually become the only region as we open doors
+        regionCollapse = dungeon.getCell(*roomCursor.coords).region
+
+        print('Collapsing to: {}'.format(regionCollapse))
+
+        remainingRegions = self.countRemainingRegions(connectorCells)
+
+        while(remainingRegions > 1):
+            # sub step 3: opening and collapsing
+
+            # get a list of all connections from the collapseTo region to pick a new target region
+            validConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions]
+
+            selectedConnector = random.choice(validConnectorCoords)
+
+            # change the connector into a doorway, it needs a region since it used to be nothing
+            print('Opening connector at: {}'.format(selectedConnector))
+            selectedCell = dungeon.getCell(*selectedConnector)
+            self.makeDoor(selectedCell, regionCollapse)
+
+            # find the region opposite the doorway and collapse it, there should only ever be 2 items in those lists
+
+            # print(regionCollapse)
+            # print('1: {}'.format(connectorCells[selectedConnector]))
+
+
+            openedRegion = [ x for x in connectorCells[selectedConnector] if x != regionCollapse ][0]
+
+            # get the list of connectors shared between the main and collapsing region
+            relevantConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions and openedRegion in regions]
+
+            self.collapseRegion(dungeon, connectorCells, openedRegion, regionCollapse)
+
+            # print('Post collapse check')
+            # self.checkDupes(connectorCells)
+
+            # sub step 4: cleaning remaining connectors for starting region
+            # always remove connectors adjacent to new or auxilliary doorways
+            adjacencyChecks = [selectedCell]
+            for coords in relevantConnectorCoords:
+                if coords == selectedConnector:
+                    connectorCells.pop(coords)
+                    continue
+
+                adjacent = False
+                for check in adjacencyChecks:
+                    if check.adjacent(coords):
+                        adjacent = True
+                        break
+
+                if adjacent:
+                    # print('Closing adjacent: {}'.format(coords))
+                    toClose = dungeon.getCell(*coords)
+                    toClose.type = dungeons.Cell.SOLID
+                elif dice.Dice.d(1,100) < self.CHANCE_EXTRA_DOORWAY:
+                    print('Making auxillary door at: {}'.format(coords))
+                    doorCell = dungeon.getCell(*coords)
+                    self.makeDoor(doorCell, regionCollapse)
+                    adjacencyChecks.append(doorCell)
+
+                    regions = connectorCells[coords]
+                    remaining = [ x for x in connectorCells[coords] if x != regionCollapse ]
+                    if len(remaining) > 0:
+                        print('Found new region to collapse: {}'.format(remaining[0]))
+                        self.collapseRegion(dungeon, connectorCells, remaining[0], regionCollapse)
+                else:
+                    toClose = dungeon.getCell(*coords)
+                    toClose.type = dungeons.Cell.SOLID
+
+                connectorCells.pop(coords)
+
+            # print('post cleaning check')
+            # self.checkDupes(connectorCells)
+
+            print()
+            dungeon.regionPrint()
+
+            remainingRegions = self.countRemainingRegions(connectorCells)
+
+
+        self.header('Stage 4: Sparseness')
+
+        # do this next
+
 
 
         self.header('Exuent')
+        return dungeon
+
+    @classmethod
+    def checkDupes(self, connectorCells):
+        for coords, regions in connectorCells.items():
+            if len(regions) != len(set(regions)):
+                print('!!!!! Found duplicate entry: {}, {}'.format(coords, regions))
+
+    @classmethod
+    def countRemainingRegions(self, connectorCells):
+        uniqueRegions = []
+        for regions in connectorCells.values():
+            for r in regions:
+                if r not in uniqueRegions:
+                    uniqueRegions.append(r)
+        print('Found {} remaining regions: {}'.format(len(uniqueRegions), uniqueRegions))
+        return len(uniqueRegions)
+
+    @classmethod
+    def collapseRegion(self, dungeon, connectorCells, regionToCollapse, collapseTo):
+        print('Collapsing: {}'.format(regionToCollapse))
+        for i in range(1, dungeon.height() - 1):
+            for j in range(1, dungeon.width() - 1):
+                c = dungeon.getCell(i, j)
+                if c.region == regionToCollapse:
+                    c.region = collapseTo
+
+        # overwrite collapsed region in the map
+        # don't worry if we end up with two collapseTo regions in the list, those will get removed later
+        for coords, regionList in connectorCells.items():
+            if regionToCollapse in regionList:
+                connectorCells[coords] = [collapseTo if x == regionToCollapse else x for x in connectorCells[coords]]
+
+    @classmethod
+    def makeDoor(self, cell, region):
+        cell.type = dungeons.Cell.DOORWAY
+        cell.region = region
+
 
     @classmethod
     def startGrowingTree(self, start, dungeon):
@@ -108,47 +282,47 @@ class DungeonFactoryAlpha:
         while len(pile) > 0:
             count += 1
 
-            print('Pile size: {}'.format(len(pile)))
+            # print('Pile size: {}'.format(len(pile)))
 
             if len(pile) == 1:
                 cursor = pile[0]
             else:
                 # random, middle, newest, oldest
-                # for now just do oldest
+                # for now just do newest
                 cursor = pile[-1]
 
-            print('Cursor: {}'.format(cursor))
+            # print('Cursor: {}'.format(cursor))
 
 
             options = dungeon.getPossibleCarves(cursor)
-            print('Options: {}'.format(options))
+            # print('Options: {}'.format(options))
 
             if len(options) == 0:
                 # this node is exhausted, remove it from the pile
-                print('Node exhausted')
+                # print('Node exhausted')
                 pile.remove(cursor)
-                continue;
+                continue
             else:
+                roll = dice.Dice.d(1,100)
 
-                if previous_direction in options and dice.Dice.d(1,100) < self.CHANCE_MAINTAIN_DIRECTION:
+                if previous_direction in options and roll < self.CHANCE_MAINTAIN_DIRECTION:
                     direction = previous_direction
                 else:
                     direction = random.choice(options)
 
+            previous_direction = direction
+
             next_cell = dungeon.getCell(*cursor.byCode(direction))
 
-            print('Next cell selected: {}'.format(next_cell))
+            # print('Next cell selected: {}'.format(next_cell))
             pile.append(next_cell)
             dungeon.carvePassage(next_cell)
 
-            # if count > 20:
-            #     return
+        # print('Pile is empty')
 
-        print('Pile is empty')
-
-
-
-
+    @classmethod
+    def getAllValidConnectors(self, dungeon, region):
+        return
 
     @classmethod
     def generateRoom(self):
@@ -292,8 +466,8 @@ class NameFactory:
 
 if __name__ == "__main__":
 
-    seed = str(uuid.uuid1())
-    # seed = 'be8b6c94-fa93-11ed-afe2-13cd88a407db'
+    # seed = str(uuid.uuid1())
+    seed = '48cba384-4d36-11ee-8173-194626641d15'
 
     random.seed(seed)
 
@@ -301,7 +475,6 @@ if __name__ == "__main__":
     print('Random Dungeon Test')
     print('Seed : {}'.format(seed))
     print(DungeonFactoryAlpha.generateDungeon())
-
 
     print('Seed : {}'.format(seed))
 

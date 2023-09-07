@@ -12,6 +12,7 @@ class Dungeon:
 
         self.grid = []
         self.rooms = []
+        self.regionPalette = 1
 
 
     def initiateGrid(self, height, width):
@@ -42,6 +43,9 @@ class Dungeon:
             return self.grid[x][y]
         except:
             return None
+
+    def newRegion(self):
+        self.regionPalette += 1
 
 
     def canRoomFit(self, room, coords):
@@ -88,18 +92,19 @@ class Dungeon:
 
         room.coords = coords
 
+        self.rooms.append(room)
+
         top_bound = coords[0]
         bottom_bound = coords[0] + room.height
 
         left_bound = coords[1]
         right_bound = coords[1] + room.width
 
-        # print('C Height check: {}, {}'.format(bottom_bound - top_bound, room.height))
-        # print('C  Width check: {}, {}'.format(right_bound - left_bound, room.width))
-
         for i in range(top_bound, bottom_bound):
             for j in range(left_bound, right_bound):
                 self.grid[i][j].type = Cell.ROOM
+                self.grid[i][j].region = self.regionPalette
+        self.newRegion()
 
     def carvePassage(self, cell):
         if type(cell) is tuple:
@@ -107,26 +112,12 @@ class Dungeon:
 
         # TODO: maybe throw an exception if its not solid
         cell.type = Cell.PASSAGE
+        cell.region = self.regionPalette
 
-    # def canSupportRegion(self, cell):
-    #     # this is kind of a shitty name
-
-    #     tests = [cell.coords]
-
-    #     tests.append( cell.north() )
-    #     tests.append( cell.south() )
-    #     tests.append( cell.east() )
-    #     tests.append( cell.west() )
-
-    #     for test in tests:
-    #         c = self.getCell(cell.h, cell.w)
-    #         if c and c.type != Cell.SOLID:
-    #             return False
-    #     return True
-
-    def isSafeCarvable(self, cell, ignore=None):
+    def isSafeCarvable(self, cell, ignore=[]):
         # safe carvable means it won't create any incidental connections between regions during dungeon gen
         # right now this doesn't test the cell itself, which *shouldn't* be a problem, I hope
+        # this also doesn't want to create any diagonal not-exactly-a-connections
 
         if type(cell) is tuple:
             cell = self.getCell(*cell)
@@ -141,9 +132,14 @@ class Dungeon:
         tests.append( self.getCell(*cell.east()) )
         tests.append( self.getCell(*cell.west()) )
 
+        tests.append( self.getCell(*cell.northWest()) )
+        tests.append( self.getCell(*cell.southWest()) )
+        tests.append( self.getCell(*cell.northEast()) )
+        tests.append( self.getCell(*cell.southEast()) )
+
         for test in tests:
             c = self.getCell(test.h, test.w)
-            if c is ignore:
+            if c in ignore:
                 continue
 
             if c and c.type != Cell.SOLID:
@@ -151,16 +147,21 @@ class Dungeon:
         return True
 
 
-    def getPossibleCarves(self, cell):
+    def getPossibleCarves(self, cell, ignores=[]):
         if type(cell) is tuple:
             cell = self.getCell(*cell)
 
         options = []
 
+        ignores = [self.getCell(*c) for c in cell.all()]
+        ignores.append(cell)
+
         for dir in Cell.directions():
             test_cell = self.getCell(*cell.byCode(dir))
 
-            if test_cell.type != Cell.PASSAGE and self.isSafeCarvable(test_cell, cell):
+
+
+            if test_cell.type != Cell.PASSAGE and self.isSafeCarvable(test_cell, ignores):
                 options.append(dir)
 
         return options
@@ -178,6 +179,17 @@ class Dungeon:
 
             print(display)
 
+    def regionPrint(self):
+
+        for index, row in enumerate(self.grid):
+
+            display = '{}: '.format(str(index).rjust(4, ' '))
+
+            for cell in row:
+                display += cell.regionSymbol()
+
+            print(display)
+
 
 
 class Cell:
@@ -187,7 +199,7 @@ class Cell:
     PASSAGE = 3
     DOORWAY = 4
     ENTRANCE = 5
-
+    CONNECTOR = 6
 
     NORTH = 100
     SOUTH = 101
@@ -229,7 +241,10 @@ class Cell:
         self._coords = None
         self.h = None
         self.w = None
+        # TODO: border was a dumb experiment, pull it out
         self.border = border
+        self.region = None
+
 
     @property
     def coords(self):
@@ -246,6 +261,15 @@ class Cell:
             return '#'
         else:
             return Cell.PRETTY[self.type]
+
+    def regionSymbol(self):
+        if self.type == Cell.CONNECTOR:
+            return '!'
+        elif self.region == None:
+            return Cell.PRETTY[1]
+        else:
+            # just get a nice unique ascii symbol
+            return chr(33 + self.region)
 
     def north(self):
         if self.h == 0:
@@ -271,6 +295,23 @@ class Cell:
         else:
             return (self.h, self.w + 1)
 
+    # note that the diagonals are only used in carvability checks
+    # to avoid diagonal connections
+    def northEast(self):
+        if self.h == 0:
+            return False
+        else:
+            return (self.h -1, self.w + 1)
+
+    def northWest(self):
+        return (self.h - 1, self.w - 1)
+
+    def southEast(self):
+        return (self.h + 1, self.w + 1)
+
+    def southWest(self):
+        return (self.h + 1, self.w - 1)
+
     def all(self):
         a = [self.north(), self.south(), self.east(), self.west()]
         return [x for x in a if x]
@@ -286,6 +327,9 @@ class Cell:
             return self.west()
         else:
             return None
+
+    def adjacent(self, coords):
+        return coords in self.all()
 
     def __str__(self):
         return 'Cell: {}, {}'.format(Cell.TRANSLATE[self.type], self._coords)
