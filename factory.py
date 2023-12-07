@@ -37,6 +37,12 @@ class DungeonFactoryAlpha:
     # this prevents the dungeon from being too linear
     CHANCE_EXTRA_DOORWAY = 5
 
+    # percent chance to let a dead end live
+    CHANCE_KEEP_DEADEND = 5
+    # max number of runs of the sparseness removal process, -1 for no limit
+    MAX_SPARENESS_RUNS = 20
+
+
     @classmethod
     def generateDungeon(self):
 
@@ -47,6 +53,7 @@ class DungeonFactoryAlpha:
         dungeon.initiateGrid(self.DEFAULT_HEIGHT, self.DEFAULT_WIDTH)
         dungeon.prettyPrint()
 
+        # =============================================================================================
         self.header('Stage 1: Carve Rooms')
         room_attempts = 0
         while dungeon.roomCount() < self.MAX_ROOMS and room_attempts < self.MAX_ROOM_ATTEMPTS:
@@ -68,6 +75,7 @@ class DungeonFactoryAlpha:
         print()
         dungeon.prettyPrint()
 
+        # =============================================================================================
         self.header('Stage 2: Passage Carving')
 
         treeCount = 0
@@ -94,6 +102,7 @@ class DungeonFactoryAlpha:
         print('Tree count: {}'.format(treeCount))
 
 
+        # =============================================================================================
         self.header('Stage 3: Connections')
 
         print()
@@ -154,19 +163,12 @@ class DungeonFactoryAlpha:
 
             # find the region opposite the doorway and collapse it, there should only ever be 2 items in those lists
 
-            # print(regionCollapse)
-            # print('1: {}'.format(connectorCells[selectedConnector]))
-
-
             openedRegion = [ x for x in connectorCells[selectedConnector] if x != regionCollapse ][0]
 
             # get the list of connectors shared between the main and collapsing region
             relevantConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions and openedRegion in regions]
 
             self.collapseRegion(dungeon, connectorCells, openedRegion, regionCollapse)
-
-            # print('Post collapse check')
-            # self.checkDupes(connectorCells)
 
             # sub step 4: cleaning remaining connectors for starting region
             # always remove connectors adjacent to new or auxilliary doorways
@@ -203,26 +205,75 @@ class DungeonFactoryAlpha:
 
                 connectorCells.pop(coords)
 
-            # print('post cleaning check')
-            # self.checkDupes(connectorCells)
-
-            print()
-            dungeon.regionPrint()
+            # dungeon.regionPrint()
 
             remainingRegions = self.countRemainingRegions(connectorCells)
 
 
+        # =============================================================================================
         self.header('Stage 4: Sparseness')
 
-        # do this next
+        # Sparseness removal is the process of removing some percentage of dead ends to reduce the
+        # amount of wasted time exploring the dungeon
+        # This particular implementation is particularly ham handed, trading a lot of loop cycles for
+        # simplicity of implementation. A more methodical approach could also implement max dead end
+        # length if it actually followed paths
 
 
+        print('Pre-sparseness removal')
+        dungeon.prettyPrint()
+
+        runCount = 0
+        allDone = False
+        deadendWhitelist = []
+
+        while (self.MAX_SPARENESS_RUNS == -1 and not allDone) or (runCount < self.MAX_SPARENESS_RUNS and not allDone):
+
+            deadends = []
+            for cell in dungeon.allCells():
+                if cell.type == dungeons.Cell.PASSAGE:
+                    neighbors = [cell.east(), cell.west(), cell.north(), cell.south()]
+                    paths = [x for x in neighbors if dungeon.getCell(*x).type in [dungeons.Cell.PASSAGE, dungeons.Cell.DOORWAY]]
+                    if len(paths) == 1:
+                        deadends.append(cell)
+
+            if len(deadends) > 0:
+                print('Remaining deadends: {}'.format(len(deadends)))
+                for cell in deadends:
+                    if dice.Dice.d(1,100) < self.CHANCE_KEEP_DEADEND:
+                        print('Found a real keeper. Whitelisting {}'.format(cell))
+                        deadendWhitelist.append(cell)
+                    elif cell in deadendWhitelist:
+                        print('Skipping whitelisted cell {}'.format(cell))
+                        continue
+                    else:
+                        cell.type = dungeons.Cell.SOLID
+
+            else:
+                allDone = True
+
+            runCount += 1
+            print('Post Sparseness run {}'.format(runCount))
+            dungeon.prettyPrint()
+
+        # =============================================================================================
+        self.header('Stage 5: Define entrance')
+
+        # this is obviously pretty token, but we're gonna put the entrance into a random hallway cell
+
+        halls = dungeon.allCells(dungeons.Cell.PASSAGE)
+        entrance = random.choice(halls)
+        entrance.type = dungeons.Cell.ENTRANCE
+
+        print('Now with entrance')
+        dungeon.prettyPrint()
 
         self.header('Exuent')
         return dungeon
 
     @classmethod
     def checkDupes(self, connectorCells):
+        # this is just a sanity check on the region collapse system, it can get cleaned up at some point
         for coords, regions in connectorCells.items():
             if len(regions) != len(set(regions)):
                 print('!!!!! Found duplicate entry: {}, {}'.format(coords, regions))
@@ -466,8 +517,8 @@ class NameFactory:
 
 if __name__ == "__main__":
 
-    # seed = str(uuid.uuid1())
-    seed = '48cba384-4d36-11ee-8173-194626641d15'
+    seed = str(uuid.uuid1())
+    # seed = '48cba384-4d36-11ee-8173-194626641d15'
 
     random.seed(seed)
 

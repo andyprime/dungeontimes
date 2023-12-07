@@ -44,6 +44,16 @@ class Dungeon:
         except:
             return None
 
+    def allCells(self, filter=None):
+        # this is just a convenience function for when a process needs all the cells
+        # regardless of arrangement, some code predates this call and could be switched over
+        bucket = []
+        for i in range(0, self.height()):
+            for j in range(0, self.width()):
+                if filter == None or filter == self.grid[i][j].type:
+                    bucket.append(self.grid[i][j])
+        return bucket
+
     def newRegion(self):
         self.regionPalette += 1
 
@@ -211,7 +221,8 @@ class Cell:
         2: 'room',
         3: 'passage',
         4: 'doorway',
-        5: 'entrance'
+        5: 'entrance',
+        6: 'BUILD UTIL'
     }
 
     TRANSLATE_DIR = {
