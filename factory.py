@@ -50,7 +50,7 @@ class DungeonFactoryAlpha:
         dungeon = dungeons.Dungeon()
 
         self.header('Stage 0: Blank Slate')
-        dungeon.initiateGrid(self.DEFAULT_HEIGHT, self.DEFAULT_WIDTH)
+        dungeon.initialize(self.DEFAULT_HEIGHT, self.DEFAULT_WIDTH)
         dungeon.prettyPrint()
 
         # =============================================================================================
@@ -269,6 +269,7 @@ class DungeonFactoryAlpha:
         dungeon.prettyPrint()
 
         self.header('Exuent')
+
         return dungeon
 
     @classmethod
@@ -525,16 +526,15 @@ if __name__ == "__main__":
 
     print('Random Dungeon Test')
     print('Seed : {}'.format(seed))
-    print(DungeonFactoryAlpha.generateDungeon())
+    d = DungeonFactoryAlpha.generateDungeon()
+
+    s = d.serialize()
+
+    d2 = dungeons.Dungeon(s)
+    d2.prettyPrint()
+
+    s2 = d2.serialize()
+
+    print(s == s2)
 
     print('Seed : {}'.format(seed))
-
-    # print('Random Adventurer Test')
-    # for i in range(1,12):
-    #     print(CreatureFactory.generateAdventurer())    
-
-    # for i in range(1,10):
-
-    #     print(NameFactory.generateRandom())
-    #     print('')
-

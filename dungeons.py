@@ -1,4 +1,5 @@
 import uuid
+import json
 
 import dice
 
@@ -8,14 +9,23 @@ class Dungeon:
         it can be child classed into block/wall versions later if needed
     '''
 
-    def __init__(self):
+    def __init__(self, serialized=None):
 
         self.grid = []
         self.rooms = []
         self.regionPalette = 1
 
+        if serialized:
+            params = json.loads(serialized)
 
-    def initiateGrid(self, height, width):
+            self.initialize(params.get('height'), params.get('width'))
+
+            for code, coords in params.get('cells', {}).items():
+                type = int(code[1])
+                for c in coords:
+                    self.getCell(c[0], c[1]).type = type
+
+    def initialize(self, height, width):
         # TODO: complain if params are bad
 
         for i in range(height):
@@ -24,7 +34,7 @@ class Dungeon:
         for i in range(len(self.grid)):
             self.grid[i] = []
             for j in range(width):
-                border = i == 0 or j == 0 or i == (height -1) or (j == width - 1)
+                border = i == 0 or j == 0 or i == (height - 1) or (j == width - 1)
                 c = Cell(border)
                 c.coords = (i, j)
                 self.grid[i].append(c)
@@ -56,7 +66,6 @@ class Dungeon:
 
     def newRegion(self):
         self.regionPalette += 1
-
 
     def canRoomFit(self, room, coords):
         if coords[0] == 0 or coords[1]  == 0:
@@ -156,7 +165,6 @@ class Dungeon:
                 return False
         return True
 
-
     def getPossibleCarves(self, cell, ignores=[]):
         if type(cell) is tuple:
             cell = self.getCell(*cell)
@@ -169,14 +177,10 @@ class Dungeon:
         for dir in Cell.directions():
             test_cell = self.getCell(*cell.byCode(dir))
 
-
-
             if test_cell.type != Cell.PASSAGE and self.isSafeCarvable(test_cell, ignores):
                 options.append(dir)
 
         return options
-
-
 
     def prettyPrint(self):
 
@@ -199,6 +203,24 @@ class Dungeon:
                 display += cell.regionSymbol()
 
             print(display)
+
+    def serialize(self):
+        # just need a basic way to encode the dungeon as a single string, nothing fancy
+        box = {
+            'width': self.width(),
+            'height': self.height(),
+            'cells': {}
+        }
+
+        # for large dungeons using sub-lists for each types saves a lot of json length
+        for t in Cell.realTypes():
+            code = 't' + str(t)
+            box['cells'][code] = []
+            for cell in self.allCells():
+                if cell.type == t:
+                    box['cells'][code].append(cell.coords)
+
+        return json.dumps(box)
 
 
 
@@ -244,6 +266,10 @@ class Cell:
     def directions(self):
         return [self.NORTH, self.SOUTH, self.EAST, self.WEST]
 
+    @classmethod
+    def realTypes(self):
+        return [self.ROOM, self.PASSAGE, self.DOORWAY, self.ENTRANCE]
+
     def __init__(self, border=False, type=None):
         self.type = type
         # Note that we can't use static variable as parameter defaults in Python, so do this manually
@@ -255,7 +281,6 @@ class Cell:
         # TODO: border was a dumb experiment, pull it out
         self.border = border
         self.region = None
-
 
     @property
     def coords(self):
@@ -342,7 +367,12 @@ class Cell:
     def adjacent(self, coords):
         return coords in self.all()
 
+    def serialize(self):
+        # not gonna json dump it since the dungeon side will do that
+        return [self.type, self.h, self.w]
+
     def __str__(self):
+        # this one is basically just for printing/debug
         return 'Cell: {}, {}'.format(Cell.TRANSLATE[self.type], self._coords)
 
 
