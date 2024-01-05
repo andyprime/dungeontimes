@@ -1,0 +1,22 @@
+# monster is a relative term, its just anything that's not a delver
+---
+name: Globlin
+category: lilguy
+hp: 4
+traits:
+  - Gooey
+  - Excitable
+  - A Bit Rude
+moves:
+  - GLOB_BOMB
+  - STABBITY
+---
+name: Boglin
+category: lilguy
+hp: 6
+traits:
+  - Scamp
+  - A Bit Crass
+  - Unfortunate hygiene
+moves:
+  - STABBITY

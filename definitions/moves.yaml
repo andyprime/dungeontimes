@@ -1,0 +1,50 @@
+---
+code: GLOBBOMB
+name: Glob Bomb
+type: consequence
+target: any
+consequence:
+  max targets: 3
+  damage: 2
+  status: GOOPED
+---
+code: BRISTLE
+name: Bristle
+target: melee
+type: consequence
+consequence:
+  max targets: 2
+  damage: 2
+---
+code: STABBITY
+name: Stabbity
+type: instant
+target: any
+effect:
+  max targets: 1
+  damage: 2
+---
+code: DISCOURSE
+name: Discourse
+type: instant
+target: ranged
+effect:
+  max targets: 1
+  status: CONFUSE
+---
+code: BODYSLAM
+name: Body Slam
+type: instant
+target: melee
+effect:
+  max targets: 1
+  damage: 4
+---
+code: FLEX
+name: Flex
+type: persist
+target: self
+effect:
+  max targets: 1
+  status: PUMPED
+  duration: 4

@@ -1,0 +1,2 @@
+# Using schema for basic YAML validation. Its just for ease of finding mistakes, so we don't want anything heavier
+schema
