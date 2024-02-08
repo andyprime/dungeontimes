@@ -20,3 +20,14 @@ traits:
   - Unfortunate hygiene
 moves:
   - STABBITY
+---
+name: King Stinker
+category: beefcake
+hp: 10
+traits:
+  - Not actually royalty
+  - Swole
+  - Unwashed
+moves:
+  - STABBITY
+  - FLEX

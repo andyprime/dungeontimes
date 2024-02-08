@@ -1,39 +1,18 @@
 import uuid
 
 import dice
-
-class Room:
-
-    def __init__(self, properties):
-        self.height = properties.get('height', None)
-        self.width = properties.get('width', None)
-        self.coords = properties.get('coords', None)
-
+import definitions.model as model
 
 class Creature:
 
     def __init__(self, properties):
-        self.id = str(uuid.uuid1())
-        self.name = properties.get('name', 'baddata')
-        self.type = properties.get('type', 'baddata')
-        self.job = properties.get('job', 'baddata')
-        self.stock = properties.get('stock', 'baddata')
-
-        self.str = properties.get('str', 'baddata')
-        self.dex = properties.get('dex', 'baddata')
-        self.con = properties.get('con', 'baddata')
-        self.int = properties.get('int', 'baddata')
-        self.wis = properties.get('wis', 'baddata')
-        self.cha = properties.get('cha', 'baddata')
-
-        self.maxhp = self.con
-        self.currenthp = self.maxhp
+        raise NotImplementedError('Do not call the base class constructor please.')
 
     def generateInitiative(self):
         return dice.Dice.d(1,20)
 
     def __str__(self):
-        return self.name + ', ' + self.stock + ' ' + self.job + '; S: ' + str(self.str) + ', D: ' + str(self.dex) + ', C: ' + str(self.con) + ', I: ' + str(self.int) + ', W: ' + str(self.wis) + ', C: ' + str(self.cha)
+        return self.name + ', ' + self.stock + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
 
     def canAct(self):
         return self.currenthp > 0
@@ -69,3 +48,39 @@ class Creature:
     def rollStat(self, stat):
         target = getattr(self, stat)
         return dice.Dice.d(1,20) <= target
+
+class Delver(Creature):
+    @classmethod
+    def random(self):
+        from factory import NameFactory
+
+        return Delver(NameFactory.generateRandom(), model.Stocks.random(), model.Classes.random())
+
+    def __init__(self, name, stock, job):
+
+        self.name = name
+        # note that for the moment stock just contains a name string, this will need to be more involved later
+        self.stock = stock.name
+        self.job = job
+        self.maxhp = job.hp
+        self.currenthp = job.hp
+
+    def __str__(self):
+        return self.name + ', ' + self.stock + ', ' + self.job.name + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
+
+
+class Monster(Creature):
+
+    @classmethod
+    def random(self):
+        # return Monster(template=model.Monsters.random())
+        return Monster(model.Monsters.random())
+
+    def __init__(self, template):
+        from factory import NameFactory
+
+        self._template = template
+        self.name = NameFactory.randomByType(template.category)
+        self.stock  = template.name
+        self.maxhp = template.hp
+        self.currenthp = template.hp

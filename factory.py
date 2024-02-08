@@ -4,6 +4,7 @@ import uuid
 import dungeons
 import dice
 import strings
+import critters
 
 
 class DungeonFactoryAlpha:
@@ -412,7 +413,7 @@ class CreatureFactory:
             'cha': dice.Dice.d(3, 6),
         }
 
-        return dungeons.Creature(data)
+        return critters.Creature(data)
 
     @classmethod
     def randomClass(self):
@@ -446,10 +447,14 @@ class CreatureFactory:
             'cha': dice.Dice.d(3, 6),
         }
 
-        return dungeons.Creature(data)
+        return critters.Creature(data)
 
 
 class NameFactory:
+    @classmethod
+    def randomByType(self, type):
+        return strings.StringTool.random('monster_'+ type)
+
     @classmethod
     def generateRandom(self):
         rando = dice.Dice.d(100)

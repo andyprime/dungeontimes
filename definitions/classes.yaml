@@ -1,17 +1,22 @@
 ---
 name: Ethicist
+hp: 10
 moves:
   - DISCOURSE
 ---
 name: Muscle Man
+hp: 16
 moves:
   - BODYSLAM
   - FLEX
 ---
 name: Swordlord
+hp: 14
 moves:
   - SPINTOWIN
 ---
 name: Neerdowell
+hp: 12
 moves:
   - HIDE
+  - STABBITY

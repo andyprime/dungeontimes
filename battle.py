@@ -2,6 +2,7 @@ import random
 
 import factory
 import dice
+import critters
 
 class Team:
 
@@ -161,12 +162,12 @@ if __name__ == "__main__":
 
     b = Battle()
 
+    for i in range(4):
+        # b.addParticipant('monster', factory.CreatureFactory.randomMonster())
+        b.addParticipant('monster', critters.Monster.random())
 
     for i in range(4):
-        b.addParticipant('monster', factory.CreatureFactory.randomMonster())
-
-    for i in range(4):
-        b.addParticipant('adventurer', factory.CreatureFactory.randomAdventurer())
+        b.addParticipant('adventurer', critters.Delver.random())
 
     b.start()
 

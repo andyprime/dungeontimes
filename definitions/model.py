@@ -1,5 +1,14 @@
 import yaml
+import random
+
 from schema import Schema, And, Or, Optional
+
+'''
+  Just a reminder that these are just definitions not the entities themselves
+
+  There might be a better name than model because of that but its not coming to me atm
+'''
+
 
 class Model:
 
@@ -15,9 +24,11 @@ class Model:
         # gotta reset this so we don't "borrow" the parent class's copy
         self._records = []
         if self._source != '':
-            handle = open(self._source, 'r')
+            handle = open('definitions/' + self._source, 'r')
             for r in yaml.safe_load_all(handle):
                 self._records.append(self(self._schema.validate(r)))
+        else:
+            raise ValueError('Model missing _source value - {}'.format(self.__name__))
 
     @classmethod
     def all(self):
@@ -29,6 +40,12 @@ class Model:
             if r.get('code', None) == id:
                 return r
         return None
+
+    @classmethod
+    def random(self):
+        if len(self._records) == 0:
+            self.load()
+        return random.choice(self._records)
 
     def __init__(self, props):
         # TODO: maybe complain if we've got a duplicate ID/code/whatev
@@ -65,7 +82,15 @@ class Moves(Model):
         return 'Move ({})'.format(self.code)
 
 
-class Monsters(Model):
+class Critter(Model):
+    pass
+
+
+class Delver(Critter):
+    pass
+
+
+class Monsters(Critter):
 
     _source = 'monsters.yaml'
 
@@ -80,6 +105,22 @@ class Monsters(Model):
 
     def __repr__(self):
         return 'Monster ({})'.format(self.name)
+
+class Classes(Model):
+    _source = 'classes.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'hp': And(int, lambda h: h > 0),
+            'moves': [str]
+        })
+
+class Stocks(Model):
+    _source = 'stocks.yaml'
+
+    _schema = Schema({
+            'name': And(str, len)
+        })
 
 
 if __name__ == "__main__":
