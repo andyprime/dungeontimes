@@ -17,8 +17,8 @@ class Dice:
     def between(self, low, high):
         return random.randint(low, high)
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
 
     print('Test d6')
     for i in range(1,10):

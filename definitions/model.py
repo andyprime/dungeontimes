@@ -21,6 +21,7 @@ class Model:
 
     @classmethod
     def load(self):
+        # print('--- Model Load - ' + self._source)
         # gotta reset this so we don't "borrow" the parent class's copy
         self._records = []
         if self._source != '':
@@ -36,10 +37,12 @@ class Model:
 
     @classmethod
     def find(self, id):
+        if len(self._records) == 0:
+            self.load()
         for r in self._records:
-            if r.get('code', None) == id:
+            if r.code == id:
                 return r
-        return None
+        raise ValueError('Asked for missing {} with id: {}'.format(self._source, id))
 
     @classmethod
     def random(self):
@@ -60,8 +63,9 @@ class Moves(Model):
     _schema = Schema({
             'name': And(str, len),
             'code': And(str, len),
-            'type': Or('consequence', 'instant', 'persist'),
+            'type': Or('consequence', 'instant', 'onesy'),
             'target': Or('any', 'melee', 'ranged', 'self'),
+            'test': And(str, len),
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),

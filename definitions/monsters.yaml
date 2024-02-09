@@ -8,7 +8,7 @@ traits:
   - Excitable
   - A Bit Rude
 moves:
-  - GLOB_BOMB
+  - GLOBBOMB
   - STABBITY
 ---
 name: Boglin
@@ -25,7 +25,7 @@ name: King Stinker
 category: beefcake
 hp: 10
 traits:
-  - Not actually royalty
+  - Pretend royalty
   - Swole
   - Unwashed
 moves:

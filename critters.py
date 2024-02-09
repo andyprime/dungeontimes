@@ -5,8 +5,8 @@ import definitions.model as model
 
 class Creature:
 
-    def __init__(self, properties):
-        raise NotImplementedError('Do not call the base class constructor please.')
+    def __init__(self):
+        self.status = []
 
     def generateInitiative(self):
         return dice.Dice.d(1,20)
@@ -17,18 +17,18 @@ class Creature:
     def canAct(self):
         return self.currenthp > 0
 
-    def getCombatAction(self, battle):
-        # given the current battle state
+    def hasStatus(self, statusCode):
+        for status in self.status:
+            if status.get('code') == statusCode:
+                return True
+        return False
 
-        target_team = battle.randomTeam(exclude=self.type) # using self.type won't work in the long run
-
-        x = {
-            'action_type': 'melee attack',
-            'target': target_team.randomMember(alive=True)
-        }
-        # print(' Me: {}, {}'.format(self.name, self.type))
-        # print('Him: {}, {}'.format(x['target'].name, x['target'].type))
-        return x
+    def tickStatus(self):
+        for status in self.status:
+            if status['duration'] == 1:
+                self.status.remove(status)
+            else:
+                status['duration'] -= 1
 
     def applyDamage(self, damage_count):
         old = self.currenthp
@@ -37,7 +37,20 @@ class Creature:
             self.currenthp = 0
         print('  HP old - {}, new - {}'.format(old, self.currenthp))
 
-    def status(self):
+    def applyStatus(self, status, half=False):
+        duration = dice.Dice.d(1,4) + 2
+        if half:
+            duration = max(1, int(duration / 2))
+        for s in self.status:
+            if s['code'] == status:
+                s['duration'] += duration
+                return
+        self.status.append({
+                'code': status,
+                'duration': duration
+            })
+
+    def healthCheck(self):
         if self.currenthp == 0:
             return 'dead'
         elif self.currenthp < self.currenthp / 2:
@@ -49,6 +62,21 @@ class Creature:
         target = getattr(self, stat)
         return dice.Dice.d(1,20) <= target
 
+    def moves(self):
+        pass
+
+    def testThresholds(self, test):
+        pass
+
+    def statusString(self):
+        t = '['
+        x = []
+        for s in self.status:
+            x.append('({} {})'.format(s['code'][0], str(s['duration'])))
+        t += ','.join(x)
+        t += ']'
+        return t
+
 class Delver(Creature):
     @classmethod
     def random(self):
@@ -57,6 +85,7 @@ class Delver(Creature):
         return Delver(NameFactory.generateRandom(), model.Stocks.random(), model.Classes.random())
 
     def __init__(self, name, stock, job):
+        super().__init__()
 
         self.name = name
         # note that for the moment stock just contains a name string, this will need to be more involved later
@@ -68,6 +97,17 @@ class Delver(Creature):
     def __str__(self):
         return self.name + ', ' + self.stock + ', ' + self.job.name + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
 
+    def __repr__(self):
+        return self.name + ', ' + self.stock + ', ' + self.job.name + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
+
+    def moves(self):
+        moves = []
+        for move in self.job.moves:
+            moves.append(model.Moves.find(move))
+        return moves
+
+    def testThresholds(self, test):
+        return (33, 66)
 
 class Monster(Creature):
 
@@ -79,8 +119,25 @@ class Monster(Creature):
     def __init__(self, template):
         from factory import NameFactory
 
+        super().__init__()
+
         self._template = template
         self.name = NameFactory.randomByType(template.category)
         self.stock  = template.name
         self.maxhp = template.hp
         self.currenthp = template.hp
+
+    def moves(self):
+        moves = []
+        for move in self._template.moves:
+            moves.append(model.Moves.find(move))
+        return moves
+
+    def testThresholds(self, test):
+        return (60, 80)
+
+    def __str__(self):
+        return self.name + ', ' + self.stock + ', ' + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
+
+    def __repr__(self):
+        return self.name + ', ' + self.stock + ', ' + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'

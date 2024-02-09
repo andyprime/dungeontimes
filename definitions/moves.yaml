@@ -1,8 +1,17 @@
 ---
+code: CONFUSED
+name: Act Confused
+target: self
+type: instant
+test: none
+effect:
+  status: DISTRACTED
+---
 code: GLOBBOMB
 name: Glob Bomb
 type: consequence
 target: any
+test: crafty
 consequence:
   max targets: 3
   damage: 2
@@ -12,6 +21,7 @@ code: BRISTLE
 name: Bristle
 target: melee
 type: consequence
+test: thicc
 consequence:
   max targets: 2
   damage: 2
@@ -20,14 +30,25 @@ code: STABBITY
 name: Stabbity
 type: instant
 target: any
+test: prowess
 effect:
   max targets: 1
+  damage: 2
+---
+code: SPINTOWIN
+name: Spin To Win
+type: instant
+target: any
+test: prowess
+effect:
+  max targets: 3
   damage: 2
 ---
 code: DISCOURSE
 name: Discourse
 type: instant
 target: ranged
+test: ego
 effect:
   max targets: 1
   status: CONFUSE
@@ -36,15 +57,26 @@ code: BODYSLAM
 name: Body Slam
 type: instant
 target: melee
+test: swole
 effect:
   max targets: 1
   damage: 4
 ---
 code: FLEX
 name: Flex
-type: persist
+type: instant
 target: self
+test: swole
 effect:
   max targets: 1
   status: PUMPED
   duration: 4
+---
+code: HIDE
+name: Hide
+type: onesy
+target: self
+test: crafty
+effect:
+  max targets: 1
+  status: HIDDEN
