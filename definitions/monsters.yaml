@@ -31,3 +31,106 @@ traits:
 moves:
   - STABBITY
   - FLEX
+---
+name: Yeti
+category: beefcake
+hp: 14
+traits:
+  - Hairy
+  - Unwashed
+  - Overly Emotional
+moves:
+  - COLDAURA
+  - PUMMEL
+---
+name: Zorbo
+category: critter
+hp: 12
+traits:
+  - Bearlike
+  - Ornery
+  - Vicious
+moves:
+  - ABSORBTRAIT
+  - ABSORBMAGIC
+  - MAUL
+---
+name: Owlbear
+category: bigboy
+hp: 14
+traits:
+  - Ornery
+  - Crikey the plumage
+  - Something
+moves:
+  - BRISTLE
+  - SQUARK
+---
+name: Gelatinous Cube
+category: weirdo
+hp: 10
+traits:
+  - Mostly translucent
+  - Platonic friend
+  - Gooshy
+moves:
+  - TRUNDLE
+  - ENGULF
+
+
+
+# Todo
+#
+# Otyugh
+# OWlbear [Scholar]
+# Gorgon?
+# Minotaur
+# Hydra
+# gelat. cube
+# cyclops, I like the idea of them not being exactly humanoid
+# bugbear
+# basilisk/cockatrice
+# carnivorous ape, maybe have them fight each other sometimes
+# bear, cave bear, cool bear
+# giant beetles, fire, bombadier, boring, stag
+# slimes/puddings/ooze
+# carrion crawler
+# winged serpent
+# crab, giant crab, devil crab, cave crab
+# elementals
+# frog and related stuff
+# undead - ghosts, ghouls, ghasts?, vampire, skeletons, wight, wraith
+# golems
+# homunculous, should these only hang out with alchemists?
+# demons - imps definitely broader theme tbd
+# giant leech
+# lamia, lammassu?
+# leprechaun, just make them absolute shit heels
+# caveman
+# MUMMY!!
+# nagas, snake people
+# hags?
+# some kinda octopus monster?
+# grell
+# roper?
+# rust monster*
+# salamander*
+# giant scorpions
+# shambling mound*
+# fungus stuff - shriekers, mushroom men, etc
+# spiders
+# giant toads
+# trolls are good but what style?
+# snapping turtle
+# insects, like wasps bees or ants, might need a way to gauranteee multiple?
+# animals, might need to add more of these for implementing mascots/companions
+# xorn, magma child
+# fish men, see atlanteans from dom
+# snake dudes, see c'tis
+# giant lobster!!!
+
+# flagellant
+# something illitid but call it a starspawn?
+# trogolodyte, maybe go with a dominions version and a giant tramply monster?
+# Bard, but its not a class but just a type of pest :D
+# maybe some beastman based off the tien chi celestial soldier/servant

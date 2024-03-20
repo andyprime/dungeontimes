@@ -80,3 +80,79 @@ test: crafty
 effect:
   max targets: 1
   status: HIDDEN
+---
+code: COLDAURA
+name: Cold Aura
+type: consequence
+target: melee
+test: magic
+consequence:
+  max targets: 5
+  status: CHILLY
+  duration: 4
+  damage: 1
+---
+code: PUMMEL
+name: Pummel
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 1
+---
+code: ABSORBTRAIT
+name: Absorb Quality
+type: instant
+target: ranged
+test: magic
+effect:
+  max targets: 1
+  special: UNIMPLEMENTED
+  # not sure how to implement this one yet
+---
+code: ABSORBMAGIC
+name: Absorb Magic
+type: consequence
+target: magic
+test: magic
+consequence:
+  max targets: 2
+  special: ABSORB
+  # unimplemented
+---
+code: MAUL
+name: Maul
+type: consequence
+target: melee
+test: thicc
+consequence:
+  max targets: 1
+  damage: 2
+  status: PINNED
+---
+code: SQUARK
+name: Mighty Squark
+type: instant
+target: self
+test: bravado
+effect:
+  status: CONFIDANT
+  duration: 2
+---
+code: TRUNDLE
+name: Trundle
+type: instant
+target: self
+test: none
+effect:
+  special: DECORATIVE
+---
+code: ENGULF
+name: Engulf in Goo
+type: consequence
+target: self
+test: none
+consequence:
+  status: [PINNED, ACID]
+  duration: 10

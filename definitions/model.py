@@ -64,18 +64,21 @@ class Moves(Model):
             'name': And(str, len),
             'code': And(str, len),
             'type': Or('consequence', 'instant', 'onesy'),
-            'target': Or('any', 'melee', 'ranged', 'self'),
+            'target': Or('any', 'melee', 'ranged', 'self', 'magic'),
             'test': And(str, len),
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
                 Optional('damage'): And(int, lambda n: n > 0),
-                Optional('duration'): And(int, lambda n: n > 0)
+                Optional('duration'): And(int, lambda n: n > 0),
+                Optional('special'): str
             },
             Optional('consequence'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
-                Optional('damage'): And(int, lambda n: n > 0)
+                Optional('duration'): And(int, lambda n: n > 0),
+                Optional('damage'): And(int, lambda n: n > 0),
+                Optional('special'): str
             }
         })
 
@@ -132,14 +135,35 @@ if __name__ == "__main__":
     print('Moves')
     Moves.load()
 
-    # print(Moves.all())
-
-
     print('Monsters')
-    print(Monsters.all())
-
     Monsters.load()
 
-    print(Monsters.all())
+    for monster in Monsters.all():
+        for move in monster.moves:
+            Moves.find(move)
 
+    allStatus = []
+    for move in Moves.all():
+        examine = {}
+        if move.type == 'consequence':
+            examine = move.consequence
+        elif move.type == 'instant':
+            examine = move.effect
+        else:
+            continue
+
+        x = examine.get('status', False)
+        if type(x) == str:
+            allStatus.append(x)
+        elif type(x) == list:
+            allStatus = allStatus + x
+        else:
+            pass
+
+    print('All recorded statuses: {}'.format(set(allStatus)))
+
+    print(' --- ')
+
+
+    print(Monsters.all())
     print(Moves.all())

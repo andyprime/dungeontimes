@@ -21,22 +21,16 @@ class Team:
         # TODO: this copy might get expensive but right now its convenient
         options = self.members.copy()
 
-        c1 = len(options)
         if alive:
             for member in options:
                 if not member.canAct():
                     options.remove(member)
 
-        c2 = len(options)
-        # print(' member filtering - {} - {}'.format(c1, c2))
-
-        # TODO: should this raise an error or something if the filters remove all possible options?
         return random.choice(options)
 
     def remaining(self):
         # count of remaining active fighters
         a = len([x for x in self.members if x.canAct()])
-        # print('R: {}'.format(a))
         return a
 
     def teamPrint(self):
@@ -44,7 +38,6 @@ class Team:
         for fellah in self.members:
             print('    {} - {}'.format( str(fellah), fellah.statusString() ))
         print()
-
 
 
 class Battle:
@@ -66,19 +59,9 @@ class Battle:
         print()
 
         if len(self.teams) < 2:
-            raise ValueError('Team count below two.')
-
-        # count = 1
-        # for name, team in self.teams.items():
-        #     print('Team #{}: {}'.format(count, name))
-        #     for fellah in team.members:
-        #         print('    {}'.format(str(fellah)))
-        #     print()
-        #     count += 1
-
+            raise ValueError('Can not initiate battle with team count below two.')
 
         self.state = Battle.BATTAL
-
 
         round_count = 1
         while (self.state == Battle.BATTAL):
@@ -167,11 +150,9 @@ class Battle:
 
 
     def processAction(self, action):
-        # for now we'll just do basic ass dex checks
         fellah = action['actor']
         move = action['move']
         target = action['target']
-
 
         appliedDamage = None
         descriptor = 'Placeholder'
@@ -273,7 +254,6 @@ if __name__ == "__main__":
     print(' - Add participants')
 
     for i in range(4):
-        # b.addParticipant('monster', factory.CreatureFactory.randomMonster())
         b.addParticipant('monster', critters.Monster.random())
 
     for i in range(4):
