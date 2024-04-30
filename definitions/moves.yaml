@@ -156,3 +156,21 @@ test: none
 consequence:
   status: [PINNED, ACID]
   duration: 10
+---
+code: INVECTIVE
+name: Invective
+type: instant
+target: ranged
+test: personality
+effect:
+  max targets: 1
+  damage: 1
+---
+code: SHOWOFF
+name: Show Off
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 4

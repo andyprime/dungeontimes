@@ -3,6 +3,7 @@ name: Ethicist
 hp: 10
 moves:
   - DISCOURSE
+  - INVECTIVE
 ---
 name: Muscle Man
 hp: 16
@@ -14,6 +15,7 @@ name: Swordlord
 hp: 14
 moves:
   - SPINTOWIN
+  - SHOWOFF
 ---
 name: Neerdowell
 hp: 12
