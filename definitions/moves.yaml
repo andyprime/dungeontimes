@@ -74,7 +74,7 @@ effect:
 ---
 code: HIDE
 name: Hide
-type: onesy
+type: instant
 target: self
 test: crafty
 effect:
@@ -174,3 +174,19 @@ test: prowess
 effect:
   max targets: 1
   damage: 4
+# thoughts: perhaps raise the chance of failure or something to indicate its a flashy move?
+---
+code: PRESTIDIGITATION
+name: Prestidigitation
+type: instant
+target: ranged
+test: crafty
+effect:
+  max targets: 1
+  status: SHOCKED
+---
+code: MAGICIANSPELL
+name: Cast Spell
+type: spellcasting
+target: self # spells have their own real target info
+test: spellcasting

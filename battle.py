@@ -1,4 +1,5 @@
 import random
+import uuid
 
 import factory
 import dice
@@ -16,17 +17,30 @@ class Team:
     def add(self, c):
         self.members.append(c)
 
-    def randomMember(self, alive=None):
 
-        # TODO: this copy might get expensive but right now its convenient
-        options = self.members.copy()
+    def validMembers(self, alive=None, exclude=None):
+        options = []
 
-        if alive:
-            for member in options:
-                if not member.canAct():
-                    options.remove(member)
+        for member in self.members:
+            if alive and not member.canAct():
+                continue
+            if exclude and member == exclude:
+                continue
+            options.append(member)
 
-        return random.choice(options)
+        return options
+
+    # def randomMember(self, alive=None):
+
+    #     # TODO: this copy might get expensive but right now its convenient
+    #     options = self.members.copy()
+
+    #     if alive:
+    #         for member in options:
+    #             if not member.canAct():
+    #                 options.remove(member)
+
+    #     return random.choice(options)
 
     def remaining(self):
         # count of remaining active fighters
@@ -84,6 +98,8 @@ class Battle:
                 fellah = current[1]
                 teamName = current[2]
 
+                print('Starting {}s turn '.format(fellah.name))
+
                 fellah.tickStatus()
 
                 if fellah.canAct():
@@ -106,15 +122,15 @@ class Battle:
             round_count += 1
 
         print('!' * 10)
-        print('All done')
+        print('Combat loop over')
 
 
 
     def selectCombatAction(self, fellah, team):
         # note that this lives in battle.py because it requires too much shared info to live on the creature itself
 
-        # pick an enemy team
-        targetTeam = self.randomTeam(exclude=team)
+        # # pick an enemy team
+        # targetTeam = self.randomTeam(exclude=team)
 
         # filter out moves that can not be performed
         validMoves = []
@@ -125,7 +141,7 @@ class Battle:
             if move.target == 'self':
                 t = fellah
             else:
-                t = targetTeam.randomMember()
+                t = self.randomTarget(fellah, 'opponent')
 
             validMoves.append({
                     'actor': fellah,
@@ -140,7 +156,6 @@ class Battle:
                     'move': Moves.find('CONFUSED'),
                     'target': fellah
                 })
-
 
         # select a move
         # eventually this will be by weight, not round robin
@@ -173,6 +188,7 @@ class Battle:
             else:
                 partialThreshold, fullThreshold = fellah.testThresholds(move.test)
 
+            # TODO - remove this once proper external testing is done
             assert(fullThreshold > partialThreshold)
 
             roll = random.uniform(1, 100)
@@ -180,12 +196,7 @@ class Battle:
             if roll >= fullThreshold:
                 effect = move.effect
 
-                if effect.get('status', None):
-                    target.applyStatus(effect['status'])
-
-                if effect.get('damage', None):
-                    appliedDamage = effect['damage']
-                    target.applyDamage(appliedDamage)
+                appliedDamage = self.applyEffect(target, effect)
 
                 descriptor = '{act} did a sick {move} on {trg}.'
                 if appliedDamage:
@@ -194,12 +205,7 @@ class Battle:
             elif roll >= partialThreshold:
                 effect = move.effect
 
-                if effect.get('status', None):
-                    target.applyStatus(effect['status'], half=True)
-
-                if effect.get('damage', None):
-                    appliedDamage = max(1, int(effect['damage'] / 2))
-                    target.applyDamage(appliedDamage)
+                appliedDamage = self.applyEffect(target, effect, True)
 
                 descriptor = '{act} tried to do a {move} on {trg} and it kinda worked.'
                 if appliedDamage:
@@ -207,12 +213,58 @@ class Battle:
 
             else:
                 descriptor = '{act} tried to do a sweet {move} but it totally failed.'
+        elif move.type == 'spellcasting':
+            spells = fellah.getSpells()
+
+            assert(len(spells) > 0)
+
+            spell = random.choice(spells)
+
+            targetTypes = spell.target
+            target = self.randomTarget(fellah, targetTypes)
+
+            self.applyEffect(target, spell.effect)
+
+
+            descriptor = '{act} cast a cool spell but unfortunately for them its not implemented yet.'
+
+
+        else:
+            descriptor = 'Invalid move type: {}'.format(move)
 
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 
         print(descriptor)
 
+    def applyEffect(self, target, effect, partial=False):
+
+        appliedDamage = 0
+
+        if effect.get('status', None):
+            target.applyStatus(effect['status'])
+
+        if effect.get('damage', None):
+            if partial:
+                appliedDamage = max(1, int(effect['damage'] / 2))
+            else:
+                appliedDamage = effect['damage']
+            target.applyDamage(appliedDamage)
+
+        return appliedDamage
+
+    def randomTarget(self, fellah, types):
+
+        potentials = []
+
+        if 'self' in types:
+            potentials.append(fellah)
+        if 'team' in types:
+            potentials.extend(self.getTeam(fellah.team).validMembers(True, fellah))
+        if 'opponent' in types:
+            potentials.extend(self.getOppositeTeam(fellah.team).validMembers(True))
+
+        return random.choice(potentials)
 
     def resetInitiative(self):
         self.initiative = []
@@ -234,18 +286,25 @@ class Battle:
             self.teams[side] = Team(side, self.teamCount)
             self.teamCount += 1
 
+        creature.team = side
         self.teams[side].add(creature)
 
-    def randomTeam(self, exclude=None):
-        team_options = list(self.teams.keys())
+    def getTeam(self, teamCode):
+        return self.teams[teamCode]
 
-        if exclude:
-            team_options.remove(exclude)
-
-        return self.teams[random.choice(team_options)]
-
+    def getOppositeTeam(self, teamCode):
+        teams = list(self.teams.keys())
+        teams.remove(teamCode)
+        return self.teams[teams[0]]
 
 if __name__ == "__main__":
+
+    seed = str(uuid.uuid1())
+    # seed = '89739eaa-0d70-11ef-899a-3b62a91e32e4'
+
+    random.seed(seed)
+    print('Seed : {}'.format(seed))
+
 
     print(' - Battle Create')
 
@@ -263,4 +322,5 @@ if __name__ == "__main__":
 
     b.start()
 
-    print('Ok, done.')
+    print('Testing complete.')
+    print('Seed : {}'.format(seed))

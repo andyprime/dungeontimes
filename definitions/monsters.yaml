@@ -56,7 +56,7 @@ moves:
   - MAUL
 ---
 name: Owlbear
-category: bigboy
+category: critter
 hp: 14
 traits:
   - Ornery

@@ -63,7 +63,7 @@ class Moves(Model):
     _schema = Schema({
             'name': And(str, len),
             'code': And(str, len),
-            'type': Or('consequence', 'instant', 'onesy'),
+            'type': Or('consequence', 'instant', 'spellcasting'),
             'target': Or('any', 'melee', 'ranged', 'self', 'magic'),
             'test': And(str, len),
             Optional('effect'): {
@@ -88,6 +88,20 @@ class Moves(Model):
     def __repr__(self):
         return 'Move ({})'.format(self.code)
 
+
+class Spells(Model):
+    _source = 'spells.yaml'
+
+    _schema = Schema({
+            'code': And(str, len),
+            'name': And(str, len),
+            'target': [Or('self', 'team', 'opponent')],
+            'effect': {
+                Optional('damage'): And(int, lambda n: n > 0),
+                Optional('status'): Or(str, [str]),
+                Optional('duration'): And(int, lambda n: n > 0)
+            }
+        })
 
 class Critter(Model):
     pass
@@ -119,7 +133,8 @@ class Classes(Model):
     _schema = Schema({
             'name': And(str, len),
             'hp': And(int, lambda h: h > 0),
-            'moves': [str]
+            'moves': [str],
+            Optional('startingSpells'): [str]
         })
 
 class Stocks(Model):
@@ -129,14 +144,33 @@ class Stocks(Model):
             'name': And(str, len)
         })
 
+class Spells(Model):
+    _source = 'spells.yaml'
+
+    _schema = Schema({
+            'code': And(str, len),
+            'name': And(str, len),
+            'target': [Or('team', 'self', 'opponent')],
+            'effect': {
+                Optional('status'): Or(str, [str]),
+                Optional('duration'): And(int, lambda n: n > 0)
+            }
+        })
+
 
 if __name__ == "__main__":
 
     print('Moves')
     Moves.load()
 
+    print('Spells')
+    Spells.load()
+
     print('Monsters')
     Monsters.load()
+
+    print('Delvers')
+    Classes.load()
 
     for monster in Monsters.all():
         for move in monster.moves:
@@ -160,9 +194,45 @@ if __name__ == "__main__":
         else:
             pass
 
+    for spell in Spells.all():
+        x = spell.effect.get('status', False)
+        if type(x) == str:
+            allStatus.append(x)
+        elif type(x) == list:
+            allStatus = allStatus + x
+        else:
+            pass
+
+
     print('All recorded statuses: {}'.format(set(allStatus)))
 
     print(' --- ')
+
+
+    orphanMoves = []
+    for move in Moves.all():
+        foundIt = False
+
+        for monster in Monsters.all():
+
+            if move.code in monster.moves:
+                print('Found {} in {}'.format(move.name, monster.name))
+                foundIt = True
+
+        for advClass in Classes.all():
+
+            if move.code in advClass.moves:
+                print('Found {} in {}'.format(move.name, advClass.name))
+                foundIt = True
+
+        if foundIt:
+            continue
+
+        orphanMoves.append(move.name)
+
+    print('Moves with no users: {}'.format(set(orphanMoves)))
+
+
 
 
     print(Monsters.all())

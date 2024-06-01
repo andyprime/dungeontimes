@@ -1,0 +1,14 @@
+---
+code: VANISH
+name: Vanishing Act
+target: [team, self]
+effect:
+  status: INVISIBLE
+  duration: 10
+---
+code: LEVITATION
+name: Levitating Act
+target: [self]
+effect:
+  status: FLOAT
+  duration: 10

@@ -22,3 +22,12 @@ hp: 12
 moves:
   - HIDE
   - STABBITY
+---
+name: Magician
+hp: 10
+moves:
+  - PRESTIDIGITATION
+  - MAGICIANSPELL
+startingSpells:
+  - VANISH
+  - LEVITATION

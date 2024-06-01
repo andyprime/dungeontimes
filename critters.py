@@ -35,7 +35,7 @@ class Creature:
         self.currenthp = self.currenthp - damage_count
         if self.currenthp < 0:
             self.currenthp = 0
-        print('  HP old - {}, new - {}'.format(old, self.currenthp))
+        print('  Apply Dam [{}] - HP old - {}, new - {}'.format(self.name, old, self.currenthp))
 
     def applyStatus(self, status, half=False):
         duration = dice.Dice.d(1,4) + 2
@@ -65,6 +65,11 @@ class Creature:
     def moves(self):
         pass
 
+    # To be implemented by children. Return a 2-tuple of ints 0-100 that indicate the partial and full success thresholds for the given test.
+    # The roll is d100 (1-100) trying to roll above or equal to the threshold numbers.
+    # The first number is the partial threshold, it will always be lower than the full threshold
+    # The second tuple element is the full threshold
+    # Example: if the tuple is (45, 75) a failure is a roll of 1-44, a partial success is 45-74 and a full is 75-100
     def testThresholds(self, test):
         pass
 
@@ -72,7 +77,7 @@ class Creature:
         t = '['
         x = []
         for s in self.status:
-            x.append('({} {})'.format(s['code'][0], str(s['duration'])))
+            x.append('({} {})'.format(s['code'], str(s['duration'])))
         t += ','.join(x)
         t += ']'
         return t
@@ -93,6 +98,7 @@ class Delver(Creature):
         self.job = job
         self.maxhp = job.hp
         self.currenthp = job.hp
+        self.team = None # temp code for battles
 
     def __str__(self):
         return self.name + ', ' + self.stock + ', ' + self.job.name + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
@@ -108,6 +114,21 @@ class Delver(Creature):
 
     def testThresholds(self, test):
         return (33, 66)
+
+    def getSpells(self):
+
+        spellIds = []
+        if self.job.startingSpells:
+            spellIds = self.job.startingSpells
+
+        # TODO - include any learned spells
+
+        spells = []
+
+        for id in spellIds:
+            spells.append(model.Spells.find(id))
+
+        return spells
 
 class Monster(Creature):
 
