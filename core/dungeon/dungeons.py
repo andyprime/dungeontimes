@@ -1,8 +1,6 @@
 import uuid
 import json
 
-import dice
-
 class Dungeon:
     '''
         Currently the dungeon class only supports block dungeon types
@@ -53,6 +51,11 @@ class Dungeon:
             return self.grid[x][y]
         except:
             return None
+
+    def entrance(self):
+        for cell in self.allCells():
+            if cell.type == Cell.ENTRANCE:
+                return cell
 
     def allCells(self, filter=None):
         # this is just a convenience function for when a process needs all the cells
@@ -373,3 +376,20 @@ class Cell:
     def __str__(self):
         # this one is basically just for printing/debug
         return 'Cell: {}, {}'.format(Cell.TRANSLATE[self.type], self._coords)
+
+
+class Room:
+
+    def __init__(self, props):
+        self.height = props.get('height')
+        self.width = props.get('width')
+        self.locals = []
+
+    def populate(self, critter):
+        self.locals.append(critter)
+
+    def __str__(self):
+        return '(Room: {}x{} @ {}, {})'.format(self.height, self.width, self.coords, len(self.locals))
+
+    def __repr__(self):
+        return self.__str__()

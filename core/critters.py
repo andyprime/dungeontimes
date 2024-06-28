@@ -1,6 +1,6 @@
 import uuid
 
-import dice
+from core.dice import Dice
 import definitions.model as model
 
 class Creature:
@@ -9,7 +9,7 @@ class Creature:
         self.status = []
 
     def generateInitiative(self):
-        return dice.Dice.d(1,20)
+        return Dice.d(1,20)
 
     def __str__(self):
         return self.name + ', ' + self.stock + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
@@ -38,7 +38,7 @@ class Creature:
         print('  Apply Dam [{}] - HP old - {}, new - {}'.format(self.name, old, self.currenthp))
 
     def applyStatus(self, status, half=False):
-        duration = dice.Dice.d(1,4) + 2
+        duration = Dice.d(1,4) + 2
         if half:
             duration = max(1, int(duration / 2))
         for s in self.status:
@@ -60,7 +60,7 @@ class Creature:
 
     def rollStat(self, stat):
         target = getattr(self, stat)
-        return dice.Dice.d(1,20) <= target
+        return Dice.d(1,20) <= target
 
     def moves(self):
         pass
@@ -85,7 +85,7 @@ class Creature:
 class Delver(Creature):
     @classmethod
     def random(self):
-        from factory import NameFactory
+        from core.names import NameFactory
 
         return Delver(NameFactory.generateRandom(), model.Stocks.random(), model.Classes.random())
 
@@ -138,7 +138,7 @@ class Monster(Creature):
         return Monster(model.Monsters.random())
 
     def __init__(self, template):
-        from factory import NameFactory
+        from core.names import NameFactory
 
         super().__init__()
 

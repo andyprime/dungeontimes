@@ -1,9 +1,8 @@
 import random
 import uuid
 
-import factory
 import dice
-import critters
+import core.critters
 
 from definitions.model import Moves
 
