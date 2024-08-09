@@ -29,7 +29,6 @@ class Expedition:
 
     def begin(self):
 
-
         while (self.status != Expedition.COMPLETE):
 
             if (self.status == Expedition.READY):

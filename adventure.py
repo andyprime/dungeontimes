@@ -13,6 +13,8 @@ def logHandlerPrint(message):
 
 if __name__ == "__main__":
 
+    # This is all just some ad hoc stuff until a more robust
+
     # Generate dungeon
     dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon()
 
@@ -24,7 +26,11 @@ if __name__ == "__main__":
         for i in range(4):
             room.populate(core.critters.Monster.random())
 
-    print(dungeon.rooms)
+
+    for room in dungeon.rooms:
+        print('{}: {}'.format(dungeon.rooms.index(room), room))
+
+
 
     # create party
     delvers = []

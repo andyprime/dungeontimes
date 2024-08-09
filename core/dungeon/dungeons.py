@@ -67,6 +67,85 @@ class Dungeon:
                     bucket.append(self.grid[i][j])
         return bucket
 
+    def getRoomForCell(self, cell):
+        for room in self.rooms:
+            if cell in room:
+                return room
+        return None
+
+
+    def basicPrint(self):
+
+        for index, row in enumerate(self.grid):
+
+            display = '{}: '.format(str(index).rjust(4, ' '))
+
+            for cell in row:
+                display += cell.symbol()
+
+            print(display)
+
+    def prettyPrint(self):
+        for index, row in enumerate(self.grid):
+
+            display = '{}: '.format(str(index).rjust(4, ' '))
+
+            for cell in row:
+                if cell.type == Cell.ROOM:
+                    room = self.getRoomForCell(cell)
+                    roomNumber = self.rooms.index(room) + 1
+
+                    # currently this expects min room dimensions of 3 and will break if the total room counts is 3 digits
+                    displayLine = room.coords[0] + int(room.height / 2)
+                    displayLength = len(str(roomNumber))
+                    displayStart = room.coords[1] + int(room.width / 2)
+
+                    if cell.coords[0] == displayLine:
+                        if (cell.coords[1] >= displayStart) and (cell.coords[1] < displayStart + displayLength):
+                            display += str(roomNumber)[cell.coords[1] - displayStart]
+                        else:
+                            display += cell.symbol()
+
+                    else:
+                        display += cell.symbol()
+
+                else:
+                    display += cell.symbol()
+
+            print(display)
+
+    def regionPrint(self):
+
+        for index, row in enumerate(self.grid):
+
+            display = '{}: '.format(str(index).rjust(4, ' '))
+
+            for cell in row:
+                display += cell.regionSymbol()
+
+            print(display)
+
+    def serialize(self):
+        # just need a basic way to encode the dungeon as a single string, nothing fancy
+        box = {
+            'width': self.width(),
+            'height': self.height(),
+            'cells': {}
+        }
+
+        # for large dungeons using sub-lists for each types saves a lot of json length
+        for t in Cell.realTypes():
+            code = 't' + str(t)
+            box['cells'][code] = []
+            for cell in self.allCells():
+                if cell.type == t:
+                    box['cells'][code].append(cell.coords)
+
+        return json.dumps(box)
+
+
+    # all the purely construction functions
+
     def newRegion(self):
         self.regionPalette += 1
 
@@ -184,46 +263,6 @@ class Dungeon:
                 options.append(dir)
 
         return options
-
-    def prettyPrint(self):
-
-        for index, row in enumerate(self.grid):
-
-            display = '{}: '.format(str(index).rjust(4, ' '))
-
-            for cell in row:
-                display += cell.symbol()
-
-            print(display)
-
-    def regionPrint(self):
-
-        for index, row in enumerate(self.grid):
-
-            display = '{}: '.format(str(index).rjust(4, ' '))
-
-            for cell in row:
-                display += cell.regionSymbol()
-
-            print(display)
-
-    def serialize(self):
-        # just need a basic way to encode the dungeon as a single string, nothing fancy
-        box = {
-            'width': self.width(),
-            'height': self.height(),
-            'cells': {}
-        }
-
-        # for large dungeons using sub-lists for each types saves a lot of json length
-        for t in Cell.realTypes():
-            code = 't' + str(t)
-            box['cells'][code] = []
-            for cell in self.allCells():
-                if cell.type == t:
-                    box['cells'][code].append(cell.coords)
-
-        return json.dumps(box)
 
 
 class Cell:
@@ -387,6 +426,17 @@ class Room:
 
     def populate(self, critter):
         self.locals.append(critter)
+
+    def __contains__(self, c):
+        if type(c) == Cell:
+            # print('1 {}, 2{}'.format(c, self.coords))
+            if (c.coords[0] >= self.coords[0] and c.coords[0] < self.coords[0] + self.height) and (c.coords[1] >= self.coords[1] and c.coords[1] < self.coords[1] + self.width):
+                return True
+            else:
+                return False
+        else:
+            return False
+
 
     def __str__(self):
         return '(Room: {}x{} @ {}, {})'.format(self.height, self.width, self.coords, len(self.locals))
