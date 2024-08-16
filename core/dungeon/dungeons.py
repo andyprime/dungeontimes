@@ -57,15 +57,35 @@ class Dungeon:
             if cell.type == Cell.ENTRANCE:
                 return cell
 
-    def allCells(self, filter=None):
+    def allCells(self, typeFilter=None, navigable=None):
         # this is just a convenience function for when a process needs all the cells
         # regardless of arrangement, some code predates this call and could be switched over
         bucket = []
         for i in range(0, self.height()):
             for j in range(0, self.width()):
-                if filter == None or filter == self.grid[i][j].type:
-                    bucket.append(self.grid[i][j])
+                c = self.grid[i][j]
+                if navigable != None and c.navigable():
+                    bucket.append(c)
+                elif typeFilter == None or typeFilter == c.type:
+                    bucket.append(c)
         return bucket
+
+    def allRoomCells(self, roomNo):
+        # a bit more efficient than making room no an allCells filter
+        if type(roomNo) == Room:
+            roomNo = self.rooms.index(roomNo)
+        room = self.rooms[roomNo]
+        cells = []
+        for i in range(room.height):
+            for j in range(room.width):
+                cells.append(self.grid[i + room.coords[0]][j + room.coords[1]])
+        print('!!!!!! target: {}, actual: {}'.format(room.height * room.width, len(cells)))
+        return cells
+
+    def getNeighbors(self, cell):
+        # get all the navigable neighbors of this cell
+        # return [x for x in cell.all() if x]
+        return [self.getCell(*x) for x in cell.all() if self.getCell(*x).navigable()]
 
     def getRoomForCell(self, cell):
         for room in self.rooms:
@@ -73,9 +93,12 @@ class Dungeon:
                 return room
         return None
 
+    def getRoomBrethren(self, cell):
+        # get all the cells that match the room of a given cell
+        r = self.getRoomForCell(cell)
+        return self.allRoomCells(r)
 
     def basicPrint(self):
-
         for index, row in enumerate(self.grid):
 
             display = '{}: '.format(str(index).rjust(4, ' '))
@@ -85,19 +108,22 @@ class Dungeon:
 
             print(display)
 
-    def prettyPrint(self):
+    def prettyPrint(self, highlight=None):
         for index, row in enumerate(self.grid):
 
             display = '{}: '.format(str(index).rjust(4, ' '))
 
             for cell in row:
-                if cell.type == Cell.ROOM:
+                if cell == highlight:
+                    display += 'P'
+                elif cell.type == Cell.ROOM:
                     room = self.getRoomForCell(cell)
                     roomNumber = self.rooms.index(room) + 1
 
                     # currently this expects min room dimensions of 3 and will break if the total room counts is 3 digits
                     displayLine = room.coords[0] + int(room.height / 2)
                     displayLength = len(str(roomNumber))
+                    # this could come left a cell when the room no is 2 digits but I've already spent too much time here
                     displayStart = room.coords[1] + int(room.width / 2)
 
                     if cell.coords[0] == displayLine:
@@ -105,7 +131,6 @@ class Dungeon:
                             display += str(roomNumber)[cell.coords[1] - displayStart]
                         else:
                             display += cell.symbol()
-
                     else:
                         display += cell.symbol()
 
@@ -279,6 +304,8 @@ class Cell:
     EAST = 102
     WEST = 103
 
+    NAVIGABLE = [2, 3, 4, 5]
+
     TRANSLATE = {
         1: 'solid',
         2: 'room',
@@ -338,6 +365,16 @@ class Cell:
             return '#'
         else:
             return Cell.PRETTY[self.type]
+
+    def positiveSymbol(self):
+        # the passage symbol is empty so it can't be colored in
+        if self.type == Cell.PASSAGE:
+            return Cell.PRETTY[Cell.SOLID]
+        else:
+            return self.symbol()
+
+    def navigable(self):
+        return self.type in Cell.NAVIGABLE
 
     def regionSymbol(self):
         if self.type == Cell.CONNECTOR:
@@ -407,6 +444,10 @@ class Cell:
 
     def adjacent(self, coords):
         return coords in self.all()
+
+    def isRoom(self):
+        # just a convenience function for accessing classes not to have to do the test themselves
+        return self.type == Cell.ROOM
 
     def serialize(self):
         # not gonna json dump it since the dungeon side will do that
