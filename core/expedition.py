@@ -19,8 +19,10 @@ class Expedition:
         self.cursor = dungeon.entrance()
         self.status = Expedition.READY
 
+        self.steps = 0
+
         # if set it is the cells we are currently trying to navigate through
-        self.path = None
+        self.path = []
 
         # Got to log which sections of the map have already been explored
         # So for now we're gonna keep the cell coords in an array to reference
@@ -39,6 +41,7 @@ class Expedition:
     def begin(self):
 
         while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
+            self.steps += 1
 
             if (self.status == Expedition.READY):
 
@@ -61,7 +64,7 @@ class Expedition:
                 easyDirections = [n for n in neighbors if n.coords not in self.history]
 
                 if self.path:
-                    destination = None
+                    destination = self.path.pop()
                 else:
                     if easyDirections:
                         destination = random.choice(easyDirections)
@@ -69,14 +72,10 @@ class Expedition:
 
                         # time to Dijkstra
 
+                        self.path = self.generatePath()
 
-                        path = self.generatePath()
-
-                        # self.processMessage('No easy directions, lying down and giving up')
-                        # self.status = Expedition.COMPLETE
-                        # destination = None
-
-
+                        self.processMessage('Generated this path: {}'.format(self.path))
+                        destination = self.path.pop()
 
                 if destination:
                     self.cursor = destination
@@ -92,7 +91,13 @@ class Expedition:
                     self.processMessage('Moving algorithm did not produce a destination')
                     self.status = Expedition.ERROR
 
-                self.historyMap()
+                if self.steps % 20 == 0:
+                    self.historyMap()
+
+                # if len(self.path) > 20:
+                #     self.historyMap()
+                #     print(len(self.path))
+                #     pizza.ham()
 
             else:
                 self.processMessage('Unknown expedition status: {}'.format(self.status))
@@ -102,18 +107,15 @@ class Expedition:
 
             display = '{}: '.format(str(index).rjust(4, ' '))
 
-            count = 0
-
             for cell in row:
                 if cell == self.cursor:
                     display += 'P'
+                elif cell in self.path:
+                    display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
                 elif cell.coords in self.history:
-                    count += 1
                     display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
                 else:
                     display += cell.symbol()
-            if count > 0:
-                self.processMessage('Row had {} visited cells'.format(count))
             print(display)
         print('\n')
 
@@ -129,16 +131,17 @@ class Expedition:
             previous[cell] = None
             q.append(cell)
 
-        distance[self.cursor.coords] = 0
-
+        distance[self.cursor] = 0
 
         while len(q) > 0:
-
             lowest = q[0]
             for cell in q:
                 if distance[cell] < distance[lowest]:
                     lowest = cell
             q.remove(lowest)
+
+            if lowest.coords not in self.history:
+                break
 
             neighbors = self.dungeon.getNeighbors(lowest)
             for neighbor in [n for n in neighbors if n in q]:
@@ -148,4 +151,14 @@ class Expedition:
                     distance[neighbor] = newDistance
                     previous[neighbor] = lowest
 
-        print(distance)
+        if len(q) == 0:
+            print('UH OH')
+            pizza.ham()
+
+        c = lowest
+        path = []
+        while(previous.get(c, False)):
+            path.append(previous[c])
+            c = previous[c]
+
+        return path

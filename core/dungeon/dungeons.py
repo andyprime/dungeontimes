@@ -64,8 +64,9 @@ class Dungeon:
         for i in range(0, self.height()):
             for j in range(0, self.width()):
                 c = self.grid[i][j]
-                if navigable != None and c.navigable():
-                    bucket.append(c)
+                if navigable != None and navigable:
+                    if c.navigable():
+                        bucket.append(c)
                 elif typeFilter == None or typeFilter == c.type:
                     bucket.append(c)
         return bucket
@@ -79,7 +80,6 @@ class Dungeon:
         for i in range(room.height):
             for j in range(room.width):
                 cells.append(self.grid[i + room.coords[0]][j + room.coords[1]])
-        print('!!!!!! target: {}, actual: {}'.format(room.height * room.width, len(cells)))
         return cells
 
     def getNeighbors(self, cell):
@@ -457,6 +457,8 @@ class Cell:
         # this one is basically just for printing/debug
         return 'Cell: {}, {}'.format(Cell.TRANSLATE[self.type], self._coords)
 
+    def __repr__(self):
+        return 'C {}'.format(self._coords)
 
 class Room:
 
