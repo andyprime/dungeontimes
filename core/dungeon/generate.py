@@ -23,8 +23,11 @@ class DungeonFactoryAlpha:
         See: https://journal.stuffwithstuff.com/2014/12/21/rooms-and-mazes/
     '''
 
-    DEFAULT_HEIGHT = 60
-    DEFAULT_WIDTH = 150
+    # DEFAULT_HEIGHT = 60
+    # DEFAULT_WIDTH = 150
+
+    DEFAULT_HEIGHT = 40
+    DEFAULT_WIDTH = 60
 
     ROOM_HEIGHT_RANGE = (3, 20)
     ROOM_WIDTH_RANGE = (3, 20)

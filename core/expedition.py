@@ -1,22 +1,28 @@
 import random
+import time
 
 class Expedition:
 
     READY = 1
     MOVING = 2
-    BATTLE = 3
-    RECOVER = 4
-    EXITING = 5
-    SCATTERED = 6
-    COMPLETE = 7
-    ERROR = 8
+    ENCOUNTER = 3
+    BATTLE = 4
+    RECOVER = 5
+    EXITING = 6
+    SCATTERED = 7
+    COMPLETE = 8
+    ERROR = 9
+
+    # Only print the map every X moves
+    PRINT_INTERVAL = 20
 
     def __init__(self, dungeon, party):
 
         self.dungeon = dungeon
         self.party = party
 
-        self.cursor = dungeon.entrance()
+        self.entrance = dungeon.entrance()
+        self.cursor = self.entrance
         self.status = Expedition.READY
 
         self.steps = 0
@@ -42,10 +48,11 @@ class Expedition:
 
         while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
             self.steps += 1
+            showOverride = False
 
             if (self.status == Expedition.READY):
 
-                self.processMessage('The party is attempting to navigate the dungeon.')
+                self.processMessage('The party enters the dungeon, prepared for peril and adventure.')
 
                 # Nothing needs to go here just yet but we're gonna formalize it as a step for clarity and future use
 
@@ -53,31 +60,14 @@ class Expedition:
 
             elif (self.status == Expedition.MOVING):
 
-                self.processMessage('The party is deciding where to go.')
+                if not self.path:
+                    self.path = self.navigate()
 
-                # just going to implement a real basic navigation system for now
-                # if there are unexplored cells adjacent to our current location just pick one at random and go there
-                # otherwise find the closest unexplored cell and chart a course to there
-
-
-                neighbors = self.dungeon.getNeighbors(self.cursor)
-                easyDirections = [n for n in neighbors if n.coords not in self.history]
-
-                if self.path:
+                if self.path is None:
+                    self.processMessage('The dungeon is completely explored.')
+                    self.status = Expedition.EXITING
+                elif len(self.path):
                     destination = self.path.pop()
-                else:
-                    if easyDirections:
-                        destination = random.choice(easyDirections)
-                    else:
-
-                        # time to Dijkstra
-
-                        self.path = self.generatePath()
-
-                        self.processMessage('Generated this path: {}'.format(self.path))
-                        destination = self.path.pop()
-
-                if destination:
                     self.cursor = destination
 
                     if self.cursor.isRoom():
@@ -91,26 +81,36 @@ class Expedition:
                     self.processMessage('Moving algorithm did not produce a destination')
                     self.status = Expedition.ERROR
 
-                if self.steps % 20 == 0:
-                    self.historyMap()
+            elif self.status == Expedition.EXITING:
+                if self.path:
+                    self.cursor = self.path.pop()
+                else:
 
-                # if len(self.path) > 20:
-                #     self.historyMap()
-                #     print(len(self.path))
-                #     pizza.ham()
+                    if self.cursor == self.entrance:
+                        self.processMessage('Party has reached the entrance and left the dungeon.')
+                        self.status = Expedition.COMPLETE
+                        showOverride = True
+                    else:
+                        self.processMessage('Party is ready to leave and plotting a course back to the entrance.')
+                        self.path = self.generatePath(target=self.entrance)
 
+            elif self.status == Expedition.COMPLETE:
+                self.processMessage('All done. Good hustle')
+                self.processMessage('Total Moves: {}'.format(self.steps))
             else:
                 self.processMessage('Unknown expedition status: {}'.format(self.status))
 
+            if self.steps % Expedition.PRINT_INTERVAL == 0 or showOverride:
+                self.historyMap()
+
     def historyMap(self):
         for index, row in enumerate(self.dungeon.grid):
-
             display = '{}: '.format(str(index).rjust(4, ' '))
 
             for cell in row:
                 if cell == self.cursor:
                     display += 'P'
-                elif cell in self.path:
+                elif self.path and cell in self.path:
                     display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
                 elif cell.coords in self.history:
                     display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
@@ -119,8 +119,26 @@ class Expedition:
             print(display)
         print('\n')
 
-    def generatePath(self):
+    def navigate(self):
+        # this is broken out to support future plans to provide different navigation approaches
+
+        # just going to implement a real basic navigation system for now
+        # if there are unexplored cells adjacent to our current location just pick one at random and go there
+        # otherwise find the closest unexplored cell and chart a course to there
+
+        neighbors = self.dungeon.getNeighbors(self.cursor)
+        easyDirections = [n for n in neighbors if n.coords not in self.history]
+
+        if easyDirections:
+            return [random.choice(easyDirections)]
+        else:
+            # time to Dijkstra
+            return self.generatePath()
+
+    def generatePath(self, target=None):
         # just a basic dijkstra implementation that stops once it finds an unexplored cell
+
+        pathingStart = time.perf_counter()
 
         distance = {}
         previous = {}
@@ -133,14 +151,19 @@ class Expedition:
 
         distance[self.cursor] = 0
 
+        count = 0
         while len(q) > 0:
+            count += 1
             lowest = q[0]
             for cell in q:
                 if distance[cell] < distance[lowest]:
                     lowest = cell
             q.remove(lowest)
 
-            if lowest.coords not in self.history:
+            # default break point is finding the first unexplored
+            if target and lowest == target:
+                break
+            elif lowest.coords not in self.history:
                 break
 
             neighbors = self.dungeon.getNeighbors(lowest)
@@ -151,12 +174,15 @@ class Expedition:
                     distance[neighbor] = newDistance
                     previous[neighbor] = lowest
 
+        delta = time.perf_counter() - pathingStart
+
+        self.processMessage('** Pathfinding run complete. Time: {}. Cells examined: {}, Cells remaining: {}'.format(str(delta), count, len(q)))
+
         if len(q) == 0:
-            print('UH OH')
-            pizza.ham()
+            return None
 
         c = lowest
-        path = []
+        path = [c]
         while(previous.get(c, False)):
             path.append(previous[c])
             c = previous[c]

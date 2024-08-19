@@ -14,7 +14,7 @@ def logHandlerPrint(message):
 
 def overwriteFileHandler(message):
     if not _advHandlerSettings.get('fileHandle', False):
-        _advHandlerSettings['fileHandle'] = open('defaultout.txt', 'w')
+        _advHandlerSettings['fileHandle'] = open('default.out', 'w')
         atexit.register(_overwriteCleanup)
 
     _advHandlerSettings['fileHandle'].write(message + "\n")
@@ -24,7 +24,7 @@ def _overwriteCleanup():
 
 if __name__ == "__main__":
 
-    # This is all just some ad hoc stuff until a more robust
+    # This is all just some ad hoc stuff until a more robust framework is made
 
     # Generate dungeon
     dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon()
