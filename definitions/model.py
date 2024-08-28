@@ -33,6 +33,8 @@ class Model:
 
     @classmethod
     def all(self):
+        if len(self._records) == 0:
+            self.load()
         return self._records
 
     @classmethod
@@ -125,7 +127,7 @@ class Monsters(Critter):
         })
 
     def __repr__(self):
-        return 'Monster ({})'.format(self.name)
+        return 'Monster Model ({})'.format(self.name)
 
 class Classes(Model):
     _source = 'classes.yaml'
