@@ -33,6 +33,8 @@ class Model:
 
     @classmethod
     def all(self):
+        if len(self._records) == 0:
+            self.load()
         return self._records
 
     @classmethod
