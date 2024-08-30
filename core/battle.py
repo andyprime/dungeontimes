@@ -1,7 +1,7 @@
 import random
 import uuid
 
-import dice
+import core.dice
 import core.critters
 
 from definitions.model import Moves
@@ -312,10 +312,10 @@ if __name__ == "__main__":
     print(' - Add participants')
 
     for i in range(4):
-        b.addParticipant('monster', critters.Monster.random())
+        b.addParticipant('monster', core.critters.Monster.random())
 
     for i in range(4):
-        b.addParticipant('adventurer', critters.Delver.random())
+        b.addParticipant('adventurer', core.critters.Delver.random())
 
     print(' - Start battle')
 
