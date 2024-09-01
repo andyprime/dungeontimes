@@ -63,11 +63,11 @@ class DungeonFactoryAlpha:
         self.header('Stage 1: Carve Rooms')
         room_attempts = 0
         while dungeon.roomCount() < self.MAX_ROOMS and room_attempts < self.MAX_ROOM_ATTEMPTS:
-            room = self.generateRoom()
-
             # note that row/col zero are reserved for border
             # also note that coords are generated outside of the room to avoid recording bad attempts at all
             coords = (random.randint(1, dungeon.height()), random.randint(1, dungeon.width()))
+
+            room = Room(coords, self.roomProps())
 
             if dungeon.canRoomFit(room, coords):
                 dungeon.carveRoom(room, coords)
@@ -384,13 +384,12 @@ class DungeonFactoryAlpha:
         return
 
     @classmethod
-    def generateRoom(self):
+    def roomProps(self):
         # TODO: maybe tweak this so really long, thin rooms are less common
-        props = {
+        return {
             'height': random.randint(*self.ROOM_HEIGHT_RANGE),
             'width': random.randint(*self.ROOM_WIDTH_RANGE)
         }
-        return Room(props)
 
     @classmethod
     def header(self, title):

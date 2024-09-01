@@ -127,7 +127,7 @@ class Monsters(Critter):
         })
 
     def __repr__(self):
-        return 'Monster ({})'.format(self.name)
+        return 'Monster Model ({})'.format(self.name)
 
 class Classes(Model):
     _source = 'classes.yaml'

@@ -1,6 +1,8 @@
 import uuid
 import json
 
+import core.critters
+
 class Dungeon:
     '''
         Currently the dungeon class only supports block dungeon types
@@ -462,12 +464,19 @@ class Cell:
 
 class Room:
 
-    def __init__(self, props):
+    def __init__(self, coords, props):
+        if not props.get('height', None):
+            raise ValueError('Room creation missing parameter: props.height')
+        if not props.get('width', None):
+            raise ValueError('Room creation missing parameter: props.width')
         self.height = props.get('height')
         self.width = props.get('width')
+        self.coords = coords
         self.locals = []
 
     def populate(self, critter):
+        if type(critter) != core.critters.Monster:
+            raise ValueError('Can not populate room with non-monster: {}'.format(critter))
         self.locals.append(critter)
 
     def __contains__(self, c):
