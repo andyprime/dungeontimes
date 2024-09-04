@@ -66,6 +66,7 @@ class Battle:
         self.conditions = []
         self.initiative = []
         self.state = Battle.PAPERWORK
+        self.roundCount = 0
 
     def start(self):
         print('Lets fight!')
@@ -76,52 +77,61 @@ class Battle:
 
         self.state = Battle.BATTAL
 
-        round_count = 1
-        while (self.state == Battle.BATTAL):
-            print('=' * 50)
-            print('ROUND {}'.format(round_count))
+        self.round()
 
-            for n, t in self.teams.items():
-                t.teamPrint()
-            print('=' * 50)
+    def round(self):
+        print('=' * 50)
+        print('ROUND {}'.format(self.roundCount))
 
-
-            # determine turn order
-            self.resetInitiative()
+        for n, t in self.teams.items():
+            t.teamPrint()
+        print('=' * 50)
 
 
-            # everybody gets a turn
-            while len(self.initiative) > 0:
-                current = self.initiative.pop()
-                # remember its a tuple
-                fellah = current[1]
-                teamName = current[2]
+        # determine turn order
+        self.resetInitiative()
 
-                print('Starting {}s turn '.format(fellah.name))
 
-                fellah.tickStatus()
+        # everybody gets a turn
+        while len(self.initiative) > 0:
+            current = self.initiative.pop()
+            # remember its a tuple
+            fellah = current[1]
+            teamName = current[2]
 
-                if fellah.canAct():
+            print('Starting {}s turn '.format(fellah.name))
 
-                    # determine a course of action
+            fellah.tickStatus()
 
-                    action = self.selectCombatAction(fellah, teamName)
+            if fellah.canAct():
 
-                    # execute it
+                # determine a course of action
 
-                    self.processAction(action)
-                else:
-                    print('Skipping {}, they are having a rough day'.format(fellah.name))
+                action = self.selectCombatAction(fellah, teamName)
 
-                team_counts = [t.remaining() for t in self.teams.values()]
-                if 0 in team_counts:
-                    self.state = Battle.OVER
-                    break
+                # execute it
 
-            round_count += 1
+                self.processAction(action)
+            else:
+                print('Skipping {}, they are having a rough day'.format(fellah.name))
 
-        print('!' * 10)
-        print('Combat loop over')
+            team_counts = [t.remaining() for t in self.teams.values()]
+            if 0 in team_counts:
+                self.state = Battle.OVER
+                break
+
+        self.roundCount += 1
+
+        # print('!' * 10)
+        # print('Combat loop over')
+
+    def complete(self):
+        return self.state == Battle.OVER
+
+    # def victor(self):
+    #     if self.state != Battle.OVER:
+    #         return None
+
 
 
 
@@ -320,6 +330,9 @@ if __name__ == "__main__":
     print(' - Start battle')
 
     b.start()
+
+    while b.state != Battle.OVER:
+        b.round()
 
     print('Testing complete.')
     print('Seed : {}'.format(seed))
