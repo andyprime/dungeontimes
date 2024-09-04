@@ -89,15 +89,16 @@ class Dungeon:
         # return [x for x in cell.all() if x]
         return [self.getCell(*x) for x in cell.all() if self.getCell(*x).navigable()]
 
-    def getRoomForCell(self, cell):
+    # def getRoomForCell(self, cell):
+    def roomAt(self, cell):
         for room in self.rooms:
             if cell in room:
                 return room
         return None
 
-    def getRoomBrethren(self, cell):
+    def roomBrethren(self, cell):
         # get all the cells that match the room of a given cell
-        r = self.getRoomForCell(cell)
+        r = self.roomAt(cell)
         return self.allRoomCells(r)
 
     def basicPrint(self):
@@ -119,7 +120,7 @@ class Dungeon:
                 if cell == highlight:
                     display += 'P'
                 elif cell.type == Cell.ROOM:
-                    room = self.getRoomForCell(cell)
+                    room = self.roomAt(cell)
                     roomNumber = self.rooms.index(room) + 1
 
                     # currently this expects min room dimensions of 3 and will break if the total room counts is 3 digits
@@ -481,6 +482,13 @@ class Room:
         if type(critter) != core.critters.Monster:
             raise ValueError('Can not populate room with non-monster: {}'.format(critter))
         self.locals.append(critter)
+
+    def occupied(self):
+        return len(self.locals) > 0
+
+    def empty(self):
+        # clear out all the occupants of the room, they are probably dead!
+        self.locals = []
 
     def __contains__(self, c):
         if type(c) == Cell:
