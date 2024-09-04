@@ -306,6 +306,7 @@ class Cell:
     EAST = 102
     WEST = 103
 
+    ALL_TYPE = [1, 2, 3, 4, 5, 6]
     NAVIGABLE = [2, 3, 4, 5]
 
     TRANSLATE = {
@@ -341,6 +342,8 @@ class Cell:
         return [self.ROOM, self.PASSAGE, self.DOORWAY, self.ENTRANCE]
 
     def __init__(self, border=False, type=None):
+        if type and type not in Cell.ALL_TYPE:
+            raise ValueError('Invalid Cell type: {}'.format(type))
         self.type = type
         # Note that we can't use static variable as parameter defaults in Python, so do this manually
         if self.type is None:
@@ -369,7 +372,7 @@ class Cell:
             return Cell.PRETTY[self.type]
 
     def positiveSymbol(self):
-        # the passage symbol is empty so it can't be colored in
+        # some cell symbols are too blank to appear well when we use a non-standard color to highlight special cells
         if self.type == Cell.PASSAGE:
             return Cell.PRETTY[Cell.SOLID]
         else:
