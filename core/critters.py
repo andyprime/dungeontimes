@@ -58,6 +58,9 @@ class Creature:
         else:
             return 'mostly ok'
 
+    def recuperate(self):
+        self.currenthp = self.maxhp
+
     def rollStat(self, stat):
         target = getattr(self, stat)
         return Dice.d(1,20) <= target

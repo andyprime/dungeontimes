@@ -165,6 +165,9 @@ class Expedition:
     # Recover
     def runstate_rec(self):
         self.processMessage('The party takes a little breather after a fight.')
+        # for now we're just gonna heal the entire party so we don't die every other fight
+        for p in self.party:
+            p.recuperate()
         self.status = Expedition.MOVING
 
     # Complete
