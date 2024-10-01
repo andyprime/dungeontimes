@@ -30,6 +30,8 @@ class Expedition:
         self.cursor = self.entrance
         self.status = Expedition.READY
 
+        print(self.entrance)
+
         self.steps = 0
 
         # if set it is the cells we are currently trying to navigate through

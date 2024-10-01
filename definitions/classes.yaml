@@ -1,29 +1,34 @@
 ---
 name: Ethicist
+code: ETHICIST
 hp: 10
 moves:
   - DISCOURSE
   - INVECTIVE
 ---
 name: Muscle Man
+code: MUSCLE
 hp: 16
 moves:
   - BODYSLAM
   - FLEX
 ---
 name: Swordlord
+code: SWORDLORD
 hp: 14
 moves:
   - SPINTOWIN
   - SHOWOFF
 ---
 name: Neerdowell
+code: NEERDOWELL
 hp: 12
 moves:
   - HIDE
   - STABBITY
 ---
 name: Magician
+code: MAGICIAN
 hp: 10
 moves:
   - PRESTIDIGITATION

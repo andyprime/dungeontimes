@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from core.dice import Dice
@@ -92,15 +93,25 @@ class Delver(Creature):
 
         return Delver(NameFactory.generateRandom(), model.Stocks.random(), model.Classes.random())
 
-    def __init__(self, name, stock, job):
+    def __init__(self, name=None, stock=None, job=None, serialized=None):
         super().__init__()
 
-        self.name = name
-        # note that for the moment stock just contains a name string, this will need to be more involved later
-        self.stock = stock.name
-        self.job = job
-        self.maxhp = job.hp
-        self.currenthp = job.hp
+        if serialized:
+            if type(serialized) == str:
+                serialized = json.loads(serialized)
+
+            self.name = serialized['n']
+            self.stock = serialized['s']
+            self.job = model.Classes.find(serialized['j'])
+            self.maxhp = serialized['mhp']
+            self.currenthp = serialized['chp']
+        else:
+            self.name = name
+            # note that for the moment stock just contains a name string, this will need to be more involved later
+            self.stock = stock.name
+            self.job = job
+            self.maxhp = job.hp
+            self.currenthp = job.hp
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -133,6 +144,21 @@ class Delver(Creature):
 
         return spells
 
+    def serialize(self, stringify=False):
+        c = {
+            'n': self.name,
+            's': self.stock,
+            'j': self.job.code,
+            'mhp': self.maxhp,
+            'chp': self.currenthp
+        }
+
+        if stringify:
+            return json.dumps(c)
+        else:
+            return c
+
+
 class Monster(Creature):
 
     @classmethod
@@ -140,16 +166,23 @@ class Monster(Creature):
         # return Monster(template=model.Monsters.random())
         return Monster(model.Monsters.random())
 
-    def __init__(self, template):
+    def __init__(self, template=None, serialized=None):
         from core.names import NameFactory
 
         super().__init__()
 
-        self._template = template
-        self.name = NameFactory.randomByType(template.category)
-        self.stock  = template.name
-        self.maxhp = template.hp
-        self.currenthp = template.hp
+        if serialized:
+            self._template = model.Monsters.find(serialized['t'])
+            self.name = serialized['n']
+            self.stock = self._template.name
+            self.maxhp = serialized['mhp']
+            self.currenthp = serialized['chp']
+        else:
+            self._template = template
+            self.name = NameFactory.randomByType(template.category)
+            self.stock  = template.name
+            self.maxhp = template.hp
+            self.currenthp = template.hp
 
     def moves(self):
         moves = []
@@ -159,6 +192,18 @@ class Monster(Creature):
 
     def testThresholds(self, test):
         return (60, 80)
+
+    def serialize(self, stringify=False):
+        c = {
+            'n': self.name,
+            't': self._template.code,
+            'mhp': self.maxhp,
+            'chp': self.currenthp
+        }
+        if stringify:
+            return json.dumps(c)
+        else:
+            return c
 
     def __str__(self):
         return self.name + ', ' + self.stock + ', ' + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'

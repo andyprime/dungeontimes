@@ -119,6 +119,7 @@ class Monsters(Critter):
 
     _schema = Schema({
             'name': And(str, len),
+            'code': And(str, len),
             'category': And(str, len),
             'hp': And(int, lambda h: h > 0),
             'traits': And(lambda t: len(t) == 3, [str]),
@@ -134,6 +135,7 @@ class Classes(Model):
 
     _schema = Schema({
             'name': And(str, len),
+            'code': And(str, len),
             'hp': And(int, lambda h: h > 0),
             'moves': [str],
             Optional('startingSpells'): [str]

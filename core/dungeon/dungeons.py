@@ -15,15 +15,22 @@ class Dungeon:
         self.rooms = []
         self.regionPalette = 1
 
+
+        print('Constructor: {}'.format(serialized))
         if serialized:
-            params = json.loads(serialized)
+            document = json.loads(serialized)
 
-            self.initialize(params.get('height'), params.get('width'))
+            print(document)
 
-            for code, coords in params.get('cells', {}).items():
+            self.initialize(document.get('height'), document.get('width'))
+
+            for code, coords in document.get('cells', {}).items():
                 type = int(code[1])
                 for c in coords:
                     self.getCell(c[0], c[1]).type = type
+
+            for r in document.get('rooms', []):
+                self.rooms.append(Room(serialized = r))
 
     def initialize(self, height, width):
         # TODO: complain if params are bad
@@ -153,15 +160,16 @@ class Dungeon:
 
             print(display)
 
-    def serialize(self):
+    def serialize(self, includeOccupants=False):
         # just need a basic way to encode the dungeon as a single string, nothing fancy
         box = {
             'width': self.width(),
             'height': self.height(),
-            'cells': {}
+            'cells': {},
+            'rooms': [r.serialize() for r in self.rooms]
         }
 
-        # for large dungeons using sub-lists for each types saves a lot of json length
+        # TODO: save some space by switching to a single string approach
         for t in Cell.realTypes():
             code = 't' + str(t)
             box['cells'][code] = []
@@ -196,7 +204,6 @@ class Dungeon:
         left_bound = coords[1] - 1
         right_bound = coords[1] + room.width + 1
 
-
         # print('Height check: {}, {}'.format(bottom_bound - top_bound, room.height))
         # print(' Width check: {}, {}'.format(right_bound - left_bound, room.width))
 
@@ -214,7 +221,6 @@ class Dungeon:
             print('Dimensions: {}, {}'.format(self.height(), self.width()))
 
         return True
-
 
     def carveRoom(self, room, coords):
         # we're gonna assume you already ran canRoomFit I guess
@@ -455,9 +461,12 @@ class Cell:
         # just a convenience function for accessing classes not to have to do the test themselves
         return self.type == Cell.ROOM
 
-    def serialize(self):
+    def serialize(self, stringify=False):
         # not gonna json dump it since the dungeon side will do that
-        return [self.type, self.h, self.w]
+        if stringify:
+            return json.dumps([self.type, self.h, self.w])
+        else:
+            return [self.type, self.h, self.w]
 
     def __str__(self):
         # this one is basically just for printing/debug
@@ -468,15 +477,24 @@ class Cell:
 
 class Room:
 
-    def __init__(self, coords, props):
-        if not props.get('height', None):
-            raise ValueError('Room creation missing parameter: props.height')
-        if not props.get('width', None):
-            raise ValueError('Room creation missing parameter: props.width')
-        self.height = props.get('height')
-        self.width = props.get('width')
-        self.coords = coords
-        self.locals = []
+    def __init__(self, coords=None, props=None, serialized=None):
+        if serialized:
+            i = serialized['i']
+            self.height = i[0]
+            self.width = i[1]
+            self.coords = (i[2], i[3])
+            self.locals = []
+            for o in serialized['occ']:
+                self.populate(core.critters.Monster(serialized=o))
+        else:
+            if not props.get('height', None):
+                raise ValueError('Room creation missing parameter: props.height')
+            if not props.get('width', None):
+                raise ValueError('Room creation missing parameter: props.width')
+            self.height = props.get('height')
+            self.width = props.get('width')
+            self.coords = coords
+            self.locals = []
 
     def populate(self, critter):
         if type(critter) != core.critters.Monster:
@@ -490,6 +508,17 @@ class Room:
         # clear out all the occupants of the room, they are probably dead!
         self.locals = []
 
+    def serialize(self, stringify=False):
+        box = {
+            'i': (self.height, self.width, self.coords[0], self.coords[1]),
+        }
+        if len(self.locals):
+            box['occ'] = [l.serialize() for l in self.locals]
+        if stringify:
+            return json.dumps(box)
+        else:
+            return box
+
     def __contains__(self, c):
         if type(c) == Cell:
             # print('1 {}, 2{}'.format(c, self.coords))
@@ -499,7 +528,6 @@ class Room:
                 return False
         else:
             return False
-
 
     def __str__(self):
         return '(Room: {}x{} @ {}, {})'.format(self.height, self.width, self.coords, len(self.locals))

@@ -1,6 +1,7 @@
 # monster is a relative term, its just anything that's not a delver
 ---
 name: Globlin
+code: GLOBLIN
 category: lilguy
 hp: 4
 traits:
@@ -12,6 +13,7 @@ moves:
   - STABBITY
 ---
 name: Boglin
+code: BOGLIN
 category: lilguy
 hp: 6
 traits:
@@ -22,6 +24,7 @@ moves:
   - STABBITY
 ---
 name: King Stinker
+code: STINKER
 category: beefcake
 hp: 10
 traits:
@@ -33,6 +36,7 @@ moves:
   - FLEX
 ---
 name: Yeti
+code: YETI
 category: beefcake
 hp: 14
 traits:
@@ -44,6 +48,7 @@ moves:
   - PUMMEL
 ---
 name: Zorbo
+code: ZORBO
 category: critter
 hp: 12
 traits:
@@ -56,6 +61,7 @@ moves:
   - MAUL
 ---
 name: Owlbear
+code: OWLBEAR
 category: critter
 hp: 14
 traits:
@@ -67,6 +73,7 @@ moves:
   - SQUARK
 ---
 name: Gelatinous Cube
+code: GELCUBE
 category: weirdo
 hp: 10
 traits:
