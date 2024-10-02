@@ -15,13 +15,8 @@ class Dungeon:
         self.rooms = []
         self.regionPalette = 1
 
-
-        print('Constructor: {}'.format(serialized))
         if serialized:
             document = json.loads(serialized)
-
-            print(document)
-
             self.initialize(document.get('height'), document.get('width'))
 
             for code, coords in document.get('cells', {}).items():

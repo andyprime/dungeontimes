@@ -20,17 +20,19 @@ class Expedition:
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, dungeon, party):
+    def __init__(self, dungeon, party, cursor=None):
 
         self.dungeon = dungeon
         self.party = party
         self.battle = None
 
         self.entrance = dungeon.entrance()
-        self.cursor = self.entrance
         self.status = Expedition.READY
 
-        print(self.entrance)
+        if cursor:
+            self.cursor = dungeon.getCell(*tuple(cursor))
+        else:
+            self.cursor = self.entrance
 
         self.steps = 0
 

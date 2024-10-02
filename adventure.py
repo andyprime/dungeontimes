@@ -40,7 +40,8 @@ if __name__ == "__main__":
         if not d:
             raise ValueError('No matching dungeon found.')
 
-        dungeon = Dungeon(serialized=d.get('serialized'))
+        cursor = exp.get('cursor', None)
+        dungeon = Dungeon(serialized=d.get('body'))
 
         # get the party
         print('Unpacking delvers')
@@ -53,6 +54,7 @@ if __name__ == "__main__":
 
         # Generate dungeon
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon()
+        cursor = None
 
         # Populate dungeon
         for room in dungeon.rooms:
@@ -70,7 +72,7 @@ if __name__ == "__main__":
     print(delvers)
 
     print('Start expedition process')
-    exp = core.expedition.Expedition(dungeon, delvers)
+    exp = core.expedition.Expedition(dungeon, delvers, cursor)
 
     # exp.registerProcessor(logHandlerPrint)
     exp.registerProcessor(overwriteFileHandler)
