@@ -146,11 +146,11 @@ class Delver(Creature):
 
     def serialize(self, stringify=False):
         c = {
-            'n': self.name,
-            's': self.stock,
-            'j': self.job.code,
-            'mhp': self.maxhp,
-            'chp': self.currenthp
+            'name': self.name,
+            'stock': self.stock,
+            'job': self.job.code,
+            'maxhp': self.maxhp,
+            'currenthp': self.currenthp
         }
 
         if stringify:

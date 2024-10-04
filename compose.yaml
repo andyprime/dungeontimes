@@ -9,3 +9,12 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: devenvironment
       MONGO_INITDB_DATABASE: dungeondb
+
+  api:
+    build:
+      context: .
+      dockerfile: containers/api/Dockerfile
+    #image: nginx
+    restart: always
+    ports:
+      - "8081:80"
