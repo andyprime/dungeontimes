@@ -30,6 +30,8 @@ if __name__ == "__main__":
     client = MongoClient('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
     db = client.dungeondb
 
+    print('!!!!!!!! {}'.format(type(db)))
+
     exp = db.expeditions.find_one({'complete': False})
 
     if exp:

@@ -1,9 +1,5 @@
 FROM python:3.12
 
-#ENV BASEDIR /opt/dungeontimes
-
-#RUN mkdir -p $BASEDIR
-
 WORKDIR /code
 
 COPY containers/api/requirements.txt /code/requirements.txt
