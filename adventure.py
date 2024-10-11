@@ -2,6 +2,7 @@
 import random
 import atexit
 from pymongo import MongoClient
+from pymongo.errors import ServerSelectionTimeoutError
 from bson import ObjectId
 
 import core
@@ -27,10 +28,14 @@ def _overwriteCleanup():
 if __name__ == "__main__":
 
     # This is all just some ad hoc stuff until a more robust framework is made
-    client = MongoClient('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
-    db = client.dungeondb
+    try:
+        client = MongoClient('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
+        db = client.dungeondb
 
-    exp = db.expeditions.find_one({'complete': False})
+        exp = db.expeditions.find_one({'complete': False})
+    except:
+        print('Could not connect to Mongo')
+        exp = False
 
     if exp:
         print('Existing expedition found, unpacking.')
