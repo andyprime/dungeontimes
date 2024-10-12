@@ -36,11 +36,11 @@ if __name__ == "__main__":
     delvers = []
     for i in range(4):
         delver = core.critters.Delver.random()
-        delvers.append({
-                'id': str(uuid.uuid1()),
-                'name': delver.name,
-                'body': delver.serialize()
-            })
+        x = delver.serialize()
+        print('1 {}'.format(x))
+        x.update({'id': str(uuid.uuid1())})
+        print('2 {}'.format(x))
+        delvers.append(x)
 
     e = {
         'name': 'PLACEHOLDER',

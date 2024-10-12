@@ -7,7 +7,7 @@ from pymongo.database import Database
 from uuid import UUID
 
 
-def dbSession():
+def db_session():
     client = MongoClient('mongodb://{}:{}@data-store:27017'.format('root', 'devenvironment'))
     db = client.dungeondb
     try:
@@ -17,19 +17,26 @@ def dbSession():
 
 app = FastAPI()
 
-
 @app.get("/")
 def read_root():
     return {"Oh": "Hello there"}
 
+@app.get('/delver/')
+def read_delvers(db: Database = Depends(db_session)):
+    ds = []
+    for d in db.delvers.find():
+        d.pop('_id')
+        ds.append(d)
+    return ds
+
 @app.get("/delver/{delver_id}")
-def read_delver(delver_id: UUID, db: Database = Depends(dbSession)):
-    x = db.delvers.find_one({'id': delver_id})
-    x.pop('_id')
-    return x
+def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
+    d = db.delvers.find_one({'id': str(delver_id)})
+    d.pop('_id')
+    return d
 
 @app.get("/dungeon/")
-def read_dungeon(db: Database = Depends(dbSession)):
+def read_dungeons(db: Database = Depends(db_session)):
     ds = []
     for d in db.dungeons.find():
         d.pop('_id')
@@ -37,19 +44,21 @@ def read_dungeon(db: Database = Depends(dbSession)):
     return ds
 
 @app.get("/dungeon/{dungeon_id}")
-def read_dungeon(dungeon_id: str, db: Database = Depends(dbSession)):
-    x = db.dungeons.find_one({'id': dungeon_id})
-    x.pop('_id')
-    return x
+def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
+    d = db.dungeons.find_one({'id': str(dungeon_id)})
+    d.pop('_id')
+    return d
 
 @app.get("/expedition/")
-def read_expedition(db: Database = Depends(dbSession)):
-    x = db.expeditions.find_one({'id': exp_id})
-    x.pop('_id')
-    return x
+def read_expedition(db: Database = Depends(db_session)):
+    es = []
+    for ex in db.expeditions.find():
+        ex.pop('_id')
+        es.append(ex)
+    return es
 
 @app.get("/expedition/{exp_id}")
-def read_expedition(exp_id: str, db: Database = Depends(dbSession)):
-    x = db.expeditions.find_one({'id': exp_id})
-    x.pop('_id')
-    return x
+def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):
+    e = db.expeditions.find_one({'id': str(exp_id)})
+    e.pop('_id')
+    return e
