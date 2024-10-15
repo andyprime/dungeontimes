@@ -18,3 +18,11 @@ services:
     restart: always
     ports:
       - "8081:80"
+
+  web:
+    build:
+      context: .
+      dockerfile: containers/web/Dockerfile
+    restart: always
+    ports: 
+      - "80:80"
