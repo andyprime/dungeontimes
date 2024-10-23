@@ -18,20 +18,29 @@ const CELL_COLORS = {
 
 const CURSOR_COLOR = '#18910f';
 
-document.addEventListener('DOMContentLoaded', async function(event) {
-    url = "http://localhost:8081/dungeon/"
-    resp = await fetch(url)
-    json = await resp.json()
-    envelope = json[0]
+dungeon = null;
+cursor = null;
+grid = [];
 
-    dungeon = JSON.parse(envelope['body'])
+
+document.addEventListener('DOMContentLoaded', async function(event) {
+    url = "http://localhost:8081/expedition/";
+    resp = await fetch(url);
+    json = await resp.json();
+    expedition = json[0];
+    console.log(expedition);
+
+    url = "http://localhost:8081/dungeon/" + expedition['dungeon'];
+    resp = await fetch(url);
+    json = await resp.json();
+    
+    dungeon = JSON.parse(json['body']);
+    cursor = expedition['cursor'];
 
     const canvas = document.getElementById("thedungeon");
-    const ctx = canvas.getContext("2d");
 
     canvas.setAttribute('width', (dungeon['width'] * GRID_SIZE) + (dungeon['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
     canvas.setAttribute('height', (dungeon['height'] * GRID_SIZE) + (dungeon['height'] - 1) + (2 * VERTICAL_MARGIN) );
-
 
     grid = [...Array(dungeon['width'])];
 
@@ -47,21 +56,28 @@ document.addEventListener('DOMContentLoaded', async function(event) {
         }
     }
 
-    console.log(grid);
+    draw();
+});
+
+function draw() {
+    console.log(cursor);
+    const canvas = document.getElementById("thedungeon");
+    const ctx = canvas.getContext("2d");
 
     for (x = 0; x < grid.length; x++) {
         for (y = 0; y < grid[i].length; y++) {
 
             switch (grid[x][y]) {
                 case ENTRANCE:
-                    console.log('Special case');
-                    ctx.fillStyle = CELL_COLORS[grid[x][y]];
+                    console.log(x, y, cursor);
+                    if (cursor != null && x == cursor[1] && y == cursor[0]) {
+                        ctx.fillStyle = CURSOR_COLOR;
+                    } else {
+                        ctx.fillStyle = CELL_COLORS[grid[x][y]];
+                    }
 
                     xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
                     ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
-
-                    console.log('X Dim.', xpos, xpos+GRID_SIZE);
-                    console.log('Y Dim', ypos, ypos+GRID_SIZE);
 
                     ctx.fillRect(xpos, ypos, GRID_SIZE, GRID_SIZE);
 
@@ -92,4 +108,4 @@ document.addEventListener('DOMContentLoaded', async function(event) {
         }
     }
 
-})
+}
