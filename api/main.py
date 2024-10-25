@@ -113,8 +113,5 @@ async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depen
         async with queue.iterator() as q:
             async for message in q:
                 await manager.broadcast(message.body)
-        # while True:
-        #     data = await rbt.something()
-        #     await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(websocket)

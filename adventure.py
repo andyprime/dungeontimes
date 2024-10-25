@@ -63,7 +63,6 @@ if __name__ == "__main__":
         print('Unpacking delvers')
         delvers = []
         for a in db.delvers.find({'id': {'$in': exp.get('party') }}):
-            print(a)
             delvers.append(core.critters.Delver(serialized=a))
 
     else:

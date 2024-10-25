@@ -28,9 +28,6 @@ services:
 
   rabbit:
     image: rabbitmq:management
-    # build:
-    #   context: .
-    #   dockerfile: containers/rabbit/Dockerfile
     restart: always
     ports:
       - "5672:5672"
