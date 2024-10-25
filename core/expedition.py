@@ -45,13 +45,30 @@ class Expedition:
         self.history.append(self.cursor.coords)
 
         self.processors = []
+        self.emitters = []
 
     def registerProcessor(self, callback):
         self.processors.append(callback)
 
-    def processMessage(self, message):
+    def registerEventEmitter(self, callback):
+        self.emitters.append(callback)
+
+    def processMessage(self, message, emit=False):
         for f in self.processors:
             f(message)
+        if emit:
+            self.emitNarrative(message)
+
+    def emitCursorUpdate(self):
+        c = self.cursor.coords
+        msg = 'CURSOR;{},{}'.format(c[0], c[1])
+        for e in self.emitters:
+            e(msg.encode('ASCII'))
+
+    def emitNarrative(self, s):
+        msg = 'NARR;{}'.format(s)
+        for e in self.emitters:
+            e(msg.encode('ASCII'))
 
     def begin(self):
         while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
@@ -74,7 +91,7 @@ class Expedition:
 
     # Ready
     def runstate_rdy(self):
-        self.processMessage('The party enters the dungeon, prepared for peril and adventure.')
+        self.processMessage('The party enters the dungeon, prepared for peril and adventure.', True)
 
         # Nothing needs to go here just yet but we're gonna formalize it as a step for clarity and future use
 
@@ -86,16 +103,18 @@ class Expedition:
             self.path = self.navigate()
 
         if self.path is None:
-            self.processMessage('The dungeon is completely explored.')
+            self.processMessage('The party declares there is nothing more to explore.', True)
             self.status = Expedition.EXITING
         elif len(self.path):
             destination = self.path.pop()
             self.cursor = destination
             self.processMessage('Moving to {}'.format(self.cursor.coords))
 
+            self.emitCursorUpdate()
+
             if self.cursor.isRoom():
                 if self.cursor.coords not in self.history:
-                    self.processMessage('Party has encountered an unexplored room. Get the lanterns ready.')
+                    self.processMessage('The party has encountered an unexplored room. Get the lanterns ready.', True)
                     self.status = Expedition.ENCOUNTER
 
                 # TODO: move this to the encounter complete section?
@@ -113,10 +132,10 @@ class Expedition:
     def runstate_enc(self):
 
         if self.dungeon.roomAt(self.cursor).occupied():
-            self.processMessage('This room is full of monsters! A battle ensues!')
+            self.processMessage('This room is full of monsters! A battle ensues!', True)
             self.status = Expedition.BATTLE
         else:
-            self.processMessage('This room is unoccupied. Maybe there is some treasure? (That doesnt exist yet)')
+            self.processMessage('This room is empty, oh well.', True)
             self.status = Expedition.MOVING
 
     # Exiting
@@ -126,11 +145,11 @@ class Expedition:
         else:
 
             if self.cursor == self.entrance:
-                self.processMessage('Party has reached the entrance and left the dungeon.')
+                self.processMessage('The party has reached the entrance and left the dungeon.', True)
                 self.status = Expedition.COMPLETE
                 showOverride = True
             else:
-                self.processMessage('Party is ready to leave and plotting a course back to the entrance.')
+                self.processMessage('Party is ready to leave and plotting a course back to the entrance.', True)
                 self.path = self.generatePath(target=self.entrance)
 
     # Battle
@@ -139,7 +158,7 @@ class Expedition:
 
             if self.battle.complete():
                 if any([d.canAct() for d in self.party]) :
-                    self.processMessage('The party is victorious. Good job team.')
+                    self.processMessage('The party is victorious. Good job team.', True)
 
                     # clear out the dead monsters
                     self.dungeon.roomAt(self.cursor).empty()
@@ -147,14 +166,14 @@ class Expedition:
 
                     self.status = Expedition.RECOVER
                 else:
-                    self.processMessage('Sadly the part has been slain my the local miscreants.')
+                    self.processMessage('Sadly the party has been slain my the local miscreants.', True)
                     self.status = Expedition.SCATTERED
             else:
                 self.battle.round()
 
         else:
 
-            self.battle = Battle()
+            self.battle = Battle(self.processMessage)
 
             for m in self.dungeon.roomAt(self.cursor).locals:
                 self.battle.addParticipant('monster', m)

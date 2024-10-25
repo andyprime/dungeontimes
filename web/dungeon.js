@@ -24,6 +24,9 @@ grid = [];
 
 
 document.addEventListener('DOMContentLoaded', async function(event) {
+    var socket = new WebSocket('ws://localhost:8081/feed/dungeon');
+    socket.onmessage = receiveMessage;
+
     url = "http://localhost:8081/expedition/";
     resp = await fetch(url);
     json = await resp.json();
@@ -59,23 +62,48 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     draw();
 });
 
+async function receiveMessage(event) {
+    msg = await event.data.text();
+    console.log(msg);
+    bits = msg.split(';');
+    if (bits[0] == 'CURSOR') {
+        coords = bits[1].split(',');
+        
+        cursor = [coords[0], coords[1]];
+        draw();
+    } else if (bits[0] == 'NARR') {
+        addEvent(bits[1]);
+    }
+}
+
+function addEvent(message) {
+    newbie = document.createElement('p');
+    newbie.innerHTML = message;
+    document.querySelector('#event-log').prepend(newbie);
+
+    events = document.querySelectorAll('#event-log p');
+    if (events.length > 10) {
+        events[events.length - 1].remove();
+    }
+}
+
 function draw() {
-    console.log(cursor);
+    console.log('Pre-draw cursor: ', cursor);
     const canvas = document.getElementById("thedungeon");
     const ctx = canvas.getContext("2d");
 
     for (x = 0; x < grid.length; x++) {
         for (y = 0; y < grid[i].length; y++) {
 
+            if (cursor != null && x == cursor[1] && y == cursor[0]) {
+                console.log('Found cursor', grid[x][y]);
+                ctx.fillStyle = CURSOR_COLOR;
+            } else {
+                ctx.fillStyle = CELL_COLORS[grid[x][y]];
+            }
+
             switch (grid[x][y]) {
                 case ENTRANCE:
-                    console.log(x, y, cursor);
-                    if (cursor != null && x == cursor[1] && y == cursor[0]) {
-                        ctx.fillStyle = CURSOR_COLOR;
-                    } else {
-                        ctx.fillStyle = CELL_COLORS[grid[x][y]];
-                    }
-
                     xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
                     ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
 
@@ -98,8 +126,6 @@ function draw() {
 
                     break;
                 default:
-                    ctx.fillStyle = CELL_COLORS[grid[x][y]];
-
                     xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
                     ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
 

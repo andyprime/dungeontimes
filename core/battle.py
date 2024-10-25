@@ -60,17 +60,18 @@ class Battle:
     OVER = 3
 
 
-    def __init__(self):
+    def __init__(self, processCallback):
         self.teams = {}
         self.teamCount = 0
         self.conditions = []
         self.initiative = []
         self.state = Battle.PAPERWORK
         self.roundCount = 0
+        self.processCallback = processCallback
 
     def start(self):
-        print('Lets fight!')
-        print()
+        self.processMessage('Lets fight!')
+        self.processMessage('')
 
         if len(self.teams) < 2:
             raise ValueError('Can not initiate battle with team count below two.')
@@ -79,14 +80,17 @@ class Battle:
 
         self.round()
 
+    def processMessage(self, message, emit=False):
+        if callable(self.processCallback):
+            self.processCallback(message, emit)
+
     def round(self):
-        print('=' * 50)
-        print('ROUND {}'.format(self.roundCount))
+        self.processMessage('=' * 50)
+        self.processMessage('ROUND {}'.format(self.roundCount))
 
         for n, t in self.teams.items():
             t.teamPrint()
-        print('=' * 50)
-
+        self.processMessage('=' * 50)
 
         # determine turn order
         self.resetInitiative()
@@ -99,7 +103,7 @@ class Battle:
             fellah = current[1]
             teamName = current[2]
 
-            print('Starting {}s turn '.format(fellah.name))
+            self.processMessage('Starting {}s turn '.format(fellah.name))
 
             fellah.tickStatus()
 
@@ -113,7 +117,7 @@ class Battle:
 
                 self.processAction(action)
             else:
-                print('Skipping {}, they are having a rough day'.format(fellah.name))
+                self.processMessage('Skipping {}, they are having a rough day'.format(fellah.name))
 
             team_counts = [t.remaining() for t in self.teams.values()]
             if 0 in team_counts:
@@ -131,9 +135,6 @@ class Battle:
     # def victor(self):
     #     if self.state != Battle.OVER:
     #         return None
-
-
-
 
     def selectCombatAction(self, fellah, team):
         # note that this lives in battle.py because it requires too much shared info to live on the creature itself
@@ -244,7 +245,7 @@ class Battle:
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 
-        print(descriptor)
+        self.processMessage(descriptor, True)
 
     def applyEffect(self, target, effect, partial=False):
 

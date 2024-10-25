@@ -1,2 +1,4 @@
 fastapi[standard]>=0.115.0,<0.116.0
 pymongo
+websockets
+aio-pika
