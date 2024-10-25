@@ -14,7 +14,6 @@ services:
     build:
       context: .
       dockerfile: containers/api/Dockerfile
-    #image: nginx
     restart: always
     ports:
       - "8081:80"
@@ -26,3 +25,10 @@ services:
     restart: always
     ports: 
       - "80:80"
+
+  rabbit:
+    image: rabbitmq:management
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"

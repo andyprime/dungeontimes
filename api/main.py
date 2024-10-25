@@ -1,12 +1,15 @@
 from typing import Union
+from uuid import UUID
+import asyncio
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
 from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.database import Database
-from uuid import UUID
 
+import aio_pika
 
 def db_session():
     client = MongoClient('mongodb://{}:{}@data-store:27017'.format('root', 'devenvironment'))
@@ -15,6 +18,17 @@ def db_session():
         yield db
     finally:
         client.close()
+
+async def mq_channel():
+    connection = await aio_pika.connect_robust('amqp://guest:guest@rabbit/')
+    channel = await connection.channel()
+    exchange = await channel.get_exchange('dungeon')
+    queue = await channel.declare_queue('dlistener-api', exclusive=True)
+    await queue.bind(exchange, routing_key='*')
+    try:
+        yield queue
+    finally:
+        await connection.close()
 
 app = FastAPI()
 
@@ -73,3 +87,31 @@ def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):
     e = db.expeditions.find_one({'id': str(exp_id)})
     e.pop('_id')
     return e
+
+# stolen blatently from the tutorial
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
+
+@app.websocket("/feed/dungeon")
+async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
+    await manager.connect(websocket)
+    try:
+        async with queue.iterator() as q:
+            async for message in q:
+                await manager.broadcast(message.body)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

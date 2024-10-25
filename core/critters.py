@@ -100,11 +100,11 @@ class Delver(Creature):
             if type(serialized) == str:
                 serialized = json.loads(serialized)
 
-            self.name = serialized['n']
-            self.stock = serialized['s']
-            self.job = model.Classes.find(serialized['j'])
-            self.maxhp = serialized['mhp']
-            self.currenthp = serialized['chp']
+            self.name = serialized['name']
+            self.stock = serialized['stock']
+            self.job = model.Classes.find(serialized['job'])
+            self.maxhp = serialized['maxhp']
+            self.currenthp = serialized['currenthp']
         else:
             self.name = name
             # note that for the moment stock just contains a name string, this will need to be more involved later

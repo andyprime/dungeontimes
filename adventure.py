@@ -1,9 +1,12 @@
 
 import random
 import atexit
+from functools import partial
+
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from bson import ObjectId
+import pika
 
 import core
 import core.dungeon.generate
@@ -25,6 +28,10 @@ def overwriteFileHandler(message):
 def _overwriteCleanup():
     _advHandlerSettings['fileHandle'].close()
 
+def rabbitHandler(channel, message):
+    print('$$$$$$$ Emit {}'.format(message))
+    channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
+
 if __name__ == "__main__":
 
     # This is all just some ad hoc stuff until a more robust framework is made
@@ -36,6 +43,10 @@ if __name__ == "__main__":
     except:
         print('Could not connect to Mongo')
         exp = False
+
+    parameters = (pika.ConnectionParameters(host='localhost'))
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
 
     if exp:
         print('Existing expedition found, unpacking.')
@@ -52,7 +63,7 @@ if __name__ == "__main__":
         print('Unpacking delvers')
         delvers = []
         for a in db.delvers.find({'id': {'$in': exp.get('party') }}):
-            delvers.append(core.critters.Delver(serialized=a['body']))
+            delvers.append(core.critters.Delver(serialized=a))
 
     else:
         print('No existing expedition, generating a new one.')
@@ -81,5 +92,6 @@ if __name__ == "__main__":
 
     # exp.registerProcessor(logHandlerPrint)
     exp.registerProcessor(overwriteFileHandler)
+    exp.registerEventEmitter(partial(rabbitHandler, channel))
 
     exp.begin()
