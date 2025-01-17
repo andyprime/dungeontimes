@@ -6,7 +6,7 @@ from core.battle import Battle
 class Expedition:
 
     READY = 'rdy'
-    MOVING = 'mov'
+    MOVING = 'mov' #should probably be renamed to exploring
     ENCOUNTER = 'enc'
     BATTLE = 'bat'
     RECOVER = 'rec'
@@ -106,11 +106,9 @@ class Expedition:
             self.processMessage('The party declares there is nothing more to explore.', True)
             self.status = Expedition.EXITING
         elif len(self.path):
-            destination = self.path.pop()
-            self.cursor = destination
-            self.processMessage('Moving to {}'.format(self.cursor.coords))
+            
 
-            self.emitCursorUpdate()
+            self.move()
 
             if self.cursor.isRoom():
                 if self.cursor.coords not in self.history:
@@ -141,7 +139,7 @@ class Expedition:
     # Exiting
     def runstate_ext(self):
         if self.path:
-            self.cursor = self.path.pop()
+            self.move()
         else:
 
             if self.cursor == self.entrance:
@@ -197,6 +195,12 @@ class Expedition:
     def runstate_cmp(self):
         self.processMessage('All done. Good hustle')
         self.processMessage('Total Moves: {}'.format(self.steps))
+
+    def move(self):
+        destination = self.path.pop()
+        self.cursor = destination
+        self.processMessage('Moving to {}'.format(self.cursor.coords))
+        self.emitCursorUpdate()
 
     def historyMap(self):
         for index, row in enumerate(self.dungeon.grid):

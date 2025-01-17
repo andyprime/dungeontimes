@@ -17,6 +17,8 @@ services:
     restart: always
     ports:
       - "8081:80"
+    volumes:
+      - ./api:/code/api
 
   web:
     build:
@@ -27,7 +29,10 @@ services:
       - "80:80"
 
   rabbit:
-    image: rabbitmq:management
+    #image: rabbitmq:management
+    build:
+      context: .
+      dockerfile: containers/rabbit/Dockerfile
     restart: always
     ports:
       - "5672:5672"

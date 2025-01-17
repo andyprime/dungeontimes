@@ -6,6 +6,8 @@ COPY containers/api/requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-COPY ./api /code/api
+#COPY ./api /code/api
+
+VOLUME /code/api
 
 CMD ["fastapi", "run", "api/main.py", "--port", "80"]

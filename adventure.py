@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parameters = (pika.ConnectionParameters(host='localhost'))
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
+    channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
 
     if exp:
         print('Existing expedition found, unpacking.')

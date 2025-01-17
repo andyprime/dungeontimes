@@ -1,6 +1,7 @@
 from typing import Union
 from uuid import UUID
 import asyncio
+import logging
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,9 @@ from pymongo import MongoClient
 from pymongo.database import Database
 
 import aio_pika
+
+
+LOG = logging.getLogger('uvicorn.error')
 
 def db_session():
     client = MongoClient('mongodb://{}:{}@data-store:27017'.format('root', 'devenvironment'))
@@ -22,12 +26,13 @@ def db_session():
 async def mq_channel():
     connection = await aio_pika.connect_robust('amqp://guest:guest@rabbit/')
     channel = await connection.channel()
-    exchange = await channel.get_exchange('dungeon')
+    exchange = await channel.declare_exchange('dungeon', 'fanout', durable=True)
     queue = await channel.declare_queue('dlistener-api', exclusive=True)
     await queue.bind(exchange, routing_key='*')
     try:
         yield queue
     finally:
+        LOG.info('----- Channel connection closed')
         await connection.close()
 
 app = FastAPI()
@@ -94,13 +99,16 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        LOG.info('!!! Websocket connect.')
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
+        LOG.info('!!! Websocket disconnect')
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
+        LOG.info('!!! Websocket broadcast ({})'.format(len(self.active_connections)))
         for connection in self.active_connections:
             await connection.send_text(message)
 
