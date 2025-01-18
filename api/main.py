@@ -23,17 +23,37 @@ def db_session():
     finally:
         client.close()
 
+class RabbitQueue:
+    def __new__(cls, *args):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(RabbitQueue, cls).__new__(cls)
+        return cls.instance
+
+    def __init__(self, host=None):
+        if host:
+            self.host = host
+
+    async def connect(self):
+        self.connection = await aio_pika.connect_robust(self.host)
+        self.channel = await self.connection.channel() 
+        # we really shouldn't be declaring the exchange in here in the future but right now it helps manage order issues
+        self.exchange = await self.channel.declare_exchange('dungeon', 'fanout', durable=True)
+        self.queue = await self.channel.declare_queue('dlistener-api', exclusive=True)
+        await self.queue.bind(self.exchange, routing_key='*')
+
+    def get_queue(self):
+        return self.queue
+        
+    async def close(self):
+        await self.connection.close()
+
 async def mq_channel():
-    connection = await aio_pika.connect_robust('amqp://guest:guest@rabbit/')
-    channel = await connection.channel()
-    exchange = await channel.declare_exchange('dungeon', 'fanout', durable=True)
-    queue = await channel.declare_queue('dlistener-api', exclusive=True)
-    await queue.bind(exchange, routing_key='*')
+    q = RabbitQueue().get_queue()
     try:
-        yield queue
+        yield q
     finally:
-        LOG.info('----- Channel connection closed')
-        await connection.close()
+        LOG.info('!!!!! Closing rabbit connection')
+        await RabbitQueue().close()
 
 app = FastAPI()
 
@@ -46,6 +66,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    q = RabbitQueue('amqp://guest:guest@rabbit/')
+    await q.connect()
 
 @app.get("/")
 def read_root():
@@ -118,6 +143,7 @@ manager = ConnectionManager()
 async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
     await manager.connect(websocket)
     try:
+        # the main listener loop should maybe be somewhere it doesn't get run for each socket but seems to be ok atm
         async with queue.iterator() as q:
             async for message in q:
                 await manager.broadcast(message.body)
