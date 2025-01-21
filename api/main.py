@@ -53,7 +53,7 @@ async def mq_channel():
         yield q
     finally:
         LOG.info('!!!!! Closing rabbit connection')
-        await RabbitQueue().close()
+        pass
 
 app = FastAPI()
 
