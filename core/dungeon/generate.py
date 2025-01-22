@@ -111,7 +111,8 @@ class DungeonFactoryAlpha:
         # =============================================================================================
         self.header('Stage 3: Connections')
 
-        # print()
+        dungeon.prettyPrint()
+        print('-'*50)
         # dungeon.regionPrint()
 
         # sub step 1: label connectors
@@ -159,6 +160,24 @@ class DungeonFactoryAlpha:
 
             # get a list of all connections from the collapseTo region to pick a new target region
             validConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions]
+
+            print('!'*60)
+            print('roomCursor {}'.format(roomCursor))
+            print('collapse: {}, {}'.format(regionCollapse, chr(33 + regionCollapse)))
+            print('remaining {}'.format(remainingRegions))
+            print('validConnectors {}'.format(validConnectorCoords))
+            # print('selectedConnector {}'.format(selectedConnector))
+            print('!'*60)
+            dungeon.basicPrint()
+            dungeon.regionPrint()
+
+            if len(validConnectorCoords) == 0:
+                # this scenario occurs when a map is generated where a set of regions is more than one cell away from the remaining regions
+                # its more likely crop up when the map dimensions are small and the passage carving is unable to create anything between
+                # two rooms that start with 2 cells between them
+                pass
+
+
 
             selectedConnector = random.choice(validConnectorCoords)
 
@@ -226,8 +245,8 @@ class DungeonFactoryAlpha:
         # length if it actually followed paths
 
 
-        # print('Pre-sparseness removal')
-        # dungeon.prettyPrint()
+        print('Pre-sparseness removal')
+        dungeon.prettyPrint()
 
         runCount = 0
         allDone = False
@@ -239,12 +258,18 @@ class DungeonFactoryAlpha:
             for cell in dungeon.allCells():
                 if cell.type == Cell.PASSAGE:
                     neighbors = [cell.east(), cell.west(), cell.north(), cell.south()]
-                    paths = [x for x in neighbors if dungeon.getCell(*x).type in [Cell.PASSAGE, Cell.DOORWAY]]
-                    if len(paths) == 1:
+                    # paths = [x for x in neighbors if dungeon.getCell(*x).type in [Cell.PASSAGE, Cell.DOORWAY]]
+                    passages = [x for x in neighbors if dungeon.getCell(*x).type == Cell.PASSAGE]
+                    doors = [x for x in neighbors if dungeon.getCell(*x).type == Cell.DOORWAY]
+
+                    # print('{}, p: {}, d: {}'.format(cell, passages, doors))
+                    if len(passages) == 1 and len(doors) == 0:
                         deadends.append(cell)
 
+            print(runCount)
+            print(deadends)
             if len(deadends) > 0:
-                # print('Remaining deadends: {}'.format(len(deadends)))
+                print('Remaining deadends: {}'.format(len(deadends)))
                 for cell in deadends:
                     if random.randint(1,100) < self.CURRENT_SETTINGS['CHANCE_KEEP_DEADEND']:
                         # print('Found a real keeper. Whitelisting {}'.format(cell))
@@ -259,8 +284,8 @@ class DungeonFactoryAlpha:
                 allDone = True
 
             runCount += 1
-            # print('Post Sparseness run {}'.format(runCount))
-            # dungeon.prettyPrint()
+            print('Post Sparseness run {}'.format(runCount))
+            dungeon.prettyPrint()
 
         # =============================================================================================
         self.header('Stage 5: Define entrance')
@@ -268,6 +293,9 @@ class DungeonFactoryAlpha:
         # this is obviously pretty token, but we're gonna put the entrance into a random hallway cell
 
         halls = dungeon.allCells(Cell.PASSAGE)
+        print('Entrance selection')
+        print(len(halls))
+        dungeon.prettyPrint()
         entrance = random.choice(halls)
         entrance.type = Cell.ENTRANCE
 

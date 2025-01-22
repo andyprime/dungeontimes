@@ -1,5 +1,6 @@
 import random
 import time
+import uuid
 from functools import partial
 
 from pymongo import MongoClient
@@ -20,6 +21,11 @@ def rabbitHandler(channel, message):
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
 if __name__ == "__main__":
+    # seed = str(uuid.uuid1())
+    seed = 'f948ee97-d878-11ef-883a-0800279f8ffa'
+    print('Seed: {}'.format(seed))
+    random.seed(seed)
+
     mongo_client = MongoService('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
 
     parameters = (pika.ConnectionParameters(host='localhost'))
@@ -80,6 +86,8 @@ if __name__ == "__main__":
         exp = core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
         exp.registerEventEmitter(emitFn)
         exp.emitNew()
+
+        pizza.ham()
 
         print('Expedition generated, having a little nap')
         time.sleep(30)

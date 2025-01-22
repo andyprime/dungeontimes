@@ -25,7 +25,9 @@ class Dungeon:
                     self.getCell(c[0], c[1]).type = type
 
             for r in document.get('rooms', []):
-                self.rooms.append(Room(serialized = r))
+                room = Room(serialized = r)
+                self.rooms.append(room)
+                room.num = self.rooms.index(room) + 1
 
     def initialize(self, height, width):
         # TODO: complain if params are bad
@@ -223,6 +225,7 @@ class Dungeon:
         room.coords = coords
 
         self.rooms.append(room)
+        room.num = self.rooms.index(room) + 1
 
         top_bound = coords[0]
         bottom_bound = coords[0] + room.height
@@ -332,7 +335,8 @@ class Cell:
         2: '_',
         3: ' ',
         4: '+',
-        5: '>'
+        5: '>',
+        6: '!'
     }
 
     @classmethod
@@ -479,6 +483,7 @@ class Room:
             self.width = i[1]
             self.coords = (i[2], i[3])
             self.locals = []
+            self.num = 0
             for o in serialized['occ']:
                 self.populate(core.critters.Monster(serialized=o))
         else:
@@ -490,6 +495,7 @@ class Room:
             self.width = props.get('width')
             self.coords = coords
             self.locals = []
+            self.num = 0
 
     def populate(self, critter):
         if type(critter) != core.critters.Monster:
@@ -525,7 +531,7 @@ class Room:
             return False
 
     def __str__(self):
-        return '(Room: {}x{} @ {}, {})'.format(self.height, self.width, self.coords, len(self.locals))
+        return '(Room No {}: {}x{} @ {}, {})'.format(self.num, self.height, self.width, self.coords, len(self.locals))
 
     def __repr__(self):
         return self.__str__()
