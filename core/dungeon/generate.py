@@ -26,43 +26,43 @@ class DungeonFactoryAlpha:
     # DEFAULT_HEIGHT = 60
     # DEFAULT_WIDTH = 150
 
-    DEFAULT_HEIGHT = 40
-    DEFAULT_WIDTH = 60
-
-    ROOM_HEIGHT_RANGE = (3, 20)
-    ROOM_WIDTH_RANGE = (3, 20)
-
-
-    MAX_ROOMS = 40
-    MAX_ROOM_ATTEMPTS = 300
-
-    # percent chance the tree maintains same carve direction when available
-    CHANCE_MAINTAIN_DIRECTION = 80
-
-    # percent chance that an extra connection will become a doorway instead of closed
-    # this prevents the dungeon from being too linear
-    CHANCE_EXTRA_DOORWAY = 5
-
-    # percent chance to let a dead end live
-    CHANCE_KEEP_DEADEND = 5
-    # max number of runs of the sparseness removal process, -1 for no limit
-    MAX_SPARENESS_RUNS = 20
-
+    DEFAULT_SETTINGS = {
+        'DEFAULT_HEIGHT': 40,
+        'DEFAULT_WIDTH': 60,
+        'ROOM_HEIGHT_RANGE': (3, 20),
+        'ROOM_WIDTH_RANGE': (3, 20),
+        'MAX_ROOMS': 40,
+        'MAX_ROOM_ATTEMPTS': 300,
+        # percent chance the tree maintains same carve direction when available
+        'CHANCE_MAINTAIN_DIRECTION': 80,
+        # percent chance that an extra connection will become a doorway instead of closed
+        # this prevents the dungeon from being too linear
+        'CHANCE_EXTRA_DOORWAY': 5,
+        # percent chance to let a dead end live
+        'CHANCE_KEEP_DEADEND': 5,
+        # max number of runs of the sparseness removal process, -1 for no limit
+        'MAX_SPARENESS_RUNS': 20
+    }       
+    CURRENT_SETTINGS = {}
 
     @classmethod
-    def generateDungeon(self):
+    def generateDungeon(self, options={}):
+        print(options)
+        self.CURRENT_SETTINGS = self.DEFAULT_SETTINGS.copy()
+        self.CURRENT_SETTINGS.update(options)
 
+        print(self.CURRENT_SETTINGS)
 
         dungeon = Dungeon()
 
         self.header('Stage 0: Blank Slate')
-        dungeon.initialize(self.DEFAULT_HEIGHT, self.DEFAULT_WIDTH)
+        dungeon.initialize(self.CURRENT_SETTINGS['DEFAULT_HEIGHT'], self.CURRENT_SETTINGS['DEFAULT_WIDTH'])
         # dungeon.prettyPrint()
 
         # =============================================================================================
         self.header('Stage 1: Carve Rooms')
         room_attempts = 0
-        while dungeon.roomCount() < self.MAX_ROOMS and room_attempts < self.MAX_ROOM_ATTEMPTS:
+        while dungeon.roomCount() < self.CURRENT_SETTINGS['MAX_ROOMS'] and room_attempts < self.CURRENT_SETTINGS['MAX_ROOM_ATTEMPTS']:
             # note that row/col zero are reserved for border
             # also note that coords are generated outside of the room to avoid recording bad attempts at all
             coords = (random.randint(1, dungeon.height()), random.randint(1, dungeon.width()))
@@ -194,7 +194,7 @@ class DungeonFactoryAlpha:
                     # print('Closing adjacent: {}'.format(coords))
                     toClose = dungeon.getCell(*coords)
                     toClose.type = Cell.SOLID
-                elif random.randint(1,100) < self.CHANCE_EXTRA_DOORWAY:
+                elif random.randint(1,100) < self.CURRENT_SETTINGS['CHANCE_EXTRA_DOORWAY']:
                     # print('Making auxillary door at: {}'.format(coords))
                     doorCell = dungeon.getCell(*coords)
                     self.makeDoor(doorCell, regionCollapse)
@@ -233,7 +233,7 @@ class DungeonFactoryAlpha:
         allDone = False
         deadendWhitelist = []
 
-        while (self.MAX_SPARENESS_RUNS == -1 and not allDone) or (runCount < self.MAX_SPARENESS_RUNS and not allDone):
+        while (self.CURRENT_SETTINGS['MAX_SPARENESS_RUNS'] == -1 and not allDone) or (runCount < self.CURRENT_SETTINGS['MAX_SPARENESS_RUNS'] and not allDone):
 
             deadends = []
             for cell in dungeon.allCells():
@@ -246,7 +246,7 @@ class DungeonFactoryAlpha:
             if len(deadends) > 0:
                 # print('Remaining deadends: {}'.format(len(deadends)))
                 for cell in deadends:
-                    if random.randint(1,100) < self.CHANCE_KEEP_DEADEND:
+                    if random.randint(1,100) < self.CURRENT_SETTINGS['CHANCE_KEEP_DEADEND']:
                         # print('Found a real keeper. Whitelisting {}'.format(cell))
                         deadendWhitelist.append(cell)
                     elif cell in deadendWhitelist:
@@ -364,7 +364,7 @@ class DungeonFactoryAlpha:
             else:
                 roll = random.randint(1,100)
 
-                if previous_direction in options and roll < self.CHANCE_MAINTAIN_DIRECTION:
+                if previous_direction in options and roll < self.CURRENT_SETTINGS['CHANCE_MAINTAIN_DIRECTION']:
                     direction = previous_direction
                 else:
                     direction = random.choice(options)
@@ -387,13 +387,13 @@ class DungeonFactoryAlpha:
     def roomProps(self):
         # TODO: maybe tweak this so really long, thin rooms are less common
         return {
-            'height': random.randint(*self.ROOM_HEIGHT_RANGE),
-            'width': random.randint(*self.ROOM_WIDTH_RANGE)
+            'height': random.randint(*self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE']),
+            'width': random.randint(*self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE'])
         }
 
     @classmethod
     def header(self, title):
-        diff = int( (self.DEFAULT_WIDTH + 4 - len(title)) / 2)
+        diff = int( (self.CURRENT_SETTINGS['DEFAULT_WIDTH'] + 4 - len(title)) / 2)
 
         s = ' ' + '=' * (diff - 1)
         s += ' {} '.format(title)

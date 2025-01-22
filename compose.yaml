@@ -31,6 +31,8 @@ services:
     restart: always
     ports: 
       - "80:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
 
   rabbit:
     #image: rabbitmq:management

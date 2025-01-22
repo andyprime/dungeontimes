@@ -1,3 +1,3 @@
 FROM nginx
 
-COPY ./web /usr/share/nginx/html
+VOLUME /usr/share/nginx/html

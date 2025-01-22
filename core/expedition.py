@@ -20,11 +20,12 @@ class Expedition:
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, dungeon, party, cursor=None):
+    def __init__(self, dungeon, party, cursor=None, id=None):
 
         self.dungeon = dungeon
         self.party = party
         self.battle = None
+        self.id = id
 
         self.entrance = dungeon.entrance()
         self.status = Expedition.READY
@@ -67,6 +68,11 @@ class Expedition:
 
     def emitNarrative(self, s):
         msg = 'NARR;{}'.format(s)
+        for e in self.emitters:
+            e(msg.encode('ASCII'))
+
+    def emitNew(self):
+        msg = 'EXP;{}'.format(self.id)
         for e in self.emitters:
             e(msg.encode('ASCII'))
 

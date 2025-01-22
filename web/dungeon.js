@@ -27,20 +27,57 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://localhost:8081/feed/dungeon');
     socket.onmessage = receiveMessage;
 
+    fetchExpedition();
+});
+
+async function receiveMessage(event) {
+    msg = await event.data.text();
+    console.log(msg);
+    bits = msg.split(';');
+    if (bits[0] == 'CURSOR') {
+        coords = bits[1].split(',');
+        
+        cursor = [coords[0], coords[1]];
+        draw();
+    } else if (bits[0] == 'NARR') {
+        addEvent(bits[1]);
+    } else if (bits[0] == 'EXP') {
+        fetchExpedition()
+    }
+}
+
+async function fetchExpedition() {
     url = "http://localhost:8081/expedition/";
     resp = await fetch(url);
     json = await resp.json();
     expedition = json[0];
-    console.log(expedition);
+    console.log('Expedition', expedition);
 
     url = "http://localhost:8081/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
     json = await resp.json();
-    
+
     dungeon = JSON.parse(json['body']);
     cursor = expedition['cursor'];
+    console.log('Dungeon', dungeon)
 
-    const canvas = document.getElementById("thedungeon");
+    draw()
+}
+
+function addEvent(message) {
+    newbie = document.createElement('p');
+    newbie.innerHTML = message;
+    document.querySelector('#event-log').prepend(newbie);
+
+    events = document.querySelectorAll('#event-log p');
+    if (events.length > 10) {
+        events[events.length - 1].remove();
+    }
+}
+
+function draw() {
+    console.log('Drawing new dungeon')
+    canvas = document.getElementById("thedungeon");
 
     canvas.setAttribute('width', (dungeon['width'] * GRID_SIZE) + (dungeon['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
     canvas.setAttribute('height', (dungeon['height'] * GRID_SIZE) + (dungeon['height'] - 1) + (2 * VERTICAL_MARGIN) );
@@ -59,38 +96,9 @@ document.addEventListener('DOMContentLoaded', async function(event) {
         }
     }
 
-    draw();
-});
-
-async function receiveMessage(event) {
-    msg = await event.data.text();
-    console.log(msg);
-    bits = msg.split(';');
-    if (bits[0] == 'CURSOR') {
-        coords = bits[1].split(',');
-        
-        cursor = [coords[0], coords[1]];
-        draw();
-    } else if (bits[0] == 'NARR') {
-        addEvent(bits[1]);
-    }
-}
-
-function addEvent(message) {
-    newbie = document.createElement('p');
-    newbie.innerHTML = message;
-    document.querySelector('#event-log').prepend(newbie);
-
-    events = document.querySelectorAll('#event-log p');
-    if (events.length > 10) {
-        events[events.length - 1].remove();
-    }
-}
-
-function draw() {
     console.log('Pre-draw cursor: ', cursor);
-    const canvas = document.getElementById("thedungeon");
-    const ctx = canvas.getContext("2d");
+    canvas = document.getElementById("thedungeon");
+    ctx = canvas.getContext("2d");
 
     for (x = 0; x < grid.length; x++) {
         for (y = 0; y < grid[i].length; y++) {
