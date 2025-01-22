@@ -21,8 +21,8 @@ def rabbitHandler(channel, message):
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
 if __name__ == "__main__":
-    # seed = str(uuid.uuid1())
-    seed = 'f948ee97-d878-11ef-883a-0800279f8ffa'
+    seed = str(uuid.uuid1())
+    # seed = ''
     print('Seed: {}'.format(seed))
     random.seed(seed)
 
@@ -51,8 +51,10 @@ if __name__ == "__main__":
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
                 'DEFAULT_HEIGHT': 10,
                 'DEFAULT_WIDTH': 30,
-                'ROOM_HEIGHT_RANGE': (3,8),
-                'ROOM_WIDTH_RANGE': (3,8)
+                'ROOM_HEIGHT_RANGE': (3,4),
+                'ROOM_WIDTH_RANGE': (3,8),
+                'MAX_SPARENESS_RUNS': 5,
+                'MAX_ROOM_ATTEMPTS': 100
             })
 
         # Populate dungeon
@@ -86,8 +88,6 @@ if __name__ == "__main__":
         exp = core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
         exp.registerEventEmitter(emitFn)
         exp.emitNew()
-
-        pizza.ham()
 
         print('Expedition generated, having a little nap')
         time.sleep(30)

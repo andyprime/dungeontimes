@@ -47,11 +47,24 @@ class DungeonFactoryAlpha:
 
     @classmethod
     def generateDungeon(self, options={}):
-        print(options)
         self.CURRENT_SETTINGS = self.DEFAULT_SETTINGS.copy()
         self.CURRENT_SETTINGS.update(options)
 
-        print(self.CURRENT_SETTINGS)
+        # do a little setting validation
+        if self.CURRENT_SETTINGS['DEFAULT_HEIGHT'] < 10:
+            raise ValueError('Map height must be at 10')
+        if self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE'][0] > self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE'][1]:
+            raise ValueError('Room height range misordered')
+        if self.CURRENT_SETTINGS['ROOM_WIDTH_RANGE'][0] > self.CURRENT_SETTINGS['ROOM_WIDTH_RANGE'][1]:
+            raise ValueError('Room width range misordered')
+        if self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE'][1] > self.CURRENT_SETTINGS['DEFAULT_HEIGHT'] - 6:
+            raise ValueError('Maximum room height can not be greater than {} [map height - 6]'.format(self.CURRENT_SETTINGS['DEFAULT_HEIGHT'] - 6))
+        if self.CURRENT_SETTINGS['ROOM_HEIGHT_RANGE'][0] < 2:
+            raise ValueError('Minimum root height can not be less than 2')
+        if self.CURRENT_SETTINGS['ROOM_WIDTH_RANGE'][1] > self.CURRENT_SETTINGS['DEFAULT_WIDTH'] - 6:
+            raise ValueError('Maximum room width can not be greater than {} [map width - 6]'.format(self.CURRENT_SETTINGS['DEFAULT_WIDTH'] - 6))
+        if self.CURRENT_SETTINGS['ROOM_WIDTH_RANGE'][0] < 2:
+            raise ValueError('Minimum root width can not be less than 2')
 
         dungeon = Dungeon()
 
@@ -111,16 +124,13 @@ class DungeonFactoryAlpha:
         # =============================================================================================
         self.header('Stage 3: Connections')
 
-        dungeon.prettyPrint()
-        print('-'*50)
+        # print()
         # dungeon.regionPrint()
 
         # sub step 1: label connectors
         # Just loop through all uncarved squares and label them if they border two distinct regions
-
-
-        # just a handy lookup map so we don't gotta fuss about finding them later
-        # cell -> list of adjacent regions region
+        # We will also create a handy lookup map so we don't gotta fuss about finding them later
+        # A dictionary where the index is a cell that is a connector and the value is a list of two regions it bridges
         connectorCells = {}
 
         for i in range(1, dungeon.height() - 1):
@@ -161,37 +171,78 @@ class DungeonFactoryAlpha:
             # get a list of all connections from the collapseTo region to pick a new target region
             validConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions]
 
-            print('!'*60)
-            print('roomCursor {}'.format(roomCursor))
-            print('collapse: {}, {}'.format(regionCollapse, chr(33 + regionCollapse)))
-            print('remaining {}'.format(remainingRegions))
-            print('validConnectors {}'.format(validConnectorCoords))
-            # print('selectedConnector {}'.format(selectedConnector))
-            print('!'*60)
-            dungeon.basicPrint()
-            dungeon.regionPrint()
-
             if len(validConnectorCoords) == 0:
                 # this scenario occurs when a map is generated where a set of regions is more than one cell away from the remaining regions
                 # its more likely crop up when the map dimensions are small and the passage carving is unable to create anything between
                 # two rooms that start with 2 cells between them
-                pass
+                                
+                # Try to find a solution first that doesn't involve two adjacent door cells by finding an uncarved cell that could act as a bridge
+                # so we're looking for a solid tile with no adjcaent regions but with neighbors that are adjacent to our main region and any other one
+                remediated = False
+                solids = dungeon.allCells(Cell.SOLID)
+                for cell in solids:
+                    neighbors = cell.all()
+                    x = [dungeon.getCell(*n).type for n in neighbors]
+                    # note the length requirement prevents this condition from picking edge cells for which all() returns fewer results
+                    if set(x) == {1} and len(x) == 4:
+                        homeOptions = []
+                        awayOptions = []
 
+                        for n1 in neighbors:
+                            c1 = dungeon.getCell(*n1)
+                            for n2 in c1.all():
+                                c2 = dungeon.getCell(*n2) 
+                                if c2.type in [Cell.PASSAGE, Cell.ROOM]:
+                                    if c2.region == regionCollapse:
+                                        homeOptions.append( (c1, c2.type) )
+                                    if c2.region != regionCollapse:
+                                        awayOptions.append( (c1, c2.type, c2.region) )
 
+                        # now that we have a 
+                        if len(homeOptions) > 0 and len(awayOptions) > 0:
+                            home = random.choice(homeOptions)
+                            away = random.choice(awayOptions)
+                            # now that we've found a valid set of three cells, we can carve them manually
+                            # before proceeding onto the region collapse sub-step for our "away" region
+                            cell.type = Cell.PASSAGE
+                            cell.region = regionCollapse
 
-            selectedConnector = random.choice(validConnectorCoords)
+                            homeCell = home[0]
+                            homeType = home[1]
+                            homeCell.type = Cell.PASSAGE if homeType == Cell.PASSAGE else Cell.DOORWAY
+                            homeCell.region = regionCollapse
 
-            # change the connector into a doorway, it needs a region since it used to be nothing
-            # print('Opening connector at: {}'.format(selectedConnector))
-            selectedCell = dungeon.getCell(*selectedConnector)
-            self.makeDoor(selectedCell, regionCollapse)
+                            awayCell = away[0]
+                            awayType = away[1]
+                            awayRegion = away[2]
 
-            # find the region opposite the doorway and collapse it, there should only ever be 2 items in those lists
+                            awayCell.type = Cell.PASSAGE if awayType == Cell.PASSAGE else Cell.DOORWAY
+                            awayCell.region = regionCollapse
+                            
+                            remediated = True
+                            openedRegion = awayRegion
+                            # in this case there were never any connectors between our regions so there are 
+                            relevantConnectorCoords = []
 
-            openedRegion = [ x for x in connectorCells[selectedConnector] if x != regionCollapse ][0]
+                if not remediated:
+                    # T he previous solution will work in all possible scenarios but we should make a fuss
+                    # since it will stack trace later regardless
+                    raise RuntimeError('Map generation detected a divided region scenario it was unable to remediate.')
+            else:
+                # this is the regular scenario section for when the distance problem doesn't occur      
+                selectedConnector = random.choice(validConnectorCoords)
 
-            # get the list of connectors shared between the main and collapsing region
-            relevantConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions and openedRegion in regions]
+                # change the connector into a doorway, it needs a region since it used to be nothing
+                # print('Opening connector at: {}'.format(selectedConnector))
+                selectedCell = dungeon.getCell(*selectedConnector)
+                self.makeDoor(selectedCell, regionCollapse)
+
+                # find the region opposite the doorway and collapse it, there should only ever be 2 items in those lists
+
+                openedRegion = [ x for x in connectorCells[selectedConnector] if x != regionCollapse ][0]
+
+                # get the list of connectors shared between the main and collapsing region, they will be cleaned up in the next stage
+                relevantConnectorCoords = [coords for coords, regions in connectorCells.items() if regionCollapse in regions and openedRegion in regions]
 
             self.collapseRegion(dungeon, connectorCells, openedRegion, regionCollapse)
 
@@ -245,8 +296,8 @@ class DungeonFactoryAlpha:
         # length if it actually followed paths
 
 
-        print('Pre-sparseness removal')
-        dungeon.prettyPrint()
+        # print('Pre-sparseness removal')
+        # dungeon.prettyPrint()
 
         runCount = 0
         allDone = False
@@ -266,10 +317,7 @@ class DungeonFactoryAlpha:
                     if len(passages) == 1 and len(doors) == 0:
                         deadends.append(cell)
 
-            print(runCount)
-            print(deadends)
             if len(deadends) > 0:
-                print('Remaining deadends: {}'.format(len(deadends)))
                 for cell in deadends:
                     if random.randint(1,100) < self.CURRENT_SETTINGS['CHANCE_KEEP_DEADEND']:
                         # print('Found a real keeper. Whitelisting {}'.format(cell))
@@ -284,8 +332,8 @@ class DungeonFactoryAlpha:
                 allDone = True
 
             runCount += 1
-            print('Post Sparseness run {}'.format(runCount))
-            dungeon.prettyPrint()
+            # print('Post Sparseness run {}'.format(runCount))
+            # dungeon.prettyPrint()
 
         # =============================================================================================
         self.header('Stage 5: Define entrance')
@@ -293,9 +341,6 @@ class DungeonFactoryAlpha:
         # this is obviously pretty token, but we're gonna put the entrance into a random hallway cell
 
         halls = dungeon.allCells(Cell.PASSAGE)
-        print('Entrance selection')
-        print(len(halls))
-        dungeon.prettyPrint()
         entrance = random.choice(halls)
         entrance.type = Cell.ENTRANCE
 
@@ -333,8 +378,8 @@ class DungeonFactoryAlpha:
                 if c.region == regionToCollapse:
                     c.region = collapseTo
 
-        # overwrite collapsed region in the map
-        # don't worry if we end up with two collapseTo regions in the list, those will get removed later
+        # The collapsed region no longer exists so we overwrite all instances of it in our mapping
+        # don't worry if we end up with two collapseTo regions in the list, those will get removed later [andy: What does this mean?]
         for coords, regionList in connectorCells.items():
             if regionToCollapse in regionList:
                 connectorCells[coords] = [collapseTo if x == regionToCollapse else x for x in connectorCells[coords]]

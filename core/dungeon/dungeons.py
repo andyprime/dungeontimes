@@ -259,7 +259,6 @@ class Dungeon:
             return False
 
         tests = []
-
         tests.append( self.getCell(*cell.north()) )
         tests.append( self.getCell(*cell.south()) )
         tests.append( self.getCell(*cell.east()) )
