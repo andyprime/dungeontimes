@@ -5,6 +5,7 @@ import logging
 
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.websockets import WebSocketState
 
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -48,12 +49,8 @@ class RabbitQueue:
         await self.connection.close()
 
 async def mq_channel():
-    q = RabbitQueue().get_queue()
-    try:
-        yield q
-    finally:
-        LOG.info('!!!!! Closing rabbit connection')
-        pass
+    LOG.info('!!!!! Closing rabbit connection')
+    return RabbitQueue().get_queue()
 
 app = FastAPI()
 
@@ -124,18 +121,21 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
-        LOG.info('!!! Websocket connect.')
+        LOG.info('!!! Websocket connect: {}.'.format(websocket.user))
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        LOG.info('!!! Websocket disconnect')
+        LOG.info('!!! Websocket disconnect {}'.format(websocket))
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
-        LOG.info('!!! Websocket broadcast ({})'.format(len(self.active_connections)))
+        LOG.info('!!! Websocket broadcasting {} to ({}) connections'.format(message, len(self.active_connections)))
         for connection in self.active_connections:
-            await connection.send_text(message)
+            if connection.application_state == WebSocketState.DISCONNECTED:
+                LOG.info('Skipping disconnected websocket {}'.format(connection))
+            else:
+                await connection.send_text(message)
 
 manager = ConnectionManager()
 
