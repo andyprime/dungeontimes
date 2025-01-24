@@ -121,7 +121,7 @@ class ConnectionManager:
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
-        LOG.info('!!! Websocket connect: {}.'.format(websocket.user))
+        LOG.info('!!! Websocket connect: {}.'.format(websocket))
         await websocket.accept()
         self.active_connections.append(websocket)
 
