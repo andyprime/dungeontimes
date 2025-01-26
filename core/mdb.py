@@ -20,7 +20,6 @@ class MongoService:
 
     def persist(self, object):
         flat_type = str(type(object))
-
         suffix = MongoService.PERSIST_MAP.get(flat_type, False)
 
         if suffix:
@@ -50,14 +49,14 @@ class MongoService:
         return d['id']
 
     # expedition is in a funny place right now, so we'll skip the mapping shenanigans for now
-    def persist_expedition(self, dungeon_id, delver_ids):
+    def persist_expedition(self, dungeon_id, delver_ids, entrance_cell):
         e = {
             'id': str(uuid.uuid1()),
             'name': 'PLACEHOLDER',
             'complete': False,
             'dungeon': dungeon_id,
             'party': delver_ids,
-            'cursor': None
+            'cursor': entrance_cell
         }
         self.db.expeditions.insert_one(e)
         return e['id']

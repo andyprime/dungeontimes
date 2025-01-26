@@ -20,12 +20,13 @@ class Expedition:
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, dungeon, party, cursor=None, id=None):
+    def __init__(self, dungeon, party, cursor=None, id=None, mdb=None):
 
         self.dungeon = dungeon
         self.party = party
         self.battle = None
         self.id = id
+        self.mdb = mdb
 
         self.entrance = dungeon.entrance()
         self.status = Expedition.READY
@@ -62,6 +63,8 @@ class Expedition:
 
     def emitCursorUpdate(self):
         c = self.cursor.coords
+        if self.mdb:
+            self.mdb.db.expeditions.update_one({'id': self.id}, {'$set': {'cursor': c}})
         msg = 'CURSOR;{},{}'.format(c[0], c[1])
         for e in self.emitters:
             e(msg.encode('ASCII'))

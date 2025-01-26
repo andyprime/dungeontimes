@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
         print('Generated delvers')
 
-        e_id = mongo_client.persist_expedition(did, ids)
+        e_id = mongo_client.persist_expedition(did, ids, dungeon.entrance().coords)
 
         print('Saved the expedition')
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             print('{}: {}'.format(dungeon.rooms.index(room), room))
         print(delvers)
 
-        exp = core.expedition.Expedition(dungeon, delvers, None, id=e_id)
+        exp = core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
         exp.registerEventEmitter(emitFn)
         exp.emitNew()
 
