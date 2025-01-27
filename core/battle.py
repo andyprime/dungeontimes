@@ -55,6 +55,9 @@ class Team:
 
 class Battle:
 
+    # Set to True if you want to skip combat for speed
+    SKIP_BATTLE = False
+
     PAPERWORK = 1
     BATTAL = 2
     OVER = 3
@@ -130,7 +133,10 @@ class Battle:
         # print('Combat loop over')
 
     def complete(self):
-        return self.state == Battle.OVER
+        if Battle.SKIP_BATTLE:
+            return True
+        else:
+            return self.state == Battle.OVER
 
     # def victor(self):
     #     if self.state != Battle.OVER:
