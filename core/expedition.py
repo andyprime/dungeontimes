@@ -173,7 +173,7 @@ class Expedition:
 
                     self.status = Expedition.RECOVER
                 else:
-                    self.processMessage('Sadly the party has been slain my the local miscreants.', True)
+                    self.processMessage('Sadly the party has been slain by the local miscreants.', True)
                     self.status = Expedition.SCATTERED
             else:
                 self.battle.round()
@@ -251,6 +251,7 @@ class Expedition:
         distance = {}
         previous = {}
         q = []
+        destination = None
 
         for cell in self.dungeon.allCells(navigable=True):
             distance[cell] = 1000000
@@ -270,8 +271,11 @@ class Expedition:
 
             # default break point is finding the first unexplored
             if target and lowest == target:
+                destination = lowest
                 break
             elif lowest.coords not in self.history:
+                # this is the standard exit scenario in which we've found the closest cell not already explored
+                destination = lowest
                 break
 
             neighbors = self.dungeon.getNeighbors(lowest)
@@ -286,13 +290,14 @@ class Expedition:
 
         self.processMessage('** Pathfinding run complete. Time: {}. Cells examined: {}, Cells remaining: {}'.format(str(delta), count, len(q)))
 
-        if len(q) == 0:
+        if not destination:
+            # this *shouldn't* be possible as long as mapgen has no significant bugs
+            self.processMessage('Pathfinding did not produce a destination')
             return None
-
-        c = lowest
-        path = [c]
-        while(previous.get(c, False)):
-            path.append(previous[c])
-            c = previous[c]
+        
+        path = [destination]
+        while(previous.get(destination, False)):
+            path.append(previous[destination])
+            destination = previous[destination]
 
         return path
