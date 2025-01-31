@@ -6,8 +6,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: devenvironment
+      MONGO_INITDB_ROOT_USERNAME: $MONGO_USER
+      MONGO_INITDB_ROOT_PASSWORD: $MONGO_PASSWORD
       MONGO_INITDB_DATABASE: dungeondb
 
   api:
@@ -19,6 +19,15 @@ services:
       - "8081:80"
     volumes:
       - ./api:/code/api
+    environment:
+      MONGO_USER: $MONGO_USER
+      MONGO_PASSWORD: $MONGO_PASSWORD
+      MONGO_HOST: $MONGO_HOST
+      MONGO_PORT: $MONGO_PORT
+      API_ORIGINS: $API_ORIGINS
+      RABBIT_USER: $RABBIT_USER
+      RABBIT_PASSWORD: $RABBIT_PASSWORD
+      RABBIT_HOST: $RABBIT_HOST
     depends_on:
       rabbit:
         condition: service_healthy
@@ -43,9 +52,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: $RABBIT_USER
+      RABBITMQ_DEFAULT_PASS: $RABBIT_PASSWORD
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
-      # test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       retries: 3
       timeout: 30s
