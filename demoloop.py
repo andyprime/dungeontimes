@@ -7,6 +7,7 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from bson import ObjectId
 import pika
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import core
 import core.dungeon.generate
@@ -20,15 +21,27 @@ def rabbitHandler(channel, message):
     print('$$$$$$$ Emit {}'.format(message))
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file='.env', extra='ignore')
+    mongo_user: str
+    mongo_password: str
+    mongo_host: str
+    mongo_port: str
+    rabbit_user: str
+    rabbit_password: str
+    rabbit_host: str
+
 if __name__ == "__main__":
     seed = str(uuid.uuid1())
     # seed = ''
     print('Seed: {}'.format(seed))
     random.seed(seed)
 
-    mongo_client = MongoService('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
+    settings = Settings()
+    mongo_client = MongoService('mongodb://{}:{}@localhost:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_port))
 
-    parameters = (pika.ConnectionParameters(host='localhost'))
+    creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
+    parameters = (pika.ConnectionParameters(host='localhost', credentials=creds))
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)

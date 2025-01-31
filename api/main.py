@@ -10,19 +10,22 @@ from fastapi.websockets import WebSocketState
 from pydantic import BaseModel
 from pymongo import MongoClient
 from pymongo.database import Database
+from pydantic_settings import BaseSettings
 
 import aio_pika
 
 
 LOG = logging.getLogger('uvicorn.error')
 
-def db_session():
-    client = MongoClient('mongodb://{}:{}@data-store:27017'.format('root', 'devenvironment'))
-    db = client.dungeondb
-    try:
-        yield db
-    finally:
-        client.close()
+class Settings(BaseSettings):
+    api_origins: str = ''
+    mongo_user: str
+    mongo_password: str
+    mongo_host: str
+    mongo_port: str
+    rabbit_user: str
+    rabbit_password: str
+    rabbit_host: str
 
 class RabbitQueue:
     def __new__(cls, *args):
@@ -52,9 +55,10 @@ async def mq_channel():
     LOG.info('!!!!! Closing rabbit connection')
     return RabbitQueue().get_queue()
 
+settings = Settings()
 app = FastAPI()
 
-origins = ['http://localhost', 'http://localhost:8081']
+origins = settings.api_origins.split(',')
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,9 +68,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def db_session():
+    x = 'mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port)
+    print('!!!!!!! {}'.format(x))
+    client = MongoClient(x)
+    db = client.dungeondb
+    try:
+        yield db
+    finally:
+        client.close()
+
 @app.on_event("startup")
 async def startup_event():
-    q = RabbitQueue('amqp://guest:guest@rabbit/')
+    q = RabbitQueue('amqp://{}:{}@{}/'.format(settings.rabbit_user, settings.rabbit_password, settings.rabbit_host))
     await q.connect()
 
 @app.get("/")

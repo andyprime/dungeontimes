@@ -3,3 +3,4 @@ schema
 pymongo
 pyyaml
 pika
+pydantic-settings

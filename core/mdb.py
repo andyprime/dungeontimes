@@ -11,7 +11,7 @@ class MongoService:
 
     def __init__(self, host):
         try:
-            self.client = MongoClient('mongodb://{}:{}@localhost:27017'.format('root', 'devenvironment'))
+            self.client = MongoClient(host)
             self.db = self.client.dungeondb
         except Exception as e:
             # this is probably a ConnectionFailure exception but lets wait and see how the connection pooling plays out

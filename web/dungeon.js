@@ -21,10 +21,11 @@ const CURSOR_COLOR = '#18910f';
 dungeon = null;
 cursor = null;
 grid = [];
+rootUrl = window.location.hostname + ':8081'
 
 
 document.addEventListener('DOMContentLoaded', async function(event) {
-    var socket = new WebSocket('ws://localhost:8081/feed/dungeon');
+    var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
     socket.onmessage = receiveMessage;
 
     fetchExpedition();
@@ -47,13 +48,13 @@ async function receiveMessage(event) {
 }
 
 async function fetchExpedition() {
-    url = "http://localhost:8081/expedition/";
+    url = '//' + rootUrl + "/expedition/";
     resp = await fetch(url);
     json = await resp.json();
     expedition = json[0];
     console.log('Expedition', expedition);
 
-    url = "http://localhost:8081/dungeon/" + expedition['dungeon'];
+    url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
     json = await resp.json();
 
