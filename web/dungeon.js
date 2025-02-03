@@ -24,7 +24,7 @@ grid = [];
 
 
 document.addEventListener('DOMContentLoaded', async function(event) {
-    var socket = new WebSocket('ws://localhost:8081/feed/dungeon');
+    var socket = new WebSocket('ws:/feed/dungeon');
     socket.onmessage = receiveMessage;
 
     fetchExpedition();
@@ -47,13 +47,13 @@ async function receiveMessage(event) {
 }
 
 async function fetchExpedition() {
-    url = "http://localhost:8081/expedition/";
+    url = "/expedition/";
     resp = await fetch(url);
     json = await resp.json();
     expedition = json[0];
     console.log('Expedition', expedition);
 
-    url = "http://localhost:8081/dungeon/" + expedition['dungeon'];
+    url = "/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
     json = await resp.json();
 
