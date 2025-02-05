@@ -98,7 +98,6 @@ class Battle:
         # determine turn order
         self.resetInitiative()
 
-
         # everybody gets a turn
         while len(self.initiative) > 0:
             current = self.initiative.pop()
