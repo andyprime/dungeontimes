@@ -176,7 +176,6 @@ class Dungeon:
 
         return json.dumps(box)
 
-
     # all the purely construction functions
 
     def newRegion(self):
@@ -193,7 +192,6 @@ class Dungeon:
         if room.width + coords[1] >= self.width():
             # print('Room fit failure: max width exceeded')
             return False
-
 
         top_bound = coords[0] - 1
         bottom_bound = coords[0] + room.height + 1
@@ -510,7 +508,8 @@ class Room:
 
     def serialize(self, stringify=False):
         box = {
-            'i': (self.height, self.width, self.coords[0], self.coords[1]),
+            'd': (self.height, self.width), 
+            'c': (self.coords[0], self.coords[1]),
         }
         if len(self.locals):
             box['occ'] = [l.serialize() for l in self.locals]

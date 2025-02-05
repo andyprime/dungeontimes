@@ -18,6 +18,14 @@ const CELL_COLORS = {
 
 const CURSOR_COLOR = '#18910f';
 
+const JOB_NAMES = {
+    'MUSCLE': 'Muscle Man',
+    'ETHICIST': 'Ethicist',
+    'SWORDLORD': 'Swordlord',
+    'NEERDOWELL': 'Neerdowell',
+    'MAGICIAN': 'Magician'
+}
+
 dungeon = null;
 cursor = null;
 grid = [];
@@ -28,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
     socket.onmessage = receiveMessage;
 
-    fetchExpedition();
+    fetchExpedition(true);
 });
 
 async function receiveMessage(event) {
@@ -44,11 +52,23 @@ async function receiveMessage(event) {
         addEvent(bits[1]);
     } else if (bits[0] == 'EXP') {
         fetchExpedition()
+    } else if (bits[0] == 'BTLS') {
+        toggleFoes(bits[1], true);
+    } else if (bits[0] == 'BTLE') {
+        toggleFoes(bits[1], false);
     }
 }
 
-async function fetchExpedition() {
+async function fetchExpedition(initial=false) {
+    if (!initial) {
+        log = document.querySelector('#event-log');
+        newbie = document.createElement('p');
+        newbie.innerHTML = 'The world is cast anew.';
+        log.textContent = '';
+        log.prepend(newbie);   
+    }
     url = '//' + rootUrl + "/expedition/";
+
     resp = await fetch(url);
     json = await resp.json();
     expedition = json[0];
@@ -63,6 +83,22 @@ async function fetchExpedition() {
     console.log('Dungeon', dungeon)
 
     draw()
+
+    url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
+    resp = await fetch(url);
+    json = await resp.json();
+
+    console.log('Delvers: ', json);
+    partyEl = document.querySelector('#theparty ul');
+    partyEl.textContent = '';
+    for (i in json) {
+        delver = json[i];
+        d = document.createElement('li');
+        d.style.display = 'inline-block';
+        d.style.padding = '10px 20px';
+        d.innerHTML = delver['name'] + "<br>" + delver['stock'] + " " + JOB_NAMES[delver['job']];
+        partyEl.append(d);
+    }
 }
 
 function addEvent(message) {
@@ -73,6 +109,26 @@ function addEvent(message) {
     events = document.querySelectorAll('#event-log p');
     if (events.length > 10) {
         events[events.length - 1].remove();
+    }
+}
+
+function toggleFoes(room, visible) {
+    console.log('Toggle Foes', room, visible);
+    if (visible) {
+        document.getElementById('thefoes').style.display = 'block';
+        foesEl = document.querySelector('#thefoes ul');
+        console.log('!!!', dungeon.rooms[room].occ)
+        for (i in dungeon.rooms[room].occ) {
+            monster = dungeon.rooms[room].occ[i];
+            d = document.createElement('li');
+            d.style.display = 'inline-block';
+            d.style.padding = '10px 20px';
+            d.innerHTML = monster['n'] + "<br>the " + monster['t'];
+            foesEl.append(d);
+        }
+    } else {
+        document.getElementById('thefoes').style.display = 'none';
+        document.querySelector('#thefoes ul').textContent = '';
     }
 }
 

@@ -61,23 +61,27 @@ class Expedition:
         if emit:
             self.emitNarrative(message)
 
+    def emit(self, msg):
+        for e in self.emitters:
+            e(msg.encode('ASCII'))
+
     def emitCursorUpdate(self):
         c = self.cursor.coords
         if self.mdb:
             self.mdb.db.expeditions.update_one({'id': self.id}, {'$set': {'cursor': c}})
-        msg = 'CURSOR;{},{}'.format(c[0], c[1])
-        for e in self.emitters:
-            e(msg.encode('ASCII'))
-
+        self.emit('CURSOR;{},{}'.format(c[0], c[1]))
+        
     def emitNarrative(self, s):
-        msg = 'NARR;{}'.format(s)
-        for e in self.emitters:
-            e(msg.encode('ASCII'))
+        self.emit('NARR;{}'.format(s))        
 
     def emitNew(self):
-        msg = 'EXP;{}'.format(self.id)
-        for e in self.emitters:
-            e(msg.encode('ASCII'))
+        self.emit('EXP;{}'.format(self.id))        
+
+    def emitBattle(self, start, roomNo):
+        if start:
+            self.emit('BTLS;{}'.format(roomNo))
+        else:
+            self.emit('BTLE;{}'.format(roomNo))
 
     def begin(self):
         while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
@@ -116,7 +120,6 @@ class Expedition:
             self.status = Expedition.EXITING
         elif len(self.path):
             
-
             self.move()
 
             if self.cursor.isRoom():
@@ -161,8 +164,8 @@ class Expedition:
 
     # Battle
     def runstate_bat(self):
+        room = self.dungeon.roomAt(self.cursor)
         if self.battle:
-
             if self.battle.complete():
                 if any([d.canAct() for d in self.party]) :
                     self.processMessage('The party is victorious. Good job team.', True)
@@ -175,18 +178,21 @@ class Expedition:
                 else:
                     self.processMessage('Sadly the party has been slain by the local miscreants.', True)
                     self.status = Expedition.SCATTERED
+                self.emitBattle(False, room.num)
             else:
                 self.battle.round()
 
         else:
-
             self.battle = Battle(self.processMessage)
 
-            for m in self.dungeon.roomAt(self.cursor).locals:
+            for m in room.locals:
                 self.battle.addParticipant('monster', m)
 
             for d in self.party:
                 self.battle.addParticipant('delver', d)
+
+            self.emitBattle(True, room.num)
+
 
     def runstate_sct(self):
         self.processMessage('Are there survivors? Who knows.')

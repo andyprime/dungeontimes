@@ -116,7 +116,7 @@ def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
     return d
 
 @app.get("/expedition/")
-def read_expedition(db: Database = Depends(db_session)):
+def read_active_expedition(db: Database = Depends(db_session)):
     es = []
     for ex in db.expeditions.find():
         ex.pop('_id')
@@ -128,6 +128,15 @@ def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):
     e = db.expeditions.find_one({'id': str(exp_id)})
     e.pop('_id')
     return e
+
+@app.get("/expedition/{exp_id}/delvers")
+def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
+    exp = db.expeditions.find_one({'id': str(exp_id)})
+    delvers = list(db.delvers.find({'id': {'$in': exp['party']}}))
+    for d in delvers:
+        d.pop('_id')
+
+    return delvers
 
 # stolen blatently from the tutorial
 class ConnectionManager:
