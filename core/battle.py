@@ -81,13 +81,15 @@ class Battle:
 
         self.state = Battle.BATTAL
 
-        self.round()
+        self.newRound()
 
     def processMessage(self, message, emit=False):
         if callable(self.processCallback):
             self.processCallback(message, emit)
 
-    def round(self):
+
+    def newRound(self):
+        self.roundCount += 1
         self.processMessage('=' * 50)
         self.processMessage('ROUND {}'.format(self.roundCount))
 
@@ -97,6 +99,40 @@ class Battle:
 
         # determine turn order
         self.resetInitiative()
+
+    def next(self):
+        print('NEXT')
+        if len(self.initiative) > 0:
+            current = self.initiative.pop()
+            fellah = current[1]
+            teamName = current[2]
+
+            self.processMessage('Starting {}s turn '.format(fellah.name))
+
+            fellah.tickStatus()
+
+            if fellah.canAct():
+
+                # determine a course of action
+
+                action = self.selectCombatAction(fellah, teamName)
+
+                # execute it
+
+                self.processAction(action)
+            else:
+                self.processMessage('Skipping {}, they are having a rough day'.format(fellah.name))
+
+            team_counts = [t.remaining() for t in self.teams.values()]
+            if 0 in team_counts:
+                self.state = Battle.OVER
+
+        else:
+            self.processMessage('Round complete.')
+            self.newRound()
+
+    def xround(self):
+        
 
         # everybody gets a turn
         while len(self.initiative) > 0:
