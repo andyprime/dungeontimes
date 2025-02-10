@@ -17,6 +17,17 @@ class Expedition:
 
     DEFAULT_TURN_DELAY = 2
 
+    TASK_DURATIONS = {
+        'rdy': 2,
+        'mov': 1.5,
+        'enc': 2,
+        'bat': 0.1,
+        'rec': 2,
+        'ext': 2,
+        'sct': 2,
+        'cmp': 2
+    }
+
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
@@ -84,9 +95,12 @@ class Expedition:
             self.emit('BTLE;{}'.format(roomNo))
 
     def begin(self):
+        # this function is not exactly deprecated but it should only be used in the context
+        # of making an expedition run itself
         while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
-            self.processTurn()
-            time.sleep(Expedition.DEFAULT_TURN_DELAY)
+            t = self.processTurn()
+            if t:
+                time.sleep(t)
 
     def processTurn(self):
         self.steps += 1
@@ -98,9 +112,12 @@ class Expedition:
 
             if self.steps % Expedition.PRINT_INTERVAL == 0 or showOverride:
                 self.historyMap()
+
+            return Expedition.TASK_DURATIONS[self.status]
         else:
             self.processMessage('Unknown expedition status: {}'.format(self.status))
             self.status = Expedition.ERROR
+            return False
 
     # Ready
     def runstate_rdy(self):
@@ -180,7 +197,7 @@ class Expedition:
                     self.status = Expedition.SCATTERED
                 self.emitBattle(False, room.num)
             else:
-                self.battle.round()
+                self.battle.next()
 
         else:
             self.battle = Battle(self.processMessage)
