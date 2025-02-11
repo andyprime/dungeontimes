@@ -106,7 +106,9 @@ if __name__ == "__main__":
         time.sleep(30)
 
         print('Start expedition process')
-        exp.begin()
+        while not exp.over():
+            t = exp.processTurn()
+            time.sleep(t)
 
         print('Expedition over, having a little nap')
         time.sleep(30)
