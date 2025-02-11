@@ -17,6 +17,7 @@ class Expedition:
 
     DEFAULT_TURN_DELAY = 2
 
+    # the abbreviated ones are just the default for any given stage, others need to be manually returned
     TASK_DURATIONS = {
         'rdy': 2,
         'mov': 1.5,
@@ -25,7 +26,8 @@ class Expedition:
         'rec': 2,
         'ext': 2,
         'sct': 2,
-        'cmp': 2
+        'cmp': 2,
+        'round_divider': 2
     }
 
     # Only print the map every X moves
@@ -108,12 +110,15 @@ class Expedition:
 
         f = getattr(self, 'runstate_' + self.status)
         if f:
-            f()
+            delayOverride = f()
 
             if self.steps % Expedition.PRINT_INTERVAL == 0 or showOverride:
                 self.historyMap()
 
-            return Expedition.TASK_DURATIONS[self.status]
+            if delayOverride:
+                return delayOverride
+            else:
+                return Expedition.TASK_DURATIONS[self.status]
         else:
             self.processMessage('Unknown expedition status: {}'.format(self.status))
             self.status = Expedition.ERROR
@@ -197,7 +202,11 @@ class Expedition:
                     self.status = Expedition.SCATTERED
                 self.emitBattle(False, room.num)
             else:
+                r1 = self.battle.round()
                 self.battle.next()
+                r2 = self.battle.round()
+                if r1 != r2:
+                    return Expedition.TASK_DURATIONS['round_divider']
 
         else:
             self.battle = Battle(self.processMessage)
@@ -209,6 +218,7 @@ class Expedition:
                 self.battle.addParticipant('delver', d)
 
             self.emitBattle(True, room.num)
+            self.battle.start()
 
 
     def runstate_sct(self):

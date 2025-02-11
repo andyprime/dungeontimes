@@ -16,7 +16,6 @@ class Team:
     def add(self, c):
         self.members.append(c)
 
-
     def validMembers(self, alive=None, exclude=None):
         options = []
 
@@ -28,18 +27,6 @@ class Team:
             options.append(member)
 
         return options
-
-    # def randomMember(self, alive=None):
-
-    #     # TODO: this copy might get expensive but right now its convenient
-    #     options = self.members.copy()
-
-    #     if alive:
-    #         for member in options:
-    #             if not member.canAct():
-    #                 options.remove(member)
-
-    #     return random.choice(options)
 
     def remaining(self):
         # count of remaining active fighters
@@ -62,7 +49,6 @@ class Battle:
     BATTAL = 2
     OVER = 3
 
-
     def __init__(self, processCallback):
         self.teams = {}
         self.teamCount = 0
@@ -80,13 +66,14 @@ class Battle:
             raise ValueError('Can not initiate battle with team count below two.')
 
         self.state = Battle.BATTAL
-
         self.newRound()
 
     def processMessage(self, message, emit=False):
         if callable(self.processCallback):
             self.processCallback(message, emit)
 
+    def round(self):
+        return self.roundCount
 
     def newRound(self):
         self.roundCount += 1
@@ -131,51 +118,11 @@ class Battle:
             self.processMessage('Round complete.')
             self.newRound()
 
-    def xround(self):
-        
-
-        # everybody gets a turn
-        while len(self.initiative) > 0:
-            current = self.initiative.pop()
-            # remember its a tuple
-            fellah = current[1]
-            teamName = current[2]
-
-            self.processMessage('Starting {}s turn '.format(fellah.name))
-
-            fellah.tickStatus()
-
-            if fellah.canAct():
-
-                # determine a course of action
-
-                action = self.selectCombatAction(fellah, teamName)
-
-                # execute it
-
-                self.processAction(action)
-            else:
-                self.processMessage('Skipping {}, they are having a rough day'.format(fellah.name))
-
-            team_counts = [t.remaining() for t in self.teams.values()]
-            if 0 in team_counts:
-                self.state = Battle.OVER
-                break
-
-        self.roundCount += 1
-
-        # print('!' * 10)
-        # print('Combat loop over')
-
     def complete(self):
         if Battle.SKIP_BATTLE:
             return True
         else:
             return self.state == Battle.OVER
-
-    # def victor(self):
-    #     if self.state != Battle.OVER:
-    #         return None
 
     def selectCombatAction(self, fellah, team):
         # note that this lives in battle.py because it requires too much shared info to live on the creature itself
@@ -214,7 +161,6 @@ class Battle:
 
         return selectedMove
 
-
     def processAction(self, action):
         fellah = action['actor']
         move = action['move']
@@ -231,7 +177,6 @@ class Battle:
             # if the result is above fullThreshold its a full success
             # otherwise if the result is above partialThreshold its a partial sucess
             # otherwise its a failure
-
 
             if move.test == 'none':
                 partialThreshold = -1
