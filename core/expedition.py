@@ -96,6 +96,9 @@ class Expedition:
         else:
             self.emit('BTLE;{}'.format(roomNo))
 
+    def over(self):
+        return self.status in [Expedition.COMPLETE, Expedition.ERROR]
+
     def begin(self):
         # this function is not exactly deprecated but it should only be used in the context
         # of making an expedition run itself
@@ -103,6 +106,8 @@ class Expedition:
             t = self.processTurn()
             if t:
                 time.sleep(t)
+            else:
+                time.sleep(Expedition.DEFAULT_TURN_DELAY)
 
     def processTurn(self):
         self.steps += 1
