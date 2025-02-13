@@ -31,7 +31,6 @@ cursor = null;
 grid = [];
 rootUrl = window.location.hostname + ':8081'
 
-
 document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
     socket.onmessage = receiveMessage;
@@ -56,6 +55,8 @@ async function receiveMessage(event) {
         toggleFoes(bits[1], true);
     } else if (bits[0] == 'BTLE') {
         toggleFoes(bits[1], false);
+    } else if (bits[0] == 'BTL-UPD') {
+        battleUpdate(JSON.parse(bits[1]));
     }
 }
 
@@ -80,9 +81,10 @@ async function fetchExpedition(initial=false) {
 
     dungeon = JSON.parse(json['body']);
     cursor = expedition['cursor'];
-    console.log('Dungeon', dungeon)
+    console.log('Dungeon', dungeon);
 
-    draw()
+    toggleFoes(false);
+    draw();
 
     url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
     resp = await fetch(url);
@@ -93,11 +95,7 @@ async function fetchExpedition(initial=false) {
     partyEl.textContent = '';
     for (i in json) {
         delver = json[i];
-        d = document.createElement('li');
-        d.style.display = 'inline-block';
-        d.style.padding = '10px 20px';
-        d.innerHTML = delver['name'] + "<br>" + delver['stock'] + " " + JOB_NAMES[delver['job']];
-        partyEl.append(d);
+        partyEl.append(characterBox('delver', delver));
     }
 }
 
@@ -112,19 +110,24 @@ function addEvent(message) {
     }
 }
 
-function toggleFoes(room, visible) {
-    console.log('Toggle Foes', room, visible);
+function toggleFoes(roomNo, visible) {
+    console.log('Toggle Foes', roomNo, visible);
     if (visible) {
+
+        room = null;
+        for (i = 0; i < dungeon.rooms.length; i++) {
+            r = dungeon.rooms[i];
+            if (r['n'] == roomNo) {
+                room = r;
+            }
+        }
+
         document.getElementById('thefoes').style.display = 'block';
         foesEl = document.querySelector('#thefoes ul');
-        console.log('!!!', dungeon.rooms[room].occ)
-        for (i in dungeon.rooms[room].occ) {
-            monster = dungeon.rooms[room].occ[i];
-            d = document.createElement('li');
-            d.style.display = 'inline-block';
-            d.style.padding = '10px 20px';
-            d.innerHTML = monster['n'] + "<br>the " + monster['t'];
-            foesEl.append(d);
+        console.log('Room occupants', room.occ)
+        for (i in room.occ) {
+            monster = room.occ[i];
+            foesEl.append(characterBox('monster', monster));
         }
     } else {
         document.getElementById('thefoes').style.display = 'none';
@@ -132,8 +135,72 @@ function toggleFoes(room, visible) {
     }
 }
 
+function battleUpdate(info) {
+    content = '';
+    sel = '#c' + info['target'] + ' .hp';
+    hpEl = document.querySelector(sel);
+    content += info['newhp'] + '/' + info['maxhp'];
+    if (info['dam'] != null && info['dam'] > 0) {
+        animate(hpEl);
+    }
+    if (Array.isArray(info['status']) && info['status'].length > 0) {
+        s = ' ';
+        for (i = 0; i < info['status'].length; i++) {
+            s += info['status'][i]['code'] + ' ';
+        }
+        content += s;
+    }
+    hpEl.textContent = content
+
+}
+
+function animate(element) {
+    element.style.color = 'red';
+    swapfn = function() {
+        element.style.color = 'black';
+    }
+    setTimeout(swapfn, 400);
+}
+
+function characterBox(type, fellah) {
+    d = document.createElement('li');
+    // uuids can start with numbers so we need to prepend a letter to make sure the ID is valid
+    d.id = 'c' + fellah['id'];
+    d.style.display = 'inline-block';
+    d.style.padding = '10px 20px';
+
+    nameEl = document.createElement('div');
+    nameEl.classList.add('name');
+    if (type == 'delver') {
+        nameEl.textContent = fellah['name'];
+    } else{
+        nameEl.textContent = fellah['n'];
+    }
+    d.append(nameEl);
+
+    titleEl = document.createElement('div');
+    titleEl.classList.add('title');
+    if (type == 'delver') {
+        titleEl.textContent = fellah['stock'] + " " + JOB_NAMES[fellah['job']]; 
+    } else {
+        // monster data is currently very abbreviated
+        titleEl.textContent = fellah['t']; 
+    }
+    d.append(titleEl);
+
+    hpEl = document.createElement('div');
+    hpEl.classList.add('hp');
+    if (type == 'delver') {
+        hpEl.textContent = fellah['currenthp'] + '/' + fellah['maxhp'];
+    } else{
+        hpEl.textContent = fellah['chp'] + '/' + fellah['mhp'];
+    }
+    d.append(hpEl);
+
+    return d;
+}
+
 function draw() {
-    console.log('Drawing new dungeon')
     canvas = document.getElementById("thedungeon");
 
     canvas.setAttribute('width', (dungeon['width'] * GRID_SIZE) + (dungeon['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
@@ -153,15 +220,12 @@ function draw() {
         }
     }
 
-    console.log('Pre-draw cursor: ', cursor);
     canvas = document.getElementById("thedungeon");
     ctx = canvas.getContext("2d");
 
     for (x = 0; x < grid.length; x++) {
         for (y = 0; y < grid[i].length; y++) {
-
             if (cursor != null && x == cursor[1] && y == cursor[0]) {
-                console.log('Found cursor', grid[x][y]);
                 ctx.fillStyle = CURSOR_COLOR;
             } else {
                 ctx.fillStyle = CELL_COLORS[grid[x][y]];

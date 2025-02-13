@@ -1,3 +1,4 @@
+import json
 import random
 import uuid
 
@@ -49,7 +50,7 @@ class Battle:
     BATTAL = 2
     OVER = 3
 
-    def __init__(self, processCallback):
+    def __init__(self, processCallback, emitter):
         self.teams = {}
         self.teamCount = 0
         self.conditions = []
@@ -57,6 +58,7 @@ class Battle:
         self.state = Battle.PAPERWORK
         self.roundCount = 0
         self.processCallback = processCallback
+        self.emitter = emitter
 
     def start(self):
         self.processMessage('Lets fight!')
@@ -71,6 +73,10 @@ class Battle:
     def processMessage(self, message, emit=False):
         if callable(self.processCallback):
             self.processCallback(message, emit)
+
+    def emit(self, message):
+        if callable(self.emitter):
+            self.emitter(message)
 
     def round(self):
         return self.roundCount
@@ -221,13 +227,21 @@ class Battle:
 
             self.applyEffect(target, spell.effect)
 
-
             descriptor = '{act} cast a cool spell but unfortunately for them its not implemented yet.'
-
 
         else:
             descriptor = 'Invalid move type: {}'.format(move)
 
+        body = {
+            'source': fellah.id,
+            'target': target.id,
+            'dam': appliedDamage,
+            'newhp': target.currenthp,
+            'maxhp': target.maxhp,
+            'status': target.status
+        }
+
+        self.emit('BTL-UPD;{}'.format(json.dumps(body)))
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 

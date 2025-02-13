@@ -44,7 +44,6 @@ class MongoService:
 
     def _persist_delver(self, delver):
         d = delver.serialize()
-        d.update({'id': str(uuid.uuid1())})
         self.db.delvers.insert_one(d)
         return d['id']
 
