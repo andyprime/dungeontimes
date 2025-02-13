@@ -1,3 +1,4 @@
+import json
 import random
 import time
 
@@ -214,7 +215,7 @@ class Expedition:
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.processMessage)
+            self.battle = Battle(self.processMessage, self.emit)
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
@@ -232,10 +233,22 @@ class Expedition:
 
     # Recover
     def runstate_rec(self):
-        self.processMessage('The party takes a little breather after a fight.')
+        self.processMessage('The party takes a little breather after a fight.', True)
         # for now we're just gonna heal the entire party so we don't die every other fight
         for p in self.party:
             p.recuperate()
+
+            # this is piggy backing off the battle update emit for now
+            body = {
+                'source': p.id,
+                'target': p.id,
+                'dam': -1,
+                'newhp': p.maxhp,
+                'maxhp': p.maxhp,
+                'status': p.status
+            }
+            self.emit('BTL-UPD;{}'.format(json.dumps(body)))
+
         self.status = Expedition.MOVING
 
     # Complete
