@@ -508,6 +508,7 @@ class Room:
 
     def serialize(self, stringify=False):
         box = {
+            'n': self.num,
             'd': (self.height, self.width), 
             'c': (self.coords[0], self.coords[1]),
         }
