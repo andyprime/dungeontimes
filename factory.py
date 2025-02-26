@@ -140,19 +140,4 @@ if __name__ == "__main__":
     # seed = '48cba384-4d36-11ee-8173-194626641d15'
 
     random.seed(seed)
-
-
-    print('Random Dungeon Test')
-    print('Seed : {}'.format(seed))
-    d = DungeonFactoryAlpha.generateDungeon()
-
-    s = d.serialize()
-
-    d2 = dungeons.Dungeon(s)
-    d2.prettyPrint()
-
-    s2 = d2.serialize()
-
-    print(s == s2)
-
     print('Seed : {}'.format(seed))

@@ -141,7 +141,7 @@ def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
 # stolen blatently from the tutorial
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         LOG.info('!!! Websocket connect: {}.'.format(websocket))
