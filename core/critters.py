@@ -31,6 +31,9 @@ class Creature:
             else:
                 status['duration'] -= 1
 
+    def clearStatus(self):
+        self.status = []
+
     def applyDamage(self, damage_count):
         old = self.currenthp
         self.currenthp = self.currenthp - damage_count
@@ -61,6 +64,7 @@ class Creature:
 
     def recuperate(self):
         self.currenthp = self.maxhp
+        self.clearStatus()
 
     def rollStat(self, stat):
         target = getattr(self, stat)
@@ -105,6 +109,7 @@ class Delver(Creature):
             self.job = model.Classes.find(serialized['job'])
             self.maxhp = serialized['maxhp']
             self.currenthp = serialized['currenthp']
+            self.id = serialized['id']
         else:
             self.name = name
             # note that for the moment stock just contains a name string, this will need to be more involved later
@@ -112,6 +117,7 @@ class Delver(Creature):
             self.job = job
             self.maxhp = job.hp
             self.currenthp = job.hp
+            self.id = str(uuid.uuid1())
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -146,6 +152,7 @@ class Delver(Creature):
 
     def serialize(self, stringify=False):
         c = {
+            'id': self.id,
             'name': self.name,
             'stock': self.stock,
             'job': self.job.code,
@@ -160,6 +167,17 @@ class Delver(Creature):
 
 
 class Monster(Creature):
+
+    # monsters don't need proper UUIDs so they can just have an internally incrementer
+    _id = 0
+    @classmethod
+    def idgen(self):
+        self._id += 1
+        return 'm{}'.format(self._id)
+
+    @classmethod
+    def idreset(self):
+        self._id = 0
 
     @classmethod
     def random(self):
@@ -183,6 +201,7 @@ class Monster(Creature):
             self.stock  = template.name
             self.maxhp = template.hp
             self.currenthp = template.hp
+        self.id = Monster.idgen()
 
     def moves(self):
         moves = []
@@ -195,6 +214,7 @@ class Monster(Creature):
 
     def serialize(self, stringify=False):
         c = {
+            'id': self.id,
             'n': self.name,
             't': self._template.code,
             'mhp': self.maxhp,
