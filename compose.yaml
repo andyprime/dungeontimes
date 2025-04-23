@@ -39,7 +39,7 @@ services:
       dockerfile: containers/web/Dockerfile
     restart: always
     ports: 
-      - "80:80"
+      - "${EXTERNAL_WEB_PORT:?error}:80"
     volumes:
       - ./web:/usr/share/nginx/html
 
