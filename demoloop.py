@@ -38,10 +38,11 @@ if __name__ == "__main__":
     random.seed(seed)
 
     settings = Settings()
-    mongo_client = MongoService('mongodb://{}:{}@localhost:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_port))
+    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port))
 
     creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
-    parameters = (pika.ConnectionParameters(host='localhost', credentials=creds))
+    parameters = (pika.ConnectionParameters(host=settings.rabbit_host, credentials=creds))
+    print(parameters)
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
