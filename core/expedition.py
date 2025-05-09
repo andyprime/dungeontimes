@@ -27,7 +27,7 @@ class Expedition:
         'rec': 2,
         'ext': 2,
         'sct': 2,
-        'cmp': 2,
+        'cmp': 3,
         'round_divider': 2
     }
 
@@ -89,7 +89,10 @@ class Expedition:
         self.emit('NARR;{}'.format(s))        
 
     def emitNew(self):
-        self.emit('EXP;{}'.format(self.id))        
+        self.emit('EXP-NEW;{}'.format(self.id))
+
+    def emitDelete(self):
+        self.emit('EXP-DEL;{}'.format(self.id))
 
     def emitBattle(self, start, roomNo):
         if start:

@@ -26,16 +26,38 @@ const JOB_NAMES = {
     'MAGICIAN': 'Magician'
 }
 
-dungeon = null;
-cursor = null;
-grid = [];
-rootUrl = window.location.hostname + ':8081'
+// dungeon = null;
+// cursor = null;
+// grid = [];
+
+expeditions = [];
+
+rootUrl = window.location.hostname + ':8081';
+
+/*
+        <canvas id="thedungeon"></canvas>
+
+        <div id="theparty"><b>Our Party</b><ul style="padding-left: 0; background-color: e6e6e6;"></ul></div>
+
+        <div id="thefoes" style="display: none;"><b>Lurking Foes!</b><ul style="padding-left: 0; background-color: e6e6e6;"></ul></div>
+
+        <p><b>Event Log</b></p>
+        <div id="event-log" style="padding: 10px 20px; background-color: e6e6e6;">
+            <p>The past is a mystery.</p>
+        </div>
+*/
+
+
 
 document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
     socket.onmessage = receiveMessage;
 
-    fetchExpedition(true);
+    panel = document.querySelector('#thebuttons');
+    panel.addEventListener('click', onDungeonSelect)
+
+
+    // fetchExistingExpeditions();
 });
 
 async function receiveMessage(event) {
@@ -49,8 +71,10 @@ async function receiveMessage(event) {
         draw();
     } else if (bits[0] == 'NARR') {
         addEvent(bits[1]);
-    } else if (bits[0] == 'EXP') {
-        fetchExpedition()
+    } else if (bits[0] == 'EXP-NEW') {
+        fetchExpedition(bits[1]);
+    } else if (bits[0] == 'EXP-DEL') {
+        removeExpedition(bits[1]);
     } else if (bits[0] == 'BTLS') {
         toggleFoes(bits[1], true);
     } else if (bits[0] == 'BTLE') {
@@ -60,19 +84,34 @@ async function receiveMessage(event) {
     }
 }
 
-async function fetchExpedition(initial=false) {
-    if (!initial) {
-        log = document.querySelector('#event-log');
-        newbie = document.createElement('p');
-        newbie.innerHTML = 'The world is cast anew.';
-        log.textContent = '';
-        log.prepend(newbie);   
-    }
-    url = '//' + rootUrl + "/expedition/";
+// async function fetchExistingExpeditions() {
+//     url = '//' + rootUrl + "/expeditions/";
+//     resp = await fetch(url);
+//     json = await resp.json();
 
-    resp = await fetch(url);
-    json = await resp.json();
-    expedition = json[0];
+//     console.log(json);
+//     pizza.ham()
+
+// }
+
+async function fetchExpedition(eid, initial=false) {
+    // if (!initial) {
+    //     log = document.querySelector('#event-log');
+    //     newbie = document.createElement('p');
+    //     newbie.innerHTML = 'The world is cast anew.';
+    //     log.textContent = '';
+    //     log.prepend(newbie);   
+    // }
+
+    for(pack in expeditions) {
+        if(pack['exp']['id'] == eid) {
+            console.log('We already know about expedition ', eid);
+            return;
+        }
+    }
+
+    resp = await fetch('//' + rootUrl + "/expedition/" + eid);
+    expedition = await resp.json();
     console.log('Expedition', expedition);
 
     url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
@@ -83,19 +122,54 @@ async function fetchExpedition(initial=false) {
     cursor = expedition['cursor'];
     console.log('Dungeon', dungeon);
 
-    toggleFoes(false);
-    draw();
+    // toggleFoes(false);
+    // draw();
 
     url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
     resp = await fetch(url);
     json = await resp.json();
-
-    console.log('Delvers: ', json);
-    partyEl = document.querySelector('#theparty ul');
-    partyEl.textContent = '';
+    delvers = [];
     for (i in json) {
-        delver = json[i];
-        partyEl.append(characterBox('delver', delver));
+        delvers.push(json[i]);
+    }
+
+    package = {
+        exp: expedition,
+        dungeon: dungeon,
+        delvers: delvers
+    };
+
+    expeditions.push(package)
+
+    createButton(eid);
+
+    console.log(expeditions);
+
+    // console.log('Delvers: ', json);
+    // partyEl = document.querySelector('#theparty ul');
+    // partyEl.textContent = '';
+    // for (i in json) {
+    //     delver = json[i];
+    //     partyEl.append(characterBox('delver', delver));
+    // }
+}
+
+function createButton(eid) {
+    but = document.createElement('button');
+    but.innerHTML = 'Dungeon ' + eid;
+    but.style['margin-right'] = '20px';
+    but.setAttribute('eid', eid);
+
+    panel = document.querySelector('#thebuttons');
+    panel.append(but)
+}
+
+function onDungeonSelect(event) {
+    console.log('Click');
+    console.log(event.target);
+
+    if(event.target.tagName == 'BUTTON') {
+        console.log(event.target.getAttribute('eid'));
     }
 }
 
