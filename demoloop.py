@@ -1,3 +1,4 @@
+import argparse
 import random
 import time
 import uuid
@@ -79,18 +80,33 @@ def all_done(es):
     return True
 
 if __name__ == "__main__":
-    seed = str(uuid.uuid1())
-    # seed = ''
+    parser  = argparse.ArgumentParser(description="Options for if you're running this outside of the container")
+    parser.add_argument('-l', '--local', action='store_true', help='Overrides container hostnames to be localhost so this can be run in a shell without modification.')
+    parser.add_argument('-s', '--seed', help="Override random seed generation with the provided value.")
+    args = parser.parse_args()
+
+    print(args)
+
+    if args.seed:
+        seed = args.seed
+    else:
+        seed = str(uuid.uuid1())
     print('Seed: {}'.format(seed))
     random.seed(seed)
 
     settings = Settings()
-    #mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port))
-    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, 'localhost', settings.mongo_port))
 
+    if args.local:
+        mongo_host = 'localhost'
+        rabbit_host = 'localhost'
+    else:
+        mongo_host = settings.mongo_host
+        rabbit_host = settings.rabbit_host
+    
+    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
     creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
-    #parameters = (pika.ConnectionParameters(host=settings.rabbit_host, credentials=creds))
-    parameters = (pika.ConnectionParameters(host='localhost', credentials=creds))
+    parameters = (pika.ConnectionParameters(host=rabbit_host, credentials=creds))
+    
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
     channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)

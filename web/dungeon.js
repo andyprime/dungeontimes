@@ -1,3 +1,6 @@
+// Andy, you ask, why are you writing all this raw javascript?
+// Well, it started off as a time saving mechanism but now its kind of a novelty.
+
 const HORIZONTAL_MARGIN = 2;
 const VERTICAL_MARGIN = 2;
 const GRID_SIZE = 20;
@@ -26,28 +29,10 @@ const JOB_NAMES = {
     'MAGICIAN': 'Magician'
 }
 
-// dungeon = null;
-// cursor = null;
-// grid = [];
-
 expeditions = [];
+selectedExpedition = null;
 
 rootUrl = window.location.hostname + ':8081';
-
-/*
-        <canvas id="thedungeon"></canvas>
-
-        <div id="theparty"><b>Our Party</b><ul style="padding-left: 0; background-color: e6e6e6;"></ul></div>
-
-        <div id="thefoes" style="display: none;"><b>Lurking Foes!</b><ul style="padding-left: 0; background-color: e6e6e6;"></ul></div>
-
-        <p><b>Event Log</b></p>
-        <div id="event-log" style="padding: 10px 20px; background-color: e6e6e6;">
-            <p>The past is a mystery.</p>
-        </div>
-*/
-
-
 
 document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
@@ -56,7 +41,6 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     panel = document.querySelector('#thebuttons');
     panel.addEventListener('click', onDungeonSelect)
 
-
     // fetchExistingExpeditions();
 });
 
@@ -64,23 +48,32 @@ async function receiveMessage(event) {
     msg = await event.data.text();
     console.log(msg);
     bits = msg.split(';');
+
+    // for expedition specific updates, ignore them if its not for the one we're looking at
+    if(['NARR', 'BTLS', 'BTLE', 'BTL-UPD'].includes(bits[0])) {
+        if(selectedExpedition != null && bits[1] != selectedExpedition['exp']['id']) {
+            return;
+        }
+    }
+
     if (bits[0] == 'CURSOR') {
-        coords = bits[1].split(',');
-        
-        cursor = [coords[0], coords[1]];
-        draw();
+        // we wanna track all coordinates but only draw if its the current one
+        updateCoords(bits[1], bits[2]);
+        if (bits[1] == selectedExpedition['exp']['id']) {
+            drawMap();
+        }
     } else if (bits[0] == 'NARR') {
-        addEvent(bits[1]);
+        addEvent(bits[2]);
     } else if (bits[0] == 'EXP-NEW') {
         fetchExpedition(bits[1]);
     } else if (bits[0] == 'EXP-DEL') {
         removeExpedition(bits[1]);
     } else if (bits[0] == 'BTLS') {
-        toggleFoes(bits[1], true);
+        toggleFoes(bits[2], true);
     } else if (bits[0] == 'BTLE') {
-        toggleFoes(bits[1], false);
+        toggleFoes(bits[2], false);
     } else if (bits[0] == 'BTL-UPD') {
-        battleUpdate(JSON.parse(bits[1]));
+        battleUpdate(JSON.parse(bits[2]));
     }
 }
 
@@ -103,6 +96,7 @@ async function fetchExpedition(eid, initial=false) {
     //     log.prepend(newbie);   
     // }
 
+    console.log('Fetch expedition', eid);
     for(pack in expeditions) {
         if(pack['exp']['id'] == eid) {
             console.log('We already know about expedition ', eid);
@@ -111,52 +105,39 @@ async function fetchExpedition(eid, initial=false) {
     }
 
     resp = await fetch('//' + rootUrl + "/expedition/" + eid);
-    expedition = await resp.json();
+    var expedition = await resp.json();
     console.log('Expedition', expedition);
 
     url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
     json = await resp.json();
-
-    dungeon = JSON.parse(json['body']);
-    cursor = expedition['cursor'];
+    var dungeon = JSON.parse(json['body']);
     console.log('Dungeon', dungeon);
-
-    // toggleFoes(false);
-    // draw();
 
     url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
     resp = await fetch(url);
     json = await resp.json();
-    delvers = [];
+    var delvers = [];
     for (i in json) {
         delvers.push(json[i]);
     }
 
-    package = {
+    expeditions.push({
         exp: expedition,
         dungeon: dungeon,
         delvers: delvers
-    };
-
-    expeditions.push(package)
+    });
 
     createButton(eid);
-
-    console.log(expeditions);
-
-    // console.log('Delvers: ', json);
-    // partyEl = document.querySelector('#theparty ul');
-    // partyEl.textContent = '';
-    // for (i in json) {
-    //     delver = json[i];
-    //     partyEl.append(characterBox('delver', delver));
-    // }
+    if (expeditions.length == 1) {
+        selectExpedition(eid);
+    }    
 }
 
 function createButton(eid) {
     but = document.createElement('button');
     but.innerHTML = 'Dungeon ' + eid;
+    but.id = 'd' + eid;
     but.style['margin-right'] = '20px';
     but.setAttribute('eid', eid);
 
@@ -165,11 +146,51 @@ function createButton(eid) {
 }
 
 function onDungeonSelect(event) {
-    console.log('Click');
-    console.log(event.target);
-
     if(event.target.tagName == 'BUTTON') {
-        console.log(event.target.getAttribute('eid'));
+        eid = event.target.getAttribute('eid');
+        selectExpedition(eid);
+    }
+}
+
+function selectExpedition(eid) {
+    for (i in expeditions) {
+        package = expeditions[i];
+        if(package['exp']['id'] == eid) {
+            selectedExpedition = package;
+        }
+    }
+    console.log('Exp. selected: ', selectedExpedition);
+    
+    clearLog();
+    drawMap();
+    drawParty();
+}
+
+function removeExpedition(eid) {
+    if (selectedExpedition != null && selectedExpedition['exp']['id'] == eid) {
+        replacement = null;
+        for (i in expeditions) {
+            if (expeditions[i]['exp']['id'] != eid) {
+                replacement = expeditions[i];
+            }
+        }
+    }
+
+    button = document.querySelector('#d' + eid);
+    button.remove();
+
+    console.log('pre splice: ', expeditions.length);
+    for (i in expeditions) {
+        if (expeditions[i]['exp']['id'] == eid) {
+            expeditions.splice(i, 1);
+        }
+    }
+    console.log('post splice: ', expeditions.length);
+
+    if (replacement != null) {
+        selectExpedition(replacement['exp']['id']);
+    } else {
+        clearData();
     }
 }
 
@@ -184,9 +205,27 @@ function addEvent(message) {
     }
 }
 
+function clearLog() {
+    document.querySelector('#event-log').innerHTML = '';
+    addEvent('The past is lost');
+}
+
+function drawParty() {
+    if(selectedExpedition != null) {
+        partyEl = document.querySelector('#theparty ul');
+        partyEl.textContent = '';
+        for (i in selectedExpedition['delvers']) {
+            delver = selectedExpedition['delvers'][i];
+            partyEl.append(characterBox('delver', delver));
+        }
+    }
+}
+
 function toggleFoes(roomNo, visible) {
     console.log('Toggle Foes', roomNo, visible);
     if (visible) {
+
+        dungeon = selectedExpedition['dungeon'];
 
         room = null;
         for (i = 0; i < dungeon.rooms.length; i++) {
@@ -224,8 +263,7 @@ function battleUpdate(info) {
         }
         content += s;
     }
-    hpEl.textContent = content
-
+    hpEl.textContent = content;
 }
 
 function animate(element) {
@@ -274,7 +312,25 @@ function characterBox(type, fellah) {
     return d;
 }
 
-function draw() {
+function updateCoords(eid, coordString) {
+    coords = coordString.split(',');
+    for (i in expeditions) {
+        if (expeditions[i]['exp']['id'] == eid) {
+            console.log('Updating coords: ', eid, coords);
+            expeditions[i]['exp']['cursor'] = [coords[0], coords[1]];
+        }
+    }
+}
+
+function drawMap(dungeon) {
+    if (selectedExpedition == null) {
+        console.log('No one ever selected an expedition.');
+        return;
+    }
+
+    dungeon = selectedExpedition['dungeon'];
+    cursor = selectedExpedition['exp']['cursor'];
+
     canvas = document.getElementById("thedungeon");
 
     canvas.setAttribute('width', (dungeon['width'] * GRID_SIZE) + (dungeon['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
@@ -337,4 +393,8 @@ function draw() {
         }
     }
 
+}
+
+function clearData() {
+    // might not be strictly necessary if things happen fast enough
 }
