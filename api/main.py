@@ -27,34 +27,37 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbit_host: str
 
-class RabbitQueue:
-    def __new__(cls, *args):
-        if not hasattr(cls, 'instance'):
-            cls.instance = super(RabbitQueue, cls).__new__(cls)
-        return cls.instance
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
 
-    def __init__(self, host=None):
-        if host:
-            self.host = host
+    async def initialize(self, host: str):
+        self.rmq_connection = await aio_pika.connect_robust(host)
 
-    async def connect(self):
-        self.connection = await aio_pika.connect_robust(self.host)
-        self.channel = await self.connection.channel() 
-        # we really shouldn't be declaring the exchange in here in the future but right now it helps manage order issues
+        self.channel = await self.rmq_connection.channel() 
         self.exchange = await self.channel.declare_exchange('dungeon', 'fanout', durable=True)
         self.queue = await self.channel.declare_queue('dlistener-api', exclusive=True)
         await self.queue.bind(self.exchange, routing_key='*')
+        await self.queue.consume(self.broadcast)
 
-    def get_queue(self):
-        return self.queue
-        
-    async def close(self):
-        await self.connection.close()
+    async def connect(self, websocket: WebSocket):
+        LOG.info('!!! Websocket connect: {}.'.format(websocket))
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-async def mq_channel():
-    LOG.info('!!!!! Closing rabbit connection')
-    return RabbitQueue().get_queue()
+    def disconnect(self, websocket: WebSocket):
+        LOG.info('!!! Websocket disconnect {}'.format(websocket))
+        self.active_connections.remove(websocket)
 
+    async def broadcast(self, message: aio_pika.IncomingMessage):
+        LOG.info('!!! Websocket broadcasting {} to ({}) connections'.format(message.body, len(self.active_connections)))
+        for connection in self.active_connections:
+            if connection.application_state == WebSocketState.DISCONNECTED:
+                LOG.info('Skipping disconnected websocket {}'.format(connection))
+            else:
+                await connection.send_text(message.body)
+
+manager = ConnectionManager()
 settings = Settings()
 app = FastAPI()
 
@@ -69,9 +72,7 @@ app.add_middleware(
 )
 
 def db_session():
-    x = 'mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port)
-    print('!!!!!!! {}'.format(x))
-    client = MongoClient(x)
+    client = MongoClient('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port))
     db = client.dungeondb
     try:
         yield db
@@ -80,8 +81,7 @@ def db_session():
 
 @app.on_event("startup")
 async def startup_event():
-    q = RabbitQueue('amqp://{}:{}@{}/'.format(settings.rabbit_user, settings.rabbit_password, settings.rabbit_host))
-    await q.connect()
+    await manager.initialize('amqp://{}:{}@{}/'.format(settings.rabbit_user, settings.rabbit_password, settings.rabbit_host))
 
 @app.get("/")
 def read_root():
@@ -115,7 +115,7 @@ def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
     d.pop('_id')
     return d
 
-@app.get("/expedition/")
+@app.get("/expeditions/")
 def read_active_expedition(db: Database = Depends(db_session)):
     es = []
     for ex in db.expeditions.find():
@@ -138,37 +138,14 @@ def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
 
     return delvers
 
-# stolen blatently from the tutorial
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        LOG.info('!!! Websocket connect: {}.'.format(websocket))
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        LOG.info('!!! Websocket disconnect {}'.format(websocket))
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: str):
-        LOG.info('!!! Websocket broadcasting {} to ({}) connections'.format(message, len(self.active_connections)))
-        for connection in self.active_connections:
-            if connection.application_state == WebSocketState.DISCONNECTED:
-                LOG.info('Skipping disconnected websocket {}'.format(connection))
-            else:
-                await connection.send_text(message)
-
-manager = ConnectionManager()
-
 @app.websocket("/feed/dungeon")
-async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
+# async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
+async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
-        # the main listener loop should maybe be somewhere it doesn't get run for each socket but seems to be ok atm
-        async with queue.iterator() as q:
-            async for message in q:
-                await manager.broadcast(message.body)
+        while True:
+            # the client isn't currently sending us anything but this is the correct move
+            data = await websocket.receive_text()
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)

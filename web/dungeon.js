@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     panel = document.querySelector('#thebuttons');
     panel.addEventListener('click', onDungeonSelect)
 
-    // fetchExistingExpeditions();
+    fetchExistingExpeditions();
 });
 
 async function receiveMessage(event) {
@@ -77,28 +77,20 @@ async function receiveMessage(event) {
     }
 }
 
-// async function fetchExistingExpeditions() {
-//     url = '//' + rootUrl + "/expeditions/";
-//     resp = await fetch(url);
-//     json = await resp.json();
+async function fetchExistingExpeditions() {
+    url = '//' + rootUrl + "/expeditions/";
+    resp = await fetch(url);
+    json = await resp.json();
 
-//     console.log(json);
-//     pizza.ham()
+    for (i in json) {
+        fetchExpedition(json[i]['id']);
+    }
+}
 
-// }
-
-async function fetchExpedition(eid, initial=false) {
-    // if (!initial) {
-    //     log = document.querySelector('#event-log');
-    //     newbie = document.createElement('p');
-    //     newbie.innerHTML = 'The world is cast anew.';
-    //     log.textContent = '';
-    //     log.prepend(newbie);   
-    // }
-
+async function fetchExpedition(eid) {
     console.log('Fetch expedition', eid);
-    for(pack in expeditions) {
-        if(pack['exp']['id'] == eid) {
+    for(i in expeditions) {
+        if(expeditions[i]['exp']['id'] == eid) {
             console.log('We already know about expedition ', eid);
             return;
         }
