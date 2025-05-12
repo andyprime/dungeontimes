@@ -74,9 +74,9 @@ class Battle:
         if callable(self.processCallback):
             self.processCallback(message, emit)
 
-    def emit(self, message):
+    def emit(self, code, message):
         if callable(self.emitter):
-            self.emitter(message)
+            self.emitter(code, message)
 
     def round(self):
         return self.roundCount
@@ -241,7 +241,7 @@ class Battle:
             'status': target.status
         }
 
-        self.emit('BTL-UPD;{}'.format(json.dumps(body)))
+        self.emit('BTL-UPD', json.dumps(body))
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 

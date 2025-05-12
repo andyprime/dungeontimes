@@ -27,7 +27,7 @@ class Expedition:
         'rec': 2,
         'ext': 2,
         'sct': 2,
-        'cmp': 2,
+        'cmp': 3,
         'round_divider': 2
     }
 
@@ -79,23 +79,29 @@ class Expedition:
         for e in self.emitters:
             e(msg.encode('ASCII'))
 
+    def identified_emit(self, code, msg):
+        self.emit('{};{};{}'.format(code, self.id, msg))
+
     def emitCursorUpdate(self):
         c = self.cursor.coords
         if self.mdb:
             self.mdb.db.expeditions.update_one({'id': self.id}, {'$set': {'cursor': c}})
-        self.emit('CURSOR;{},{}'.format(c[0], c[1]))
+        self.emit('CURSOR;{};{},{}'.format(self.id, c[0], c[1]))
         
     def emitNarrative(self, s):
-        self.emit('NARR;{}'.format(s))        
+        self.emit('NARR;{};{}'.format(self.id, s))        
 
     def emitNew(self):
-        self.emit('EXP;{}'.format(self.id))        
+        self.emit('EXP-NEW;{}'.format(self.id))
+
+    def emitDelete(self):
+        self.emit('EXP-DEL;{}'.format(self.id))
 
     def emitBattle(self, start, roomNo):
         if start:
-            self.emit('BTLS;{}'.format(roomNo))
+            self.emit('BTLS;{};{}'.format(self.id, roomNo))
         else:
-            self.emit('BTLE;{}'.format(roomNo))
+            self.emit('BTLE;{};{}'.format(self.id, roomNo))
 
     def over(self):
         return self.status in [Expedition.COMPLETE, Expedition.ERROR]
@@ -215,7 +221,7 @@ class Expedition:
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.processMessage, self.emit)
+            self.battle = Battle(self.processMessage, self.identified_emit)
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)

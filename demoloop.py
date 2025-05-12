@@ -1,7 +1,8 @@
+import argparse
 import random
 import time
 import uuid
-from functools import partial
+from functools import partial, reduce
 
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
@@ -31,37 +32,8 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbit_host: str
 
-if __name__ == "__main__":
-    seed = str(uuid.uuid1())
-    # seed = ''
-    print('Seed: {}'.format(seed))
-    random.seed(seed)
-
-    settings = Settings()
-    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, settings.mongo_host, settings.mongo_port))
-
-    creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
-    parameters = (pika.ConnectionParameters(host=settings.rabbit_host, credentials=creds))
-    print(parameters)
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
-
-    emitFn = partial(rabbitHandler, channel)
-
-    while True:
-        print('Demo loop start!')
-        print('Destroying any existing entities.')
-
-        print(mongo_client)
-
-        result = mongo_client.db.expeditions.delete_many({})
-        result2 = mongo_client.db.dungeons.delete_many({})
-        result3 = mongo_client.db.delvers.delete_many({})
-
-        print('Deleted: {}, {}, {}'.format(result.deleted_count, result2.deleted_count, result3.deleted_count))
-
-        # Generate dungeon
+def buildExpedition(mongo_client):
+    # Generate dungeon
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
                 'DEFAULT_HEIGHT': 10,
                 'DEFAULT_WIDTH': 30,
@@ -92,24 +64,96 @@ if __name__ == "__main__":
 
         e_id = mongo_client.persist_expedition(did, ids, dungeon.entrance().coords)
 
-        print('Saved the expedition')
+        print('Saved the expedition: {}'.format(e_id))
 
         dungeon.prettyPrint()
         for room in dungeon.rooms:
             print('{}: {}'.format(dungeon.rooms.index(room), room))
         print(delvers)
 
-        exp = core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
-        exp.registerEventEmitter(emitFn)
-        exp.emitNew()
+        return core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
 
-        print('Expedition generated, having a little nap')
+def all_done(es):
+    for x in es.values():
+        if not x['ex'].over():
+            return False
+    return True
+
+if __name__ == "__main__":
+    parser  = argparse.ArgumentParser(description="Options for if you're running this outside of the container")
+    parser.add_argument('-l', '--local', action='store_true', help='Overrides container hostnames to be localhost so this can be run in a shell without modification.')
+    parser.add_argument('-s', '--seed', help="Override random seed generation with the provided value.")
+    args = parser.parse_args()
+
+    print(args)
+
+    if args.seed:
+        seed = args.seed
+    else:
+        seed = str(uuid.uuid1())
+    print('Seed: {}'.format(seed))
+    random.seed(seed)
+
+    settings = Settings()
+
+    if args.local:
+        mongo_host = 'localhost'
+        rabbit_host = 'localhost'
+    else:
+        mongo_host = settings.mongo_host
+        rabbit_host = settings.rabbit_host
+    
+    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
+    creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
+    parameters = (pika.ConnectionParameters(host=rabbit_host, credentials=creds))
+    
+    connection = pika.BlockingConnection(parameters)
+    channel = connection.channel()
+    channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
+
+    emitFn = partial(rabbitHandler, channel)
+
+    while True:
+        print('Demo loop start!')
+        print('Destroying any existing entities.')
+
+        result = mongo_client.db.expeditions.delete_many({})
+        result2 = mongo_client.db.dungeons.delete_many({})
+        result3 = mongo_client.db.delvers.delete_many({})
+
+        print('Deleted: {}, {}, {}'.format(result.deleted_count, result2.deleted_count, result3.deleted_count))
+
+        expeditions = {}
+        exp1 = buildExpedition(mongo_client) 
+        expeditions[exp1.id] = {'ex': exp1, 'time': 2}
+
+        exp2 = buildExpedition(mongo_client)
+        expeditions[exp2.id] = {'ex': exp2, 'time': 3}
+
+        for ex in expeditions.values():
+            exchange_name = ex['ex'].id
+            print('Declaring: {}'.format(exchange_name))
+            ex['ex'].registerEventEmitter(emitFn)
+            ex['ex'].emitNew()
+
+        print('Expedition(s) generated, having a little nap')
+        print(expeditions)
         time.sleep(30)
 
+        current_time = 1
         print('Start expedition process')
-        while not exp.over():
-            t = exp.processTurn()
-            time.sleep(t)
+        while not all_done(expeditions):
+            ex = reduce(lambda x, y: x if x['time'] < y['time'] else y, expeditions.values())
+
+            time.sleep(ex['time'] - current_time)
+            current_time = ex['time']
+
+            wakeup = ex['ex'].processTurn()
+            expeditions[ex['ex'].id]['time'] = current_time + wakeup
+            
 
         print('Expedition over, having a little nap')
         time.sleep(30)
+
+        for ex in expeditions.values():
+            ex['ex'].emitDelete()
