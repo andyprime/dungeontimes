@@ -1,6 +1,6 @@
 import yaml
 import random
-
+import re
 
 class StringTool:
 
@@ -19,14 +19,22 @@ class StringTool:
             main_selection = random.choices(self._records[source]['options'], weights)[0]
 
             gen_string = main_selection['s']
-            bits = gen_string.split(' ')
+            # bits = gen_string.split(' ')
+            bits = re.findall('\$[\^\w]+', gen_string)
 
             for bit in bits:
                 if bit[0] == '$':
-                    if bit[1:] in self._records[source]:
-                        x = random.choice(self._records[source][bit[1:]])
+                    if bit[1] == '^':
+                        index = bit[2:]
                     else:
-                        x = self.random(bit[1:])
+                        index = bit[1:]
+
+                    if index in self._records[source]:
+                        x = random.choice(self._records[source][index])
+                    else:
+                        x = self.random(index)
+                    if bit[1] == '^':
+                        x = x.capitalize()                    
                     gen_string = gen_string.replace(bit, x, 1)
 
             return gen_string
@@ -68,5 +76,8 @@ BasicLastNames = OldStringsTool('basiclastnames')
 
 if __name__ == "__main__":
 
-    for i in range(1, 100):
-        print(StringTool.random('regular_name'))
+    for i in range(1, 1000):
+        print(StringTool.random('regular_names'))
+
+    for i in range(1, 1000):
+        print(StringTool.random('dungeon_names'))

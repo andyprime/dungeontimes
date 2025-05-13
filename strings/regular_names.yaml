@@ -3,9 +3,9 @@ options:
     s: $first_names $last_names
     w: 4
   - 
-    s: $first_names $nickname $last_names
+    s: $first_names "$^nickname" $last_names
     w: 1
   - 
-    s: $first_names the $honorific
+    s: $first_names the $^honorific
     w: 1
   
