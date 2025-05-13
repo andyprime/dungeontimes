@@ -103,6 +103,7 @@ async function fetchExpedition(eid) {
     url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
     json = await resp.json();
+    var dungeonName = json['name'];
     var dungeon = JSON.parse(json['body']);
     console.log('Dungeon', dungeon);
 
@@ -120,15 +121,15 @@ async function fetchExpedition(eid) {
         delvers: delvers
     });
 
-    createButton(eid);
+    createButton(eid, dungeonName);
     if (expeditions.length == 1) {
         selectExpedition(eid);
     }    
 }
 
-function createButton(eid) {
+function createButton(eid, name) {
     but = document.createElement('button');
-    but.innerHTML = 'Dungeon ' + eid;
+    but.innerHTML = name;
     but.id = 'd' + eid;
     but.style['margin-right'] = '20px';
     but.setAttribute('eid', eid);
