@@ -2,6 +2,7 @@ import uuid
 import json
 
 import core.critters
+import core.strings as strings
 
 class Dungeon:
     '''
@@ -14,6 +15,8 @@ class Dungeon:
         self.grid = []
         self.rooms = []
         self.regionPalette = 1
+
+        self.name = strings.StringTool.random('dungeon_names')
 
         if serialized:
             document = json.loads(serialized)

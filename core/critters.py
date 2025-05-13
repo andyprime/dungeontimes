@@ -1,6 +1,7 @@
 import json
 import uuid
 
+import core.strings
 from core.dice import Dice
 import definitions.model as model
 
@@ -93,9 +94,7 @@ class Creature:
 class Delver(Creature):
     @classmethod
     def random(self):
-        from core.names import NameFactory
-
-        return Delver(NameFactory.generateRandom(), model.Stocks.random(), model.Classes.random())
+        return Delver(core.strings.StringTool.random('regular_names'), model.Stocks.random(), model.Classes.random())
 
     def __init__(self, name=None, stock=None, job=None, serialized=None):
         super().__init__()
@@ -185,8 +184,6 @@ class Monster(Creature):
         return Monster(model.Monsters.random())
 
     def __init__(self, template=None, serialized=None):
-        from core.names import NameFactory
-
         super().__init__()
 
         if serialized:
@@ -197,7 +194,7 @@ class Monster(Creature):
             self.currenthp = serialized['chp']
         else:
             self._template = template
-            self.name = NameFactory.randomByType(template.category)
+            self.name = core.strings.StringTool.random('monster_' + template.category)
             self.stock  = template.name
             self.maxhp = template.hp
             self.currenthp = template.hp
