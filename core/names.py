@@ -1,6 +1,6 @@
 import random
 
-import strings
+import core.strings as strings
 from core.dice import Dice
 
 class NameFactory:

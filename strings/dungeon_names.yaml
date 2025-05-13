@@ -1,0 +1,34 @@
+options:
+  - 
+    s: $literals of $scary_nouns
+    w: 1
+  - 
+    s: The $literals of $scary_nouns
+    w: 1
+  - 
+    s: $scary_adjectives $literals
+    w: 1
+  
+literals:
+  - Cave
+  - Cavern
+  - Pit
+  - Den
+  - Hollow
+  - Chamber
+  - Delve
+  - Dungeon
+  - Donjon
+  - Prison
+  - Vault
+  - Gaol
+  - Hold
+  - Bastion
+  - Stronghold
+  - Bastille
+  - Redoubt
+  - Cellar
+  - Crypt
+  - Catacomb
+  - Sepulchre
+  - Tomb

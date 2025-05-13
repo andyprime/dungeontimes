@@ -36,7 +36,7 @@ class MongoService:
         dungeon_id = str(uuid.uuid1())
         d = {
             'id': dungeon_id,
-            'name': 'PLACEHOLDER',
+            'name': dungeon.name,
             'body': b
         }
         self.db.dungeons.insert_one(d)
