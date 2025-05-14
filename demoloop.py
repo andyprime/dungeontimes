@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 import core
 import core.dungeon.generate
 import core.expedition
+import core.region
 from core.dungeon.dungeons import Dungeon
 from core.mdb import MongoService
 
@@ -113,6 +114,12 @@ if __name__ == "__main__":
 
     emitFn = partial(rabbitHandler, channel)
 
+    result = mongo_client.db.regions.delete_many({})
+
+    region = core.region.RegionGenerate.generate_region()
+
+    mongo_client.persist(region)
+
     while True:
         print('Demo loop start!')
         print('Destroying any existing entities.')
@@ -143,6 +150,7 @@ if __name__ == "__main__":
         current_time = 1
         print('Start expedition process')
         while not all_done(expeditions):
+            # this just figures out which expedition has the first scheduled process time
             ex = reduce(lambda x, y: x if x['time'] < y['time'] else y, expeditions.values())
 
             time.sleep(ex['time'] - current_time)

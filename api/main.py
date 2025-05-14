@@ -138,6 +138,13 @@ def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
 
     return delvers
 
+@app.get("/region/")
+def read_region(db: Database = Depends(db_session)):
+    r = db.regions.find_one()
+    r.pop('_id')
+    return r
+
+
 @app.websocket("/feed/dungeon")
 # async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
 async def websocket_endpoint(websocket: WebSocket):

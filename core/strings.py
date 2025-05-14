@@ -45,35 +45,6 @@ class StringTool:
         with open(filename) as stream:
             self._records[source] = yaml.safe_load(stream)
 
-class OldStringsTool:
-
-    def __init__(self, sourceName):
-        self.sourceName = sourceName
-        self.fileName = filename = 'strings/' + sourceName + '.txt'
-        self.loaded = False
-        self.values = []
-
-    def random(self):
-        if not self.loaded:
-            self.load()
-            
-        return random.choice(self.values)
-
-    def load(self):
-        lines = open(self.fileName).read().splitlines()
-        self.values = lines
-        self.loaded = True
-
-    def __str__(self):
-        return self.fileName + '; Loaded: ' + str(self.loaded) + ', value count: ' + str(len(self.values))
-
-CoolNouns = OldStringsTool('coolnouns')
-CoolAdjectives = OldStringsTool('cooladjectives')
-CoolVerbs = OldStringsTool('coolverbs')
-FirstNames = OldStringsTool('firstnames')
-BasicLastNames = OldStringsTool('basiclastnames')
-
-
 if __name__ == "__main__":
 
     for i in range(1, 1000):

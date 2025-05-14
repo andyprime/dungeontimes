@@ -7,6 +7,7 @@ class MongoService:
     PERSIST_MAP= {
         '<class \'core.dungeon.dungeons.Dungeon\'>': 'dungeon',
         '<class \'core.critters.Delver\'>': 'delver',
+        '<class \'core.region.Region\'>': 'region'
     }
 
     def __init__(self, host):
@@ -46,6 +47,10 @@ class MongoService:
         d = delver.serialize()
         self.db.delvers.insert_one(d)
         return d['id']
+
+    def _persist_region(self, region):
+        self.db.regions.insert_one(region.serialize(False))
+        return region.id
 
     # expedition is in a funny place right now, so we'll skip the mapping shenanigans for now
     def persist_expedition(self, dungeon_id, delver_ids, entrance_cell):
