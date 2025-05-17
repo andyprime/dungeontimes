@@ -10,7 +10,7 @@ class Region:
         self.grid = []
         self.name = strings.StringTool.random('region_names')
         self.id = str(uuid.uuid1())
-
+        self.dungeons = {}
 
     def initialize(self, height, width, terrain=None):
         if not terrain:
@@ -33,6 +33,7 @@ class Region:
     def width(self):
         return len(self.grid[0])
 
+    # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):
         try:
             return self.grid[y][x]
@@ -51,13 +52,40 @@ class Region:
                     bucket.append(c)
         return bucket
 
+    def getNeighbors(self, cell):
+        # get all the navigable neighbors of this cell
+        return [self.getCell(*x) for x in cell.all() if self.getCell(*x) and self.getCell(*x).navigable()]
+
+    def getWeight(self, cell):
+        return RCell.WEIGHT[cell.type]
+
+    def place_dungeon(self, dungeon_id):
+        cells = [c for c in self.allCells() if c.type in RCell.DUNGEON_TYPES]
+        self.dungeons[dungeon_id] = random.choice(cells)
+        print('Just added dungeon to region')
+        print(self.dungeons)
+
+    def find_dungeon(self, dungeon_id):
+        return self.dungeons[dungeon_id]
+
+    def remove_dungeons(self):
+        self.dungeons.clear()
+
     def prettyPrint(self, highlight=None):
+        if highlight and type(highlight) == tuple:
+            highlight = self.getCell(*highlight)
+
         for index, row in enumerate(self.grid):
 
             display = '{}: '.format(str(index).rjust(4, ' '))
 
             for cell in row:
-                display += cell.symbol()
+                if cell == highlight:
+                    display += 'P'
+                elif cell in self.dungeons.values():
+                    display += 'D'
+                else:
+                    display += cell.symbol()
 
             print(display)
 
@@ -90,6 +118,7 @@ class RCell:
     TOWN = 11
 
     ALL_TYPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    DUNGEON_TYPES = [4, 7, 9, 10]
     NAVIGABLE = [1, 2, 3, 4, 5, 7, 9, 10, 11]
     PERSISTENT = [1, 2, 3, 11]
 
@@ -105,6 +134,20 @@ class RCell:
         9: '%',
         10: '.',
         11: 'o'
+    }
+
+    TRANSLATE = {
+        1: 'City',
+        2: 'Farm',
+        3: 'Road',
+        4: 'Forest',
+        5: 'River',
+        6: 'Water',
+        7: 'Hills',
+        8: 'Mtn.',
+        9: 'Desert',
+        10: 'Plain',
+        11: 'Town'
     }
 
     WEIGHT = {
@@ -138,11 +181,27 @@ class RCell:
         self.h = coords[0]
         self.w = coords[1]
 
-    def navigale(self):
+    def navigable(self):
         return self.type in RCell.NAVIGABLE
 
     def symbol(self):
         return RCell.PRETTY[self.type]
+
+    def north(self):
+        return (self.h - 1, self.w)
+
+    def south(self):
+        return (self.h + 1, self.w)
+
+    def west(self):
+        return (self.h, self.w - 1)
+
+    def east(self):
+        return (self.h, self.w + 1)
+
+    def all(self):
+        a = [self.north(), self.south(), self.east(), self.west()]
+        return [x for x in a if x]
 
     def serialize(self, stringify=False):
         box = [self.type, self.h, self.w]
@@ -152,6 +211,12 @@ class RCell:
             return json.dumps(box)
         else:
             return box
+
+    def __str__(self):
+        return 'R Cell: {}, {}'.format(RCell.TRANSLATE[self.type], self._coords)
+
+    def __repr__(self):
+        return 'RC {}'.format(self._coords)
 
 class RegionGenerate:
 

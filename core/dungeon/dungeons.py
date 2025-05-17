@@ -33,8 +33,6 @@ class Dungeon:
                 room.num = self.rooms.index(room) + 1
 
     def initialize(self, height, width):
-        # TODO: complain if params are bad
-
         for i in range(height):
             self.grid.append([])
 
@@ -94,7 +92,12 @@ class Dungeon:
     def getNeighbors(self, cell):
         # get all the navigable neighbors of this cell
         # return [x for x in cell.all() if x]
+        print(cell)
         return [self.getCell(*x) for x in cell.all() if self.getCell(*x).navigable()]
+
+    def getWeight(self, cell):
+        # this is here for compatibility but all cells have a weight of 1 in dungeons right now
+        return 1
 
     # def getRoomForCell(self, cell):
     def roomAt(self, cell):
