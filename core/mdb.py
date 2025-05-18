@@ -52,6 +52,22 @@ class MongoService:
         self.db.regions.insert_one(region.serialize(False))
         return region.id
 
+    def update(self, object):
+        flat_type = str(type(object))
+        suffix = MongoService.PERSIST_MAP.get(flat_type, False)
+
+        if suffix:
+            f = getattr(self, '_update_' + suffix)
+            if f:
+                return f(object)
+            else: 
+                raise ValueError('Found persist map but no callable for type {}'.format(flat_type))
+        else:
+            raise ValueError('Did not find persist map for type "{}"'.format(flat_type))
+
+    def _update_region(self, region):
+        self.db.regions.replace_one({'id': region.id}, region.serialize(False))
+
     # expedition is in a funny place right now, so we'll skip the mapping shenanigans for now
     def persist_expedition(self, dungeon_id, delver_ids, entrance_cell):
         e = {

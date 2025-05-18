@@ -122,6 +122,7 @@ if __name__ == "__main__":
     result = mongo_client.db.regions.delete_many({})
 
     region = core.region.RegionGenerate.generate_region()
+    region.registerEventEmitter(emitFn)
     mongo_client.persist(region)
 
     while True:
@@ -149,6 +150,9 @@ if __name__ == "__main__":
             print('Declaring: {}'.format(exchange_name))
             ex['ex'].registerEventEmitter(emitFn)
             ex['ex'].emitNew()
+
+        mongo_client.update(region)
+        region.emitDungeonLocales()
 
         print('Expedition(s) generated, having a little nap')
         print(expeditions)

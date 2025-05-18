@@ -11,6 +11,7 @@ class Region:
         self.name = strings.StringTool.random('region_names')
         self.id = str(uuid.uuid1())
         self.dungeons = {}
+        self.emitters = []
 
     def initialize(self, height, width, terrain=None):
         if not terrain:
@@ -32,6 +33,17 @@ class Region:
     @property
     def width(self):
         return len(self.grid[0])
+
+    def registerEventEmitter(self, callback):
+        self.emitters.append(callback)
+
+    def emit(self, msg):
+        for e in self.emitters:
+            e(msg.encode('ASCII'))
+
+    def emitDungeonLocales(self):
+        dungeons = [str(list(c.coords)) for c in self.dungeons.values()]
+        self.emit('DNGS;{}'.format(';'.join(dungeons)))
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):
@@ -62,16 +74,14 @@ class Region:
     def place_dungeon(self, dungeon_id):
         cells = [c for c in self.allCells() if c.type in RCell.DUNGEON_TYPES]
         self.dungeons[dungeon_id] = random.choice(cells)
-        print('Just added dungeon to region')
-        print(self.dungeons)
-
+        
     def find_dungeon(self, dungeon_id):
         return self.dungeons[dungeon_id]
 
     def remove_dungeons(self):
         self.dungeons.clear()
 
-    def prettyPrint(self, highlight=None):
+    def prettyPrint(self, highlight=None, path=None):
         if highlight and type(highlight) == tuple:
             highlight = self.getCell(*highlight)
 
@@ -81,11 +91,15 @@ class Region:
 
             for cell in row:
                 if cell == highlight:
-                    display += 'P'
+                    c = 'P'
                 elif cell in self.dungeons.values():
-                    display += 'D'
+                    c = 'D'
                 else:
-                    display += cell.symbol()
+                    c = cell.symbol()
+
+                if path and cell in path:
+                        c = '\033[93m' + c + '\033[0m'
+                display += c
 
             print(display)
 
@@ -96,6 +110,8 @@ class Region:
             'name': self.name,
             'width': self.width,
             'height': self.height,
+            'homebase': self.homebase,
+            'dungeons': [list(e.coords) for e in self.dungeons.values()],
             'cells': [c.serialize(False) for c in self.allCells()]
         }
         if stringify:
@@ -240,14 +256,14 @@ class RegionGenerate:
         self.CURRENT_SETTINGS.update(options)
 
         # =============================================================================================
-        self.header('Setup')
+        # self.header('Setup')
         region = Region()
         region.initialize(self.CURRENT_SETTINGS['DEFAULT_HEIGHT'], self.CURRENT_SETTINGS['DEFAULT_WIDTH'], self.CURRENT_SETTINGS['DEFAULT_TERRAIN'])
 
-        region.prettyPrint()
+        # region.prettyPrint()
 
         # =============================================================================================
-        self.header('City Generation')
+        # self.header('City Generation')
 
         height_range = ( int(region.height / 2) - int(region.height * 0.1), int(region.height / 2) + int(region.height * 0.1) )
         width_range = ( int(region.width / 2) - int(region.width * 0.1), int(region.width / 2) + int(region.width * 0.1) )
@@ -260,11 +276,10 @@ class RegionGenerate:
         region.grid[y][x].name = strings.StringTool.random('city_names')
         region.homebase = (y, x)
 
-        print(region.homebase)
-        region.prettyPrint()
+        # region.prettyPrint()
 
         # =============================================================================================
-        self.header('Towns and roads')
+        # self.header('Towns and roads')
 
         total_space = region.height * region.width
         amount = int(total_space * self.CURRENT_SETTINGS['TOWN_AMOUNT_RATIO'])
@@ -274,8 +289,8 @@ class RegionGenerate:
         town_spacing = int(max(region.height, region.width) * self.CURRENT_SETTINGS['TOWN_SPACING_RATIO'])
         town_attempts = 0
 
-        print('Placeing {} towns'.format(town_count))
-        print('Min spacing: {}'.format(town_spacing))
+        # print('Placeing {} towns'.format(town_count))
+        # print('Min spacing: {}'.format(town_spacing))
 
         while len(existing_towns) < town_count and town_attempts < self.TOWN_ATTEMPT_CUTOFF:
             clear = True
@@ -297,10 +312,10 @@ class RegionGenerate:
                 region.grid[placement[0]][placement[1]].type = RCell.TOWN
                 self.path_road(region, region.homebase, placement)
         
-        region.prettyPrint()
+        # region.prettyPrint()
 
         # =============================================================================================
-        self.header('Farms')
+        # self.header('Farms')
 
         # lets not be clever about this
         for cell in region.allCells():
@@ -314,11 +329,11 @@ class RegionGenerate:
             if close_enough and cell.type == self.CURRENT_SETTINGS['DEFAULT_TERRAIN']:
                 cell.type = RCell.FARMLAND
 
-        region.prettyPrint()
+        # region.prettyPrint()
 
 
         # =============================================================================================
-        self.header('Other Terrain')
+        # self.header('Other Terrain')
 
         terrain_options = [RCell.FOREST, RCell.HILLS, RCell.MOUNTAIN, RCell.DESERT]
 
@@ -328,7 +343,7 @@ class RegionGenerate:
             terrain = random.choice(terrain_options)
             terrain_options.remove(terrain)
 
-            print('Drawing some: {}'.format(terrain))
+            # print('Drawing some: {}'.format(terrain))
             amount = int(region.height * region.width * self.CURRENT_SETTINGS['TERRAIN_AMOUNT_RATIO'])
             attempts = 0
             successes = 0
@@ -345,7 +360,7 @@ class RegionGenerate:
                     self.draw_terrain(region, cell.coords, radius, terrain)
                     successes += 1
 
-        region.prettyPrint()
+        # region.prettyPrint()
 
         return region
 
@@ -401,12 +416,6 @@ class RegionGenerate:
     def distance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
-    # returns the maximum of either the X or Y distance
-    # @classmethod
-    # def absdistance(self, pos1, pos2):
-
-    #     return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
-
     @classmethod
     def ydistance(self, pos1, pos2):
         return abs(pos1[0] - pos2[0])
@@ -427,7 +436,7 @@ class RegionGenerate:
 
 if __name__ == "__main__":
     
-    r = RegionGenerate.generateRegion()
+    r = RegionGenerate.generate_region()
 
 
     # print(r.serialize())

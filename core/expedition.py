@@ -53,7 +53,8 @@ class Expedition:
         self.status = Expedition.PREP
 
         self.cursor = region.homebase
-        
+        self.outgoing = True
+
         self.steps = 0
 
         # if set it is the cells we are currently trying to navigate through
@@ -160,14 +161,23 @@ class Expedition:
     # overland travel
     def runstate_trv(self):
         self.processMessage('Travel')
-        target = self.region.find_dungeon(self.dungeon.id)
+
+        if self.outgoing:
+            target = self.region.find_dungeon(self.dungeon.id)
+        else:
+            target = self.region.getCell(*self.region.homebase)
+
         if self.cursor == target:
-            self.processMessage('The party has found the entrance to the dungeon.', True)
-            self.status = Expedition.READY
+            if self.outgoing:
+                self.processMessage('The party has found the entrance to the dungeon.', True)
+                self.status = Expedition.READY
+            else:
+                self.processMessage('The party has returned home for some well deserved rest.', True)
+                self.status = Expedition.COMPLETE
         elif self.path:
             self.move()
         else:
-            print('Pathing to dungeon at {}'.format(target))
+            print('Pathing to {}'.format(target))
             self.path = self.generatePath(self.cursor, self.region, target)
 
     # Ready
@@ -223,11 +233,14 @@ class Expedition:
 
             if self.cursor == self.dungeon.entrance():
                 self.processMessage('The party has reached the entrance and left the dungeon.', True)
-                self.status = Expedition.COMPLETE
+                self.status = Expedition.TRAVEL
+                self.cursor = self.region.find_dungeon(self.dungeon.id)
+                self.path = []
+                self.outgoing = False
                 showOverride = True
             else:
                 self.processMessage('Party is ready to leave and plotting a course back to the entrance.', True)
-                self.path = self.generatePath(self.cursor, self.dungeon, target=self.dungeon.entrance)
+                self.path = self.generatePath(self.cursor, self.dungeon, target=self.dungeon.entrance())
 
     # Battle
     def runstate_bat(self):
@@ -317,7 +330,7 @@ class Expedition:
                         display += cell.symbol()
                 print(display)
         else:
-            self.region.prettyPrint(self.cursor)
+            self.region.prettyPrint(self.cursor, self.path)
         print('\n')
 
     def navigate(self):
@@ -344,8 +357,6 @@ class Expedition:
 
         if type(target) == tuple:
             target = grid.getCell(*target)
-
-        print('Pathing from {} to {}'.format(start, target))
 
         pathingStart = time.perf_counter()
 

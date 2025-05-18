@@ -92,7 +92,6 @@ class Dungeon:
     def getNeighbors(self, cell):
         # get all the navigable neighbors of this cell
         # return [x for x in cell.all() if x]
-        print(cell)
         return [self.getCell(*x) for x in cell.all() if self.getCell(*x).navigable()]
 
     def getWeight(self, cell):
