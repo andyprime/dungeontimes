@@ -3,9 +3,10 @@ import uuid
 
 import core.strings
 from core.dice import Dice
+from core.mdb import Persister
 import definitions.model as model
 
-class Creature:
+class Creature(Persister):
 
     def __init__(self):
         self.status = []
@@ -40,7 +41,6 @@ class Creature:
         self.currenthp = self.currenthp - damage_count
         if self.currenthp < 0:
             self.currenthp = 0
-        print('  Apply Dam [{}] - HP old - {}, new - {}'.format(self.name, old, self.currenthp))
 
     def applyStatus(self, status, half=False):
         duration = Dice.d(1,4) + 2
@@ -148,6 +148,16 @@ class Delver(Creature):
             spells.append(model.Spells.find(id))
 
         return spells
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'stock': self.stock,
+            'job': self.job.code,
+            'maxhp': self.maxhp,
+            'currenthp': self.currenthp
+        }
 
     def serialize(self, stringify=False):
         c = {

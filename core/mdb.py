@@ -4,13 +4,18 @@ from pymongo import MongoClient
 
 class MongoService:
 
-    PERSIST_MAP= {
-        '<class \'core.dungeon.dungeons.Dungeon\'>': 'dungeon',
-        '<class \'core.critters.Delver\'>': 'delver',
-        '<class \'core.region.Region\'>': 'region'
+    client = None
+    db = None
+
+    COLLECTION_MAP= {
+        '<class \'core.dungeon.dungeons.Dungeon\'>': 'dungeons',
+        '<class \'core.critters.Delver\'>': 'delvers',
+        '<class \'core.region.Region\'>': 'regions',
+        '<class \'core.expedition.Expedition\'>': 'expeditions'
     }
 
-    def __init__(self, host):
+    @classmethod
+    def setup(self, host):
         try:
             self.client = MongoClient(host)
             self.db = self.client.dungeondb
@@ -19,64 +24,72 @@ class MongoService:
             print('Exception during mongo connection')
             print(e)
 
+    @classmethod
+    def get_collection(self, obj):
+        flat_type = str(type(obj))
+        return MongoService.COLLECTION_MAP.get(flat_type, False)
+
+    @classmethod
+    def save(self, object):
+        collection = self.get_collection(object)
+
+        if collection:
+            c = getattr(self.db, collection)
+
+            # Note: Mongo collections don't implement a basic truthiness function so you gotta compare it
+            if c != None:
+                c.insert_one(object.data_format())
+            else: 
+                raise ValueError('No collection object found for: {}'.format(flat_type))
+        else:
+            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))
+
+    @classmethod
     def persist(self, object):
-        flat_type = str(type(object))
-        suffix = MongoService.PERSIST_MAP.get(flat_type, False)
+        collection = self.get_collection(object)
 
-        if suffix:
-            f = getattr(self, '_persist_' + suffix)
-            if f:
-                return f(object)
+        if collection:
+            c = getattr(self.db, collection)
+
+            if c != None:
+                c.replace_one({'id': object.id}, object.data_format())
             else: 
-                raise ValueError('Found persist map but no callable for type {}'.format(flat_type))
+                raise ValueError('No collection object found for: {}'.format(flat_type))
         else:
-            raise ValueError('Did not find persist map for type "{}"'.format(flat_type))
-            
-    def _persist_dungeon(self, dungeon):
-        b = dungeon.serialize()
-        dungeon_id = str(uuid.uuid1())
-        d = {
-            'id': dungeon_id,
-            'name': dungeon.name,
-            'body': b
-        }
-        self.db.dungeons.insert_one(d)
-        return dungeon_id
+            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))
 
-    def _persist_delver(self, delver):
-        d = delver.serialize()
-        self.db.delvers.insert_one(d)
-        return d['id']
+    @classmethod
+    def persist_prop(self, object, prop, value):
+        collection = self.get_collection(object)
 
-    def _persist_region(self, region):
-        self.db.regions.insert_one(region.serialize(False))
-        return region.id
+        if collection:
+            c = getattr(self.db, collection)
 
-    def update(self, object):
-        flat_type = str(type(object))
-        suffix = MongoService.PERSIST_MAP.get(flat_type, False)
-
-        if suffix:
-            f = getattr(self, '_update_' + suffix)
-            if f:
-                return f(object)
+            if c != None:
+                values = {}
+                values[prop] = value
+                c.update_one({'id': object.id}, {'$set': values})
             else: 
-                raise ValueError('Found persist map but no callable for type {}'.format(flat_type))
+                raise ValueError('No collection object found for: {}'.format(flat_type))
         else:
-            raise ValueError('Did not find persist map for type "{}"'.format(flat_type))
+            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))        
 
-    def _update_region(self, region):
-        self.db.regions.replace_one({'id': region.id}, region.serialize(False))
+class Persister:
 
-    # expedition is in a funny place right now, so we'll skip the mapping shenanigans for now
-    def persist_expedition(self, dungeon_id, delver_ids, entrance_cell):
-        e = {
-            'id': str(uuid.uuid1()),
-            'name': 'PLACEHOLDER',
-            'complete': False,
-            'dungeon': dungeon_id,
-            'party': delver_ids,
-            'cursor': entrance_cell
-        }
-        self.db.expeditions.insert_one(e)
-        return e['id']
+    def __init__(self):
+        pass
+
+    def data_format(self):
+        raise ValueError('You must override the data_format method.')
+
+    def save(self):
+        MongoService.save(self)
+        return self.id
+
+    def persist(self):
+        MongoService.persist(self)
+        return self.id
+
+    def persist_prop(self, prop, value):
+        MongoService.persist_prop(self, prop, value)
+        return self.id

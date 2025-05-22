@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbit_host: str
 
-def buildExpedition(mongo_client, region):
+def buildExpedition(region):
     # Generate dungeon
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
                 'DEFAULT_HEIGHT': 10,
@@ -49,7 +49,7 @@ def buildExpedition(mongo_client, region):
             for i in range(4):
                 room.populate(core.critters.Monster.random())
 
-        did = mongo_client.persist(dungeon)
+        did = dungeon.save()
         dungeon.id = did
 
         region.place_dungeon(did)
@@ -62,21 +62,21 @@ def buildExpedition(mongo_client, region):
         for i in range(4):
             d = core.critters.Delver.random()
             delvers.append(d)
-            ids.append(mongo_client.persist(d))
+            ids.append(d.save())
 
         print('Generated delvers')
 
-        # I don't remember why we're generating the 
-        e_id = mongo_client.persist_expedition(did, ids, dungeon.entrance().coords)
+        exp = core.expedition.Expedition(region, dungeon, delvers, None)
+        exp.save()
 
-        print('Saved the expedition: {}'.format(e_id))
+        print('Saved the expedition: {}'.format(exp.id))
 
         dungeon.prettyPrint()
         for room in dungeon.rooms:
             print('{}: {}'.format(dungeon.rooms.index(room), room))
         print(delvers)
 
-        return core.expedition.Expedition(region, dungeon, delvers, None, id=e_id, mdb=mongo_client)
+        return exp 
 
 def all_done(es):
     for x in es.values():
@@ -109,7 +109,7 @@ if __name__ == "__main__":
         mongo_host = settings.mongo_host
         rabbit_host = settings.rabbit_host
     
-    mongo_client = MongoService('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
+    MongoService.setup('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
     creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
     parameters = (pika.ConnectionParameters(host=rabbit_host, credentials=creds))
     
@@ -119,19 +119,19 @@ if __name__ == "__main__":
 
     emitFn = partial(rabbitHandler, channel)
 
-    result = mongo_client.db.regions.delete_many({})
+    result = MongoService.db.regions.delete_many({})
 
     region = core.region.RegionGenerate.generate_region()
+    region.save()
     region.registerEventEmitter(emitFn)
-    mongo_client.persist(region)
-
+    
     while True:
         print('Demo loop start!')
         print('Destroying any existing entities.')
 
-        result = mongo_client.db.expeditions.delete_many({})
-        result2 = mongo_client.db.dungeons.delete_many({})
-        result3 = mongo_client.db.delvers.delete_many({})
+        result = MongoService.db.expeditions.delete_many({})
+        result2 = MongoService.db.dungeons.delete_many({})
+        result3 = MongoService.db.delvers.delete_many({})
         region.remove_dungeons()
 
         print('Deleted: {}, {}, {}'.format(result.deleted_count, result2.deleted_count, result3.deleted_count))
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         expeditions = {}
 
         for i in range(0, args.exp):
-            exp = buildExpedition(mongo_client, region) 
+            exp = buildExpedition(region) 
             # starting it off with a low but staggered time
             expeditions[exp.id] = {'ex': exp, 'time': i+2}
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             ex['ex'].registerEventEmitter(emitFn)
             ex['ex'].emitNew()
 
-        mongo_client.update(region)
+        region.persist()
         region.emitDungeonLocales()
 
         print('Expedition(s) generated, having a little nap')

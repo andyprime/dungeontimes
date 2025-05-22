@@ -15,7 +15,7 @@ class StringTool:
             return random.choice(self._records[source])
         else:
             weights = [x['w'] for x in self._records[source]['options']]
-            # remidner that choices always returns an array even if you only want 1 result
+            # reminder that choices always returns an array even if you only want 1 result
             main_selection = random.choices(self._records[source]['options'], weights)[0]
 
             gen_string = main_selection['s']
