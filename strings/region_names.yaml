@@ -1,0 +1,10 @@
+options:
+  - 
+    s: $literals
+    w: 1
+  
+literals:
+  - Jumble Coast
+  - Hills of Linguini
+  - Flurbistan
+  - The Northern Range

@@ -13,6 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 import core
 import core.dungeon.generate
 import core.expedition
+import core.region
 from core.dungeon.dungeons import Dungeon
 from core.mdb import MongoService
 
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbit_host: str
 
-def buildExpedition(mongo_client):
+def buildExpedition(mongo_client, region):
     # Generate dungeon
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
                 'DEFAULT_HEIGHT': 10,
@@ -49,6 +50,9 @@ def buildExpedition(mongo_client):
                 room.populate(core.critters.Monster.random())
 
         did = mongo_client.persist(dungeon)
+        dungeon.id = did
+
+        region.place_dungeon(did)
 
         print('Generated dungeon')
 
@@ -62,6 +66,7 @@ def buildExpedition(mongo_client):
 
         print('Generated delvers')
 
+        # I don't remember why we're generating the 
         e_id = mongo_client.persist_expedition(did, ids, dungeon.entrance().coords)
 
         print('Saved the expedition: {}'.format(e_id))
@@ -71,7 +76,7 @@ def buildExpedition(mongo_client):
             print('{}: {}'.format(dungeon.rooms.index(room), room))
         print(delvers)
 
-        return core.expedition.Expedition(dungeon, delvers, None, id=e_id, mdb=mongo_client)
+        return core.expedition.Expedition(region, dungeon, delvers, None, id=e_id, mdb=mongo_client)
 
 def all_done(es):
     for x in es.values():
@@ -83,6 +88,7 @@ if __name__ == "__main__":
     parser  = argparse.ArgumentParser(description="Options for if you're running this outside of the container")
     parser.add_argument('-l', '--local', action='store_true', help='Overrides container hostnames to be localhost so this can be run in a shell without modification.')
     parser.add_argument('-s', '--seed', help="Override random seed generation with the provided value.")
+    parser.add_argument('-e', '--exp', type=int, default=2, help="Number of expeditions to simulate. Default is 2.")
     args = parser.parse_args()
 
     print(args)
@@ -113,6 +119,12 @@ if __name__ == "__main__":
 
     emitFn = partial(rabbitHandler, channel)
 
+    result = mongo_client.db.regions.delete_many({})
+
+    region = core.region.RegionGenerate.generate_region()
+    region.registerEventEmitter(emitFn)
+    mongo_client.persist(region)
+
     while True:
         print('Demo loop start!')
         print('Destroying any existing entities.')
@@ -120,21 +132,27 @@ if __name__ == "__main__":
         result = mongo_client.db.expeditions.delete_many({})
         result2 = mongo_client.db.dungeons.delete_many({})
         result3 = mongo_client.db.delvers.delete_many({})
+        region.remove_dungeons()
 
         print('Deleted: {}, {}, {}'.format(result.deleted_count, result2.deleted_count, result3.deleted_count))
 
         expeditions = {}
-        exp1 = buildExpedition(mongo_client) 
-        expeditions[exp1.id] = {'ex': exp1, 'time': 2}
 
-        exp2 = buildExpedition(mongo_client)
-        expeditions[exp2.id] = {'ex': exp2, 'time': 3}
+        for i in range(0, args.exp):
+            exp = buildExpedition(mongo_client, region) 
+            # starting it off with a low but staggered time
+            expeditions[exp.id] = {'ex': exp, 'time': i+2}
+
+        region.prettyPrint()
 
         for ex in expeditions.values():
             exchange_name = ex['ex'].id
             print('Declaring: {}'.format(exchange_name))
             ex['ex'].registerEventEmitter(emitFn)
             ex['ex'].emitNew()
+
+        mongo_client.update(region)
+        region.emitDungeonLocales()
 
         print('Expedition(s) generated, having a little nap')
         print(expeditions)
@@ -143,6 +161,7 @@ if __name__ == "__main__":
         current_time = 1
         print('Start expedition process')
         while not all_done(expeditions):
+            # this just figures out which expedition has the first scheduled process time
             ex = reduce(lambda x, y: x if x['time'] < y['time'] else y, expeditions.values())
 
             time.sleep(ex['time'] - current_time)
@@ -150,7 +169,6 @@ if __name__ == "__main__":
 
             wakeup = ex['ex'].processTurn()
             expeditions[ex['ex'].id]['time'] = current_time + wakeup
-            
 
         print('Expedition over, having a little nap')
         time.sleep(30)

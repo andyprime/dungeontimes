@@ -11,7 +11,33 @@ const PASSAGE = 3;
 const DOORWAY = 4;
 const ENTRANCE = 5;
 
-const CELL_COLORS = {
+const CITY = 1;
+const FARMLAND = 2;
+const ROAD = 3;
+const FOREST = 4;
+const RIVER = 5;
+const WATER = 6;
+const HILLS = 7;
+const MOUNTAIN = 8;
+const DESERT = 9;
+const PLAIN = 10;
+const TOWN = 11;
+
+const REGION_CELL_COLORS = {
+    1: '#3855f4',
+    2: '#b6ee3b',
+    3: '#c8c8c8',
+    4: '#236405',
+    5: '#000000',
+    6: '#000000',
+    7: '#cbd02c',
+    8: '#6a6a6a',
+    9: '#ffa14f',
+    10: '#20a61c',
+    11: '#3855f4'
+}
+
+const DUNGEON_CELL_COLORS = {
     1: '#000000',
     2: '#9a9a9a',
     3: '#9a9a9a',
@@ -19,7 +45,9 @@ const CELL_COLORS = {
     5: '#b8b8b8'
 }
 
-const CURSOR_COLOR = '#18910f';
+const REGION_CURSOR_COLOR = '#ff79cb';
+const REGION_DUNGEON_COLOR = '#000000';
+const DUNGEON_CURSOR_COLOR = '#18910f';
 
 const JOB_NAMES = {
     'MUSCLE': 'Muscle Man',
@@ -29,8 +57,9 @@ const JOB_NAMES = {
     'MAGICIAN': 'Magician'
 }
 
-expeditions = [];
-selectedExpedition = null;
+region = null;
+expeditions = {};
+selectedView = null;
 
 rootUrl = window.location.hostname + ':8081';
 
@@ -38,10 +67,13 @@ document.addEventListener('DOMContentLoaded', async function(event) {
     var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
     socket.onmessage = receiveMessage;
 
-    panel = document.querySelector('#thebuttons');
-    panel.addEventListener('click', onDungeonSelect)
+    panel1 = document.querySelector('#region-buttons');
+    panel1.addEventListener('click', onRegionSelect);
 
-    fetchExistingExpeditions();
+    panel2 = document.querySelector('#dungeon-buttons');
+    panel2.addEventListener('click', onDungeonSelect);
+
+    fetchExisting();
 });
 
 async function receiveMessage(event) {
@@ -50,34 +82,90 @@ async function receiveMessage(event) {
     bits = msg.split(';');
 
     // for expedition specific updates, ignore them if its not for the one we're looking at
-    if(['NARR', 'BTLS', 'BTLE', 'BTL-UPD'].includes(bits[0])) {
-        if(selectedExpedition != null && bits[1] != selectedExpedition['exp']['id']) {
-            return;
-        }
-    }
+
+    relevant = selectedView != null && bits[1] == selectedView['id'];
+    // if(['NARR', 'BTLS', 'BTLE', 'BTL-UPD'].includes(bits[0])) {
+    //     if(selectedView != null && bits[1] != selectedView['id']) {
+    //         return;
+    //     }
+    // }
 
     if (bits[0] == 'CURSOR') {
         // we wanna track all coordinates but only draw if its the current one
-        updateCoords(bits[1], bits[2]);
-        if (bits[1] == selectedExpedition['exp']['id']) {
-            drawMap();
-        }
+        // [1] = ID, [2] = D/O, [3] = coords
+        
+        if (bits[2] == 'D') {
+            expeditions[bits[1]]['inside'] = true;
+            updateCoords(bits[1], bits[3]);
+            if (relevant) {
+                drawDungeon();
+            }
+        } else {
+            expeditions[bits[1]]['inside'] = false;
+            updateCoords(bits[1], bits[3]);
+            if(selectedView['type'] == 'region') {
+                drawRegion();
+            }
+        }        
     } else if (bits[0] == 'NARR') {
-        addEvent(bits[2]);
+        if (relevant) {
+            addEvent(bits[2]);
+        }
     } else if (bits[0] == 'EXP-NEW') {
         fetchExpedition(bits[1]);
     } else if (bits[0] == 'EXP-DEL') {
         removeExpedition(bits[1]);
     } else if (bits[0] == 'BTLS') {
-        toggleFoes(bits[2], true);
+        expeditions[bits[1]]['battling'] = bits[2];
+        if (relevant) {
+            toggleFoes(bits[2], true);
+        }
     } else if (bits[0] == 'BTLE') {
-        toggleFoes(bits[2], false);
+        expeditions[bits[1]]['battling'] = null;
+        if (relevant) {
+            toggleFoes(bits[2], false);
+        }
     } else if (bits[0] == 'BTL-UPD') {
-        battleUpdate(JSON.parse(bits[2]));
-    }
+        if (relevant) {
+            battleUpdate(JSON.parse(bits[2]));
+        }
+    } else if (bits[0] == 'DNGS') {
+        entrances = []
+        for (i = 1; i < bits.length; i++) {
+            entrances.push(JSON.parse(bits[i]));  
+        }
+        region.dungeons = entrances;
+        if(selectedView['type'] == 'region') {
+            drawRegion();
+        }  
+    } 
 }
 
-async function fetchExistingExpeditions() {
+async function fetchExisting() {
+
+    url = '//' + rootUrl + '/region/';
+    resp = await fetch(url);
+    region = await resp.json();
+
+    grid = [...Array(region['width'])];
+    for (i in grid) {
+        grid[i] = [...Array(region['height'])];
+        grid[i].fill(1);
+    }
+    for (i =0; i < region.cells.length; i++) {
+        c = region.cells[i];
+        // backend does y,x so we reverse that when loading in
+        grid[c[2]][c[1]] = c[0];
+    }
+    region['grid'] = grid;
+    region['type'] = 'region';
+    delete region['cells'];
+
+    console.log('Region', region);
+
+    createButton('region', region['id'], region['name']);
+    selectRegion();
+
     url = '//' + rootUrl + "/expeditions/";
     resp = await fetch(url);
     json = await resp.json();
@@ -89,15 +177,15 @@ async function fetchExistingExpeditions() {
 
 async function fetchExpedition(eid) {
     console.log('Fetch expedition', eid);
-    for(i in expeditions) {
-        if(expeditions[i]['exp']['id'] == eid) {
-            console.log('We already know about expedition ', eid);
-            return;
-        }
+    
+    if(expeditions[eid] != undefined) {
+        console.log('We already know about expedition ', eid);
+        return;
     }
 
     resp = await fetch('//' + rootUrl + "/expedition/" + eid);
     var expedition = await resp.json();
+    expedition['type'] = 'dungeon';
     console.log('Expedition', expedition);
 
     url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
@@ -105,6 +193,7 @@ async function fetchExpedition(eid) {
     json = await resp.json();
     var dungeonName = json['name'];
     var dungeon = JSON.parse(json['body']);
+    dungeon['battling'] = null;
     console.log('Dungeon', dungeon);
 
     url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
@@ -115,76 +204,77 @@ async function fetchExpedition(eid) {
         delvers.push(json[i]);
     }
 
-    expeditions.push({
-        exp: expedition,
-        dungeon: dungeon,
-        delvers: delvers
-    });
+    // this is a convenience flag to avoid having to emit exp. state specifically yet
+    expedition['inside'] = false;
+    expedition['dungeon'] = dungeon;
+    expedition['delvers'] = delvers;
 
-    createButton(eid, dungeonName);
-    if (expeditions.length == 1) {
-        selectExpedition(eid);
-    }    
+    expeditions[eid] = expedition;
+
+    createButton('dungeon', eid, dungeonName);
 }
 
-function createButton(eid, name) {
+function createButton(type, id, name) {
     but = document.createElement('button');
     but.innerHTML = name;
-    but.id = 'd' + eid;
     but.style['margin-right'] = '20px';
-    but.setAttribute('eid', eid);
+    but.setAttribute('id', id);
 
-    panel = document.querySelector('#thebuttons');
-    panel.append(but)
+    li = document.createElement('li');
+    if (type == 'dungeon') {
+        li.id = 'd' + id;
+    } else {
+        li.id = 'r' + id;
+    }
+    li.className = 'btn-' + type;
+    li.style['list-style-type'] = 'none';
+    li.style['display'] = 'inline';
+    li.append(but);
+
+    panel = document.querySelector('#' + type + '-buttons');
+    panel.append(li);
 }
 
 function onDungeonSelect(event) {
     if(event.target.tagName == 'BUTTON') {
-        eid = event.target.getAttribute('eid');
+        eid = event.target.getAttribute('id');
         selectExpedition(eid);
     }
 }
 
-function selectExpedition(eid) {
-    for (i in expeditions) {
-        package = expeditions[i];
-        if(package['exp']['id'] == eid) {
-            selectedExpedition = package;
+function selectExpedition(id) {
+    if (expeditions[id] != undefined) {
+        selectedView = expeditions[id];
+        
+        clearLog();
+        drawDungeon();
+        drawParty();
+        if (expeditions[id]['battling'] != null) {
+            toggleFoes(expeditions[id]['battling'], true);
         }
+    } else {
+        throw new Error('Trying to select unknown expedition', id);
     }
-    console.log('Exp. selected: ', selectedExpedition);
-    
+}
+
+function onRegionSelect(event) {
+    if(event.target.tagName == 'BUTTON') {
+        selectRegion()
+    }
+}
+
+function selectRegion() {
+    selectedView = region;
     clearLog();
-    drawMap();
-    drawParty();
+    drawRegion();
 }
 
 function removeExpedition(eid) {
-    if (selectedExpedition != null && selectedExpedition['exp']['id'] == eid) {
-        replacement = null;
-        for (i in expeditions) {
-            if (expeditions[i]['exp']['id'] != eid) {
-                replacement = expeditions[i];
-            }
-        }
-    }
-
     button = document.querySelector('#d' + eid);
     button.remove();
 
-    console.log('pre splice: ', expeditions.length);
-    for (i in expeditions) {
-        if (expeditions[i]['exp']['id'] == eid) {
-            expeditions.splice(i, 1);
-        }
-    }
-    console.log('post splice: ', expeditions.length);
-
-    if (replacement != null) {
-        selectExpedition(replacement['exp']['id']);
-    } else {
-        clearData();
-    }
+    delete expeditions[eid];
+    selectRegion();
 }
 
 function addEvent(message) {
@@ -204,11 +294,11 @@ function clearLog() {
 }
 
 function drawParty() {
-    if(selectedExpedition != null) {
+    if(selectedView != null) {
         partyEl = document.querySelector('#theparty ul');
         partyEl.textContent = '';
-        for (i in selectedExpedition['delvers']) {
-            delver = selectedExpedition['delvers'][i];
+        for (i in selectedView['delvers']) {
+            delver = selectedView['delvers'][i];
             partyEl.append(characterBox('delver', delver));
         }
     }
@@ -218,7 +308,9 @@ function toggleFoes(roomNo, visible) {
     console.log('Toggle Foes', roomNo, visible);
     if (visible) {
 
-        dungeon = selectedExpedition['dungeon'];
+        dungeon = selectedView['dungeon'];
+
+        console.log(dungeon);
 
         room = null;
         for (i = 0; i < dungeon.rooms.length; i++) {
@@ -307,24 +399,72 @@ function characterBox(type, fellah) {
 
 function updateCoords(eid, coordString) {
     coords = coordString.split(',');
-    for (i in expeditions) {
-        if (expeditions[i]['exp']['id'] == eid) {
-            console.log('Updating coords: ', eid, coords);
-            expeditions[i]['exp']['cursor'] = [coords[0], coords[1]];
-        }
+
+    if (expeditions[eid] != undefined) {
+        expeditions[eid]['cursor'] = [coords[0], coords[1]];
     }
 }
 
-function drawMap(dungeon) {
-    if (selectedExpedition == null) {
+function drawRegion() {
+    canvas = document.getElementById("themap");
+    canvas.setAttribute('width', (region['width'] * GRID_SIZE) + (region['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
+    canvas.setAttribute('height', (region['height'] * GRID_SIZE) + (region['height'] - 1) + (2 * VERTICAL_MARGIN) );
+    ctx = canvas.getContext("2d");
+
+    cursors = [];
+    for (i in expeditions) {
+        if (!expeditions[i]['inside']) {
+            cursors.push(expeditions[i]['cursor']);
+        }
+    }
+
+    for (x = 0; x < region.grid.length; x++) {
+        for (y = 0; y < region.grid[x].length; y++) {
+
+            // tuples don't exist in javascript so we gotta do work to figure this out
+            inCursors = false;
+            inDungeons = false;
+            for (c in cursors) {
+                if (cursors[c][0] == y && cursors[c][1] == x) {
+                    inCursors = true;
+                }
+            }
+            for (d in region.dungeons) {
+                if (region.dungeons[d][0] == y && region.dungeons[d][1] == x) {
+                    inDungeons = true;
+                }
+            }
+
+            if (inCursors) {
+                ctx.fillStyle = REGION_CURSOR_COLOR;
+            } else if(inDungeons) {
+                ctx.fillStyle = REGION_DUNGEON_COLOR;
+            } else {
+                ctx.fillStyle = REGION_CELL_COLORS[region.grid[x][y]];
+            }
+
+            switch (region.grid[x][y]) {
+                default:
+                    xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
+                    ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
+
+                    ctx.fillRect(xpos, ypos, GRID_SIZE, GRID_SIZE);
+            }
+        }
+    }
+
+}
+
+function drawDungeon(dungeon) {
+    if (selectedView == null) {
         console.log('No one ever selected an expedition.');
         return;
     }
 
-    dungeon = selectedExpedition['dungeon'];
-    cursor = selectedExpedition['exp']['cursor'];
+    dungeon = selectedView['dungeon'];
+    cursor = selectedView['cursor'];
 
-    canvas = document.getElementById("thedungeon");
+    canvas = document.getElementById("themap");
 
     canvas.setAttribute('width', (dungeon['width'] * GRID_SIZE) + (dungeon['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
     canvas.setAttribute('height', (dungeon['height'] * GRID_SIZE) + (dungeon['height'] - 1) + (2 * VERTICAL_MARGIN) );
@@ -343,15 +483,15 @@ function drawMap(dungeon) {
         }
     }
 
-    canvas = document.getElementById("thedungeon");
+    canvas = document.getElementById("themap");
     ctx = canvas.getContext("2d");
 
     for (x = 0; x < grid.length; x++) {
-        for (y = 0; y < grid[i].length; y++) {
+        for (y = 0; y < grid[x].length; y++) {
             if (cursor != null && x == cursor[1] && y == cursor[0]) {
-                ctx.fillStyle = CURSOR_COLOR;
+                ctx.fillStyle = DUNGEON_CURSOR_COLOR;
             } else {
-                ctx.fillStyle = CELL_COLORS[grid[x][y]];
+                ctx.fillStyle = DUNGEON_CELL_COLORS[grid[x][y]];
             }
 
             switch (grid[x][y]) {

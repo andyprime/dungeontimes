@@ -6,8 +6,10 @@ from core.battle import Battle
 
 class Expedition:
 
+    PREP = 'pre'
+    TRAVEL = 'trv'
     READY = 'rdy'
-    MOVING = 'mov' #should probably be renamed to exploring
+    EXPLORE = 'exp'
     ENCOUNTER = 'enc'
     BATTLE = 'bat'
     RECOVER = 'rec'
@@ -18,10 +20,15 @@ class Expedition:
 
     DEFAULT_TURN_DELAY = 2
 
+    OVERLAND_STATES = ['pre', 'trv', 'sct', 'cmp']
+    DUNGEON_STATES = ['rdy', 'exp', 'enc', 'bat', 'rec', 'ext']
+
     # the abbreviated ones are just the default for any given stage, others need to be manually returned
     TASK_DURATIONS = {
+        'pre': 10,
+        'trv': 1,
         'rdy': 2,
-        'mov': 1.5,
+        'exp': 1.5,
         'enc': 2,
         'bat': 0.1,
         'rec': 2,
@@ -34,21 +41,19 @@ class Expedition:
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, dungeon, party, cursor=None, id=None, mdb=None):
+    def __init__(self, region, dungeon, party, cursor=None, id=None, mdb=None):
 
+        self.region = region
         self.dungeon = dungeon
         self.party = party
         self.battle = None
         self.id = id
         self.mdb = mdb
 
-        self.entrance = dungeon.entrance()
-        self.status = Expedition.READY
+        self.status = Expedition.PREP
 
-        if cursor:
-            self.cursor = dungeon.getCell(*tuple(cursor))
-        else:
-            self.cursor = self.entrance
+        self.cursor = region.homebase
+        self.outgoing = True
 
         self.steps = 0
 
@@ -58,7 +63,7 @@ class Expedition:
         # Got to log which sections of the map have already been explored
         # So for now we're gonna keep the cell coords in an array to reference
         self.history = []
-        self.history.append(self.cursor.coords)
+        self.history.append(self.cursor)
 
         self.processors = []
         self.emitters = []
@@ -86,7 +91,7 @@ class Expedition:
         c = self.cursor.coords
         if self.mdb:
             self.mdb.db.expeditions.update_one({'id': self.id}, {'$set': {'cursor': c}})
-        self.emit('CURSOR;{};{},{}'.format(self.id, c[0], c[1]))
+        self.emit('CURSOR;{};{};{},{}'.format(self.id, self.location(), c[0], c[1]))
         
     def emitNarrative(self, s):
         self.emit('NARR;{};{}'.format(self.id, s))        
@@ -103,8 +108,20 @@ class Expedition:
         else:
             self.emit('BTLE;{};{}'.format(self.id, roomNo))
 
+    def overland(self):
+        return self.status in Expedition.OVERLAND_STATES
+
+    def inDungeon(self):
+        return self.status in Expedition.DUNGEON_STATES
+
     def over(self):
         return self.status in [Expedition.COMPLETE, Expedition.ERROR]
+
+    def location(self):
+        if self.inDungeon():
+            return 'D'
+        else:
+            return 'O'
 
     def begin(self):
         # this function is not exactly deprecated but it should only be used in the context
@@ -136,16 +153,42 @@ class Expedition:
             self.status = Expedition.ERROR
             return False
 
+    # Home base starting status
+    def runstate_pre(self):
+        self.processMessage('The party does some last minute shopping in town. Don\'t want to forget a spare sword.', True)
+        self.status = Expedition.TRAVEL
+
+    # overland travel
+    def runstate_trv(self):
+        self.processMessage('Travel')
+
+        if self.outgoing:
+            target = self.region.find_dungeon(self.dungeon.id)
+        else:
+            target = self.region.getCell(*self.region.homebase)
+
+        if self.cursor == target:
+            if self.outgoing:
+                self.processMessage('The party has found the entrance to the dungeon.', True)
+                self.status = Expedition.READY
+            else:
+                self.processMessage('The party has returned home for some well deserved rest.', True)
+                self.status = Expedition.COMPLETE
+        elif self.path:
+            self.move()
+        else:
+            print('Pathing to {}'.format(target))
+            self.path = self.generatePath(self.cursor, self.region, target)
+
     # Ready
     def runstate_rdy(self):
-        self.processMessage('The party enters the dungeon, prepared for peril and adventure.', True)
-
-        # Nothing needs to go here just yet but we're gonna formalize it as a step for clarity and future use
-
-        self.status = Expedition.MOVING
+        self.processMessage('The party enters the dungeon, adjusting to the dim light.', True)
+        self.cursor = self.dungeon.entrance()
+        self.path = []
+        self.status = Expedition.EXPLORE
 
     # Moving
-    def runstate_mov(self):
+    def runstate_exp(self):
         if not self.path:
             self.path = self.navigate()
 
@@ -180,7 +223,7 @@ class Expedition:
             self.status = Expedition.BATTLE
         else:
             self.processMessage('This room is empty, oh well.', True)
-            self.status = Expedition.MOVING
+            self.status = Expedition.EXPLORE
 
     # Exiting
     def runstate_ext(self):
@@ -188,13 +231,16 @@ class Expedition:
             self.move()
         else:
 
-            if self.cursor == self.entrance:
+            if self.cursor == self.dungeon.entrance():
                 self.processMessage('The party has reached the entrance and left the dungeon.', True)
-                self.status = Expedition.COMPLETE
+                self.status = Expedition.TRAVEL
+                self.cursor = self.region.find_dungeon(self.dungeon.id)
+                self.path = []
+                self.outgoing = False
                 showOverride = True
             else:
                 self.processMessage('Party is ready to leave and plotting a course back to the entrance.', True)
-                self.path = self.generatePath(target=self.entrance)
+                self.path = self.generatePath(self.cursor, self.dungeon, target=self.dungeon.entrance())
 
     # Battle
     def runstate_bat(self):
@@ -210,7 +256,7 @@ class Expedition:
 
                     self.status = Expedition.RECOVER
                 else:
-                    self.processMessage('Sadly the party has been slain by the local miscreants.', True)
+                    self.processMessage('Sadly the party has been bested by the local miscreants.', True)
                     self.status = Expedition.SCATTERED
                 self.emitBattle(False, room.num)
             else:
@@ -255,7 +301,7 @@ class Expedition:
             }
             self.emit('BTL-UPD;{}'.format(json.dumps(body)))
 
-        self.status = Expedition.MOVING
+        self.status = Expedition.EXPLORE
 
     # Complete
     def runstate_cmp(self):
@@ -269,19 +315,22 @@ class Expedition:
         self.emitCursorUpdate()
 
     def historyMap(self):
-        for index, row in enumerate(self.dungeon.grid):
-            display = '{}: '.format(str(index).rjust(4, ' '))
+        if self.inDungeon():
+            for index, row in enumerate(self.dungeon.grid):
+                display = '{}: '.format(str(index).rjust(4, ' '))
 
-            for cell in row:
-                if cell == self.cursor:
-                    display += 'P'
-                elif self.path and cell in self.path:
-                    display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
-                elif cell.coords in self.history:
-                    display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
-                else:
-                    display += cell.symbol()
-            print(display)
+                for cell in row:
+                    if cell == self.cursor:
+                        display += 'P'
+                    elif self.path and cell in self.path:
+                        display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
+                    elif cell.coords in self.history:
+                        display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
+                    else:
+                        display += cell.symbol()
+                print(display)
+        else:
+            self.region.prettyPrint(self.cursor, self.path)
         print('\n')
 
     def navigate(self):
@@ -298,10 +347,16 @@ class Expedition:
             return [random.choice(easyDirections)]
         else:
             # time to Dijkstra
-            return self.generatePath()
+            return self.generatePath(self.cursor, self.dungeon)
 
-    def generatePath(self, target=None):
+    def generatePath(self, start, grid, target=None):
         # just a basic dijkstra implementation that stops once it finds an unexplored cell
+
+        if type(start) == tuple:
+            start = grid.getCell(*start)
+
+        if type(target) == tuple:
+            target = grid.getCell(*target)
 
         pathingStart = time.perf_counter()
 
@@ -310,12 +365,12 @@ class Expedition:
         q = []
         destination = None
 
-        for cell in self.dungeon.allCells(navigable=True):
+        for cell in grid.allCells(navigable=True):
             distance[cell] = 1000000
             previous[cell] = None
             q.append(cell)
 
-        distance[self.cursor] = 0
+        distance[start] = 0
 
         count = 0
         while len(q) > 0:
@@ -326,18 +381,18 @@ class Expedition:
                     lowest = cell
             q.remove(lowest)
 
-            # default break point is finding the first unexplored
+            # Our break points are finding the optionally provided target cell, or otherwise the closest unexplored cell
             if target and lowest == target:
                 destination = lowest
                 break
-            elif lowest.coords not in self.history:
-                # this is the standard exit scenario in which we've found the closest cell not already explored
+            elif not target and lowest.coords not in self.history:
                 destination = lowest
                 break
 
-            neighbors = self.dungeon.getNeighbors(lowest)
+            neighbors = grid.getNeighbors(lowest)
             for neighbor in [n for n in neighbors if n in q]:
-                newDistance = distance[lowest] + 1 if distance[lowest] else 1
+                weight = grid.getWeight(neighbor)
+                newDistance = distance[lowest] + weight if distance[lowest] else weight
 
                 if newDistance < distance[neighbor]:
                     distance[neighbor] = newDistance
