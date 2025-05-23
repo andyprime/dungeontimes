@@ -105,8 +105,6 @@ class DungeonFactoryAlpha:
                 cursor = dungeon.getCell(i, j)
 
                 if dungeon.isSafeCarvable(cursor):
-
-
                     treeCount += 1
 
                     # print('Starting new tree at {}'.format(cursor))
@@ -119,7 +117,6 @@ class DungeonFactoryAlpha:
         # dungeon.prettyPrint()
 
         # print('Tree count: {}'.format(treeCount))
-
 
         # =============================================================================================
         self.header('Stage 3: Connections')
@@ -295,7 +292,6 @@ class DungeonFactoryAlpha:
         # simplicity of implementation. A more methodical approach could also implement max dead end
         # length if it actually followed paths
 
-
         # print('Pre-sparseness removal')
         # dungeon.prettyPrint()
 
@@ -388,7 +384,6 @@ class DungeonFactoryAlpha:
     def makeDoor(self, cell, region):
         cell.type = Cell.DOORWAY
         cell.region = region
-
 
     @classmethod
     def startGrowingTree(self, start, dungeon):

@@ -1,10 +1,11 @@
 import uuid
 import json
 
+from core.mdb import Persister
 import core.critters
 import core.strings as strings
 
-class Dungeon:
+class Dungeon(Persister):
     '''
         Currently the dungeon class only supports block dungeon types
         it can be child classed into block/wall versions later if needed
@@ -12,6 +13,7 @@ class Dungeon:
 
     def __init__(self, serialized=None):
 
+        self.id = str(uuid.uuid1())        
         self.grid = []
         self.rooms = []
         self.regionPalette = 1
@@ -161,6 +163,26 @@ class Dungeon:
                 display += cell.regionSymbol()
 
             print(display)
+
+    def data_format(self):
+        box = {
+            'id': self.id,
+            'name': self.name,
+            'width': self.width(),
+            'height': self.height(),
+            'rooms': [r.serialize() for r in self.rooms]
+        }
+
+        cells = {}
+        for t in Cell.realTypes():
+            code = 't' + str(t)
+            cells[code] = []
+            for cell in self.allCells():
+                if cell.type == t:
+                    cells[code].append(cell.coords)
+        box['cells'] = json.dumps(cells)
+
+        return box
 
     def serialize(self, includeOccupants=False):
         # just need a basic way to encode the dungeon as a single string, nothing fancy

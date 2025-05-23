@@ -1,10 +1,12 @@
 import json
 import random
 import time
+import uuid
 
 from core.battle import Battle
+from core.mdb import Persister
 
-class Expedition:
+class Expedition(Persister):
 
     PREP = 'pre'
     TRAVEL = 'trv'
@@ -41,15 +43,14 @@ class Expedition:
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, region, dungeon, party, cursor=None, id=None, mdb=None):
+    def __init__(self, region, dungeon, party, cursor=None, id=None):
 
         self.region = region
         self.dungeon = dungeon
         self.party = party
         self.battle = None
-        self.id = id
-        self.mdb = mdb
-
+        self.id = str(uuid.uuid1())
+        
         self.status = Expedition.PREP
 
         self.cursor = region.homebase
@@ -89,8 +90,7 @@ class Expedition:
 
     def emitCursorUpdate(self):
         c = self.cursor.coords
-        if self.mdb:
-            self.mdb.db.expeditions.update_one({'id': self.id}, {'$set': {'cursor': c}})
+        self.persist_prop('cursor', c)
         self.emit('CURSOR;{};{};{},{}'.format(self.id, self.location(), c[0], c[1]))
         
     def emitNarrative(self, s):
@@ -122,6 +122,16 @@ class Expedition:
             return 'D'
         else:
             return 'O'
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': 'PLACEHOLDER',
+            'complete': False,
+            'dungeon': self.dungeon.id,
+            'party': [p.id for p in self.party],
+            'cursor': self.cursor
+        }
 
     def begin(self):
         # this function is not exactly deprecated but it should only be used in the context

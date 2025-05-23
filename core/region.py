@@ -1,10 +1,11 @@
 import uuid
 import json
 import random
+from core.mdb import Persister
 
 import core.strings as strings
 
-class Region:
+class Region(Persister):
 
     def __init__(self, serialized=None):
         self.grid = []
@@ -102,6 +103,17 @@ class Region:
                 display += c
 
             print(display)
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'width': self.width,
+            'height': self.height,
+            'homebase': self.homebase,
+            'dungeons': [list(e.coords) for e in self.dungeons.values()],
+            'cells': json.dumps([c.serialize(False) for c in self.allCells()])
+        }
 
     def serialize(self, stringify=False):
         # just need a basic way to encode the dungeon as a single string, nothing fancy

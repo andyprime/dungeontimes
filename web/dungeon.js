@@ -147,13 +147,14 @@ async function fetchExisting() {
     resp = await fetch(url);
     region = await resp.json();
 
+    cells = JSON.parse(region['cells']);
     grid = [...Array(region['width'])];
     for (i in grid) {
         grid[i] = [...Array(region['height'])];
         grid[i].fill(1);
     }
-    for (i =0; i < region.cells.length; i++) {
-        c = region.cells[i];
+    for (i =0; i < cells.length; i++) {
+        c = cells[i];
         // backend does y,x so we reverse that when loading in
         grid[c[2]][c[1]] = c[0];
     }
@@ -190,9 +191,9 @@ async function fetchExpedition(eid) {
 
     url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
     resp = await fetch(url);
-    json = await resp.json();
-    var dungeonName = json['name'];
-    var dungeon = JSON.parse(json['body']);
+    var dungeon = await resp.json();
+    var dungeonName = dungeon['name'];
+    dungeon['cells'] = JSON.parse(dungeon['cells']);
     dungeon['battling'] = null;
     console.log('Dungeon', dungeon);
 
