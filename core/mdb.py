@@ -40,9 +40,9 @@ class MongoService:
             if c != None:
                 c.insert_one(object.data_format())
             else: 
-                raise ValueError('No collection object found for: {}'.format(flat_type))
+                raise ValueError('No collection object found for: {}'.format(collection))
         else:
-            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))
+            raise ValueError('Did not find collection map for type "{}"'.format(collection))
 
     @classmethod
     def persist(self, object):
@@ -54,9 +54,9 @@ class MongoService:
             if c != None:
                 c.replace_one({'id': object.id}, object.data_format())
             else: 
-                raise ValueError('No collection object found for: {}'.format(flat_type))
+                raise ValueError('No collection object found for: {}'.format(collection))
         else:
-            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))
+            raise ValueError('Did not find collection map for type "{}"'.format(collection))
 
     @classmethod
     def persist_prop(self, object, prop, value):
@@ -70,9 +70,9 @@ class MongoService:
                 values[prop] = value
                 c.update_one({'id': object.id}, {'$set': values})
             else: 
-                raise ValueError('No collection object found for: {}'.format(flat_type))
+                raise ValueError('No collection object found for: {}'.format(collection))
         else:
-            raise ValueError('Did not find collection map for type "{}"'.format(flat_type))        
+            raise ValueError('Did not find collection map for type "{}"'.format(collection))        
 
 class Persister:
 
