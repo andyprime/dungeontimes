@@ -1,0 +1,23 @@
+name: Docker Compose and Image push
+
+
+on: [push]
+
+# on:
+#   push:
+#     branches: [ "main" ]
+#   pull_request:
+#     branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Run build
+        run: docker compose -f deployment.yml build 
+
+      - name: Push it real good
+        run: bash imagepush.sh
