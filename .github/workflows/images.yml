@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4.2.2
 
       - name: Run build
-        run: docker compose -f deployment.yml build 
+        run: docker compose --env-file dev.env -f deployment.yml build 
 
       - name: Push it real good
         run: bash imagepush.sh
