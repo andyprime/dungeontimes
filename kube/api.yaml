@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dungeon-api-deployment
+  labels:
+    app: dungeon-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dungeon-api
+  template:
+    metadata:
+      labels:
+        app: dungeon-api
+    spec:
+      containers:
+        - name: dungeon-api
+          image: lobachevsky.net:4444/dungeon_times/dungeontimes-d-api:latest
+          envFrom:
+            - configMapRef:
+                name: general-config
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dungeon-api-service
+spec:
+  type: NodePort
+  selector:
+    app: dungeon-api
+  ports:
+  - protocol: TCP
+    port: 8081
+    targetPort: 80

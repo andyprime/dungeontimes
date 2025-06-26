@@ -1,3 +1,6 @@
+# a slightly different compose file for generating final images
+name: dungeontimes-d
+
 services:
 
   data-store:
@@ -11,9 +14,10 @@ services:
       MONGO_INITDB_DATABASE: dungeondb
 
   api:
+    # container_name: dungeontimes-api-d
     build:
       context: .
-      dockerfile: containers/dev/api/Dockerfile
+      dockerfile: containers/deploy/api/Dockerfile
     restart: always
     ports:
       - "8081:80"
@@ -34,20 +38,19 @@ services:
         restart: true
 
   web:
+    # container_name: dungeontimes-web-d
     build:
       context: .
-      dockerfile: containers/dev/web/Dockerfile
+      dockerfile: containers/deploy/web/Dockerfile
     restart: always
     ports: 
       - "${EXTERNAL_WEB_PORT:?error}:80"
-    volumes:
-      - ./web:/usr/share/nginx/html
-
+    
   rabbit:
     #image: rabbitmq:management
     build:
       context: .
-      dockerfile: containers/dev/rabbit/Dockerfile
+      dockerfile: containers/deploy/rabbit/Dockerfile
     restart: always
     ports:
       - "5672:5672"
@@ -62,9 +65,10 @@ services:
       timeout: 30s
 
   dm:
+    # container_name: dungeontimes-dm-d
     build:
       context: .
-      dockerfile: containers/dev/dm/Dockerfile
+      dockerfile: containers/deploy/dm/Dockerfile
     # restart: always
     volumes: 
       - ./:/code

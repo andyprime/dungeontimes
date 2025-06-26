@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dungeon-dm-deployment
+  labels:
+    app: dungeon-dm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dungeon-dm
+  template:
+    metadata:
+      labels:
+        app: dungeon-dm
+    spec:
+      containers:
+        - name: dungeon-dm
+          image: lobachevsky.net:4444/dungeon_times/dungeontimes-d-dm:latest
+          envFrom:
+            - configMapRef:
+                name: general-config
+          ports:
+            - containerPort: 80

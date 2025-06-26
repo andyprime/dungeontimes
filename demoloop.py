@@ -108,7 +108,7 @@ if __name__ == "__main__":
     else:
         mongo_host = settings.mongo_host
         rabbit_host = settings.rabbit_host
-    
+
     MongoService.setup('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
     creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
     parameters = (pika.ConnectionParameters(host=rabbit_host, credentials=creds))

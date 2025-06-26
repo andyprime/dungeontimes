@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: general-config
+  namespace: default
+data:
+  MONGO_USER: root
+  MONGO_PASSWORD: devenvironment
+  MONGO_HOST: dungeon-mongod-service.default
+  MONGO_PORT: "27017"
+  API_ORIGINS: http://localhost:8080,http://localhost:8081,http:/1.1.1.1
+  RABBIT_USER: guest
+  RABBIT_PASSWORD: guest
+  RABBIT_HOST: dungeon-rabbit-service.default
