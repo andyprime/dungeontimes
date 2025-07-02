@@ -12,8 +12,6 @@ on:
 
 jobs:
   main-images:
-    needs: python-general
-
     runs-on: ubuntu-latest
 
     steps:
