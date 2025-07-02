@@ -1,6 +1,10 @@
 name: Docker Compose and Image push
 
-on: [push]
+on: 
+  workflow_run:
+    workflows: [python-general]
+    types: [completed]
+  push:
 
 # on:
 #   push:
