@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: [python-general]
     types: [completed]
-  push:
+    branches: [main, image-management-workflow]
 
 # on:
 #   push:
