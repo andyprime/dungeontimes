@@ -2,11 +2,10 @@ name: Docker Compose and Image push
 
 on:
   push:
-    branches: [ main, image-management-workflow ]
+    branches: [ main ]
 
 jobs:
   python-basic:
-    # uses: andyprime/dungeontimes/.github/workflows/python-app.yml
     uses: ./.github/workflows/python-app.yml
 
   main-images:
