@@ -1,17 +1,16 @@
 name: Docker Compose and Image push
 
-on: 
-  workflow_run:
-    workflows: [python-general]
-    types: [completed]
-    branches: [main, image-management-workflow]
-
-# on:
-#   push:
-#     branches: [ "main" ]
+on:
+  push:
+    branches: [ main, image-management-workflow ]
 
 jobs:
+  python-basic:
+    uses: andyprime/dungeontimes/.github/workflows/python-app.yml
+
   main-images:
+    needs: [python-basic]
+
     runs-on: ubuntu-latest
 
     steps:
