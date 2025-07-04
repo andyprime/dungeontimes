@@ -6,7 +6,8 @@ on:
 
 jobs:
   python-basic:
-    uses: andyprime/dungeontimes/.github/workflows/python-app.yml
+    # uses: andyprime/dungeontimes/.github/workflows/python-app.yml
+    uses: ./.github/workflows/python-app.yml
 
   main-images:
     needs: [python-basic]
