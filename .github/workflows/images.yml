@@ -1,0 +1,30 @@
+name: Docker Compose and Image push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  python-basic:
+    uses: ./.github/workflows/python-app.yml
+
+  main-images:
+    needs: [python-basic]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Run build
+        run: docker compose --env-file dev.env -f deployment.yml build 
+
+      - name: Registry login
+        uses: docker/login-action@v3
+        with:
+          registry: lobachevsky.net:4444
+          username: robot$dungeon_times+dungeonbot
+          password: ${{ secrets.HARBOR_TOKEN }}
+
+      - name: Push it real good
+        run: bash imagepush.sh
