@@ -4,10 +4,6 @@
 name: Python application
 
 on: [workflow_call, pull_request]
-  # push:
-  #   branches: [ main, image-management-workflow ]
-  # pull_request: 
-  #   branches: [ main ]
 
 permissions:
   contents: read
