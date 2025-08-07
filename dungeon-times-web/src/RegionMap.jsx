@@ -1,54 +1,54 @@
 import { useRef, useEffect } from 'react'
 
-function drawRegion() {
-    canvas = document.getElementById("themap");
-    canvas.setAttribute('width', (region['width'] * GRID_SIZE) + (region['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
-    canvas.setAttribute('height', (region['height'] * GRID_SIZE) + (region['height'] - 1) + (2 * VERTICAL_MARGIN) );
-    ctx = canvas.getContext("2d");
+// function drawRegion() {
+//     canvas = document.getElementById("themap");
+//     canvas.setAttribute('width', (region['width'] * GRID_SIZE) + (region['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
+//     canvas.setAttribute('height', (region['height'] * GRID_SIZE) + (region['height'] - 1) + (2 * VERTICAL_MARGIN) );
+//     ctx = canvas.getContext("2d");
 
-    cursors = [];
-    for (i in expeditions) {
-        if (!expeditions[i]['inside']) {
-            cursors.push(expeditions[i]['cursor']);
-        }
-    }
+//     cursors = [];
+//     for (i in expeditions) {
+//         if (!expeditions[i]['inside']) {
+//             cursors.push(expeditions[i]['cursor']);
+//         }
+//     }
 
-    for (x = 0; x < region.grid.length; x++) {
-        for (y = 0; y < region.grid[x].length; y++) {
+//     for (x = 0; x < region.grid.length; x++) {
+//         for (y = 0; y < region.grid[x].length; y++) {
 
-            // tuples don't exist in javascript so we gotta do work to figure this out
-            inCursors = false;
-            inDungeons = false;
-            for (c in cursors) {
-                if (cursors[c][0] == y && cursors[c][1] == x) {
-                    inCursors = true;
-                }
-            }
-            for (d in region.dungeons) {
-                if (region.dungeons[d][0] == y && region.dungeons[d][1] == x) {
-                    inDungeons = true;
-                }
-            }
+//             // tuples don't exist in javascript so we gotta do work to figure this out
+//             inCursors = false;
+//             inDungeons = false;
+//             for (c in cursors) {
+//                 if (cursors[c][0] == y && cursors[c][1] == x) {
+//                     inCursors = true;
+//                 }
+//             }
+//             for (d in region.dungeons) {
+//                 if (region.dungeons[d][0] == y && region.dungeons[d][1] == x) {
+//                     inDungeons = true;
+//                 }
+//             }
 
-            if (inCursors) {
-                ctx.fillStyle = REGION_CURSOR_COLOR;
-            } else if(inDungeons) {
-                ctx.fillStyle = REGION_DUNGEON_COLOR;
-            } else {
-                ctx.fillStyle = REGION_CELL_COLORS[region.grid[x][y]];
-            }
+//             if (inCursors) {
+//                 ctx.fillStyle = REGION_CURSOR_COLOR;
+//             } else if(inDungeons) {
+//                 ctx.fillStyle = REGION_DUNGEON_COLOR;
+//             } else {
+//                 ctx.fillStyle = REGION_CELL_COLORS[region.grid[x][y]];
+//             }
 
-            switch (region.grid[x][y]) {
-                default:
-                    xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
-                    ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
+//             switch (region.grid[x][y]) {
+//                 default:
+//                     xpos = HORIZONTAL_MARGIN + x + (x * GRID_SIZE);
+//                     ypos = VERTICAL_MARGIN + y + (y * GRID_SIZE);
 
-                    ctx.fillRect(xpos, ypos, GRID_SIZE, GRID_SIZE);
-            }
-        }
-    }
+//                     ctx.fillRect(xpos, ypos, GRID_SIZE, GRID_SIZE);
+//             }
+//         }
+//     }
 
-}
+// }
 
 const HORIZONTAL_MARGIN = 2;
 const VERTICAL_MARGIN = 2;
@@ -88,7 +88,7 @@ function RegionMap({region, cursors}) {
     const canvasRef = useRef(null)
 
     const draw = (canvas) => {
-        console.log('Canvas draw: ', region, cursors);
+        // console.log('Canvas draw: ', region, cursors);
 
         if (region != null && region.grid != null) {
             canvas.setAttribute('width', (region['width'] * GRID_SIZE) + (region['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
