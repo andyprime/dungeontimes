@@ -1,3 +1,11 @@
-FROM nginx
+FROM node:22-alpine
 
-VOLUME /usr/share/nginx/html
+VOLUME /app
+
+WORKDIR /app
+
+COPY dungeon-times-web/package.json .
+
+RUN npm install
+
+CMD [ "npx",  "vite" ]
