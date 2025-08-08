@@ -44,7 +44,7 @@ class Team:
 class Battle:
 
     # Set to True if you want to skip combat for speed
-    SKIP_BATTLE = True
+    SKIP_BATTLE = False
 
     PAPERWORK = 1
     BATTAL = 2

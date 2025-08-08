@@ -309,7 +309,7 @@ class Expedition(Persister):
                 'maxhp': p.maxhp,
                 'status': p.status
             }
-            self.emit('BTL-UPD;{}'.format(json.dumps(body)))
+            self.emit('BTL-UPD;{};{}'.format(self.id, json.dumps(body)))
 
         self.status = Expedition.EXPLORE
 

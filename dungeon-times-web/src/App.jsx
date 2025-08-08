@@ -1,7 +1,8 @@
 import { useContext, useState, useEffect, useRef } from 'react'
 import './App.css'
 import RegionMap from './RegionMap.jsx'
-import DungeonMap from './DungeonMap.jsx'
+import ExpeditionView from './ExpeditionView.jsx'
+import EventLog from './EventLog.jsx'
 
 const rootUrl = window.location.hostname + ':8081';
 
@@ -16,13 +17,13 @@ async function fetchRegion() {
   var cells = JSON.parse(region['cells']);
   var grid = [...Array(region['width'])];
   for (var i in grid) {
-      grid[i] = [...Array(region['height'])];
-      grid[i].fill(1);
+    grid[i] = [...Array(region['height'])];
+    grid[i].fill(1);
   }
   for (i =0; i < cells.length; i++) {
-      var c = cells[i];
-      // backend does y,x so we reverse that when loading in
-      grid[c[2]][c[1]] = c[0];
+    var c = cells[i];
+    // backend does y,x so we reverse that when loading in
+    grid[c[2]][c[1]] = c[0];
   }
   region['grid'] = grid;
   region['type'] = 'region';
@@ -46,7 +47,7 @@ async function fetchExpeditions() {
 
 async function fetchExpedition(eid) {
   console.log('Fetch expedition', eid);
-   
+
   let resp = await fetch('//' + rootUrl + "/expedition/" + eid);
   let expedition = await resp.json();
   expedition['type'] = 'dungeon';
@@ -57,7 +58,8 @@ async function fetchExpedition(eid) {
   let dungeon = await resp.json();
   // var dungeonName = dungeon['name'];
   dungeon['cells'] = JSON.parse(dungeon['cells']);
-  dungeon['battling'] = null;
+  dungeon['battling'] = false;
+  dungeon['roomFocus'] = null;
   // console.log('Dungeon', dungeon);
 
   url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
@@ -78,10 +80,11 @@ async function fetchExpedition(eid) {
 
 
 function App() {
+  const socket = useRef(null)
 
   const [region, setRegion] = useState(null);
   const [expeditions, setExpeditions] = useState([]);
-  const [selectedDungeon, setSelectedDungeon] = useState(null);
+  const [selectedExpedition, setSelectedExpedition] = useState(null);
 
   const [view, setView] = useState('region');
   // view will get closured in receiveMessage so we gotta set up a ref and an effect to keep it fresh
@@ -91,18 +94,18 @@ function App() {
 
   const [regionCursors, setRegionCursors] = useState([]);
   const [dungeonCursors, setDungeonCursors] = useState([]);
-  const [inBattle, setInBattle] = useState(false);
+  const [messageIndex, setMessages] = useState({region: ['The past is a mystery']});
 
   var receiveMessage = async function (event) {
     let msg = await event.data.text();
     let bits = msg.split(';');
 
-    let relevant = view != null && bits[1] == selectedView['id'];
+    // console.log(msg);
 
     if (bits[0] == 'CURSOR') {
       // we wanna track all coordinates but only draw if its the current one
       // [1] = ID, [2] = D/O, [3] = coords
-      
+
       if (bits[2] == 'D') {
         if (bits[1] == viewRef.current) {
           setDungeonCursors([bits[3].split(',')]);
@@ -112,13 +115,23 @@ function App() {
         setRegionCursors(Object.values(expeditions));
       }        
     } else if (bits[0] == 'NARR') {
-        if (relevant) {
-            addEvent(bits[2]);
+      setMessages(oldMessages => {
+
+        let old = oldMessages[bits[1]];
+        if (old == undefined) {
+          old = [];
         }
+        let fresh = old.slice (0, 9);
+        fresh.unshift(bits[2]);
+        let newMsg = {...oldMessages};
+        newMsg[bits[1]] = fresh;
+        return newMsg;
+      });
+
     } else if (bits[0] == 'DNGS') {
       let entrances = []
       for (let i = 1; i < bits.length; i++) {
-          entrances.push(JSON.parse(bits[i]));  
+        entrances.push(JSON.parse(bits[i]));  
       }
 
       // we can avoid having to ref/effect region here by using the function param of our state
@@ -132,22 +145,82 @@ function App() {
       });
     } else if (bits[0] == 'EXP-DEL') {
       delete expeditions[bits[1]];
+    } else if (bits[0] == 'BTLS') {
+
+      // the next three sections are kinda gross, need to sort out a better way than updating
+      // the entire expeditions set
+      setExpeditions(oldExpeditions => {
+        if (oldExpeditions[bits[1]] != undefined) {
+          let newExpeditions = Object.assign({}, oldExpeditions);
+          newExpeditions[bits[1]].dungeon.battling = true;
+          newExpeditions[bits[1]].dungeon.roomFocus = bits[2];
+          return newExpeditions;
+        } else {
+          return oldExpeditions;
+        }
+      });      
+
+    } else if (bits[0] == 'BTLE') {
+      setExpeditions(oldExpeditions => {
+        if (oldExpeditions[bits[1]] != undefined) {
+          let newExpeditions = Object.assign({}, oldExpeditions);
+          newExpeditions[bits[1]].dungeon.battling = false;
+          return newExpeditions;
+        } else {
+          return oldExpeditions;
+        }
+      });     
+    } else if (bits[0] == 'BTL-UPD') {
+      let update = JSON.parse(bits[2]);
+      setExpeditions(oldExpeditions => {
+        if (oldExpeditions[bits[1]] != undefined) {
+          let newExpeditions = Object.assign({}, oldExpeditions);
+          
+          let expedition = newExpeditions[bits[1]];
+          if (update.target[0] == 'm') {
+            // monsters have no id based lookup yet :(
+            let room = expedition.dungeon.rooms.find( room => room.n == expedition.dungeon.roomFocus );
+            
+            if (room) {
+              let target = room.occ.find( monster => monster.id == update.target );
+              target.chp = update.newhp;
+
+              if (update['status'] !=  undefined) {
+                target['status'] = update['status'];
+              }
+            }
+
+          } else {
+            let target = expedition.delvers.find( delver => delver.id == update.target);
+            target.currenthp = update.newhp;
+            if (update['status'] !=  undefined) {
+              target['status'] = update['status'];
+            }
+          }
+
+          return newExpeditions;
+        } else {
+          return oldExpeditions;
+        }
+      });
     }
 
   }
 
-  const selectDungeon = function(event) {
-    // console.log('Select', event.target.getAttribute('eid'));
+  const selectExpedition = function(event) {
     let id = event.target.getAttribute('eid');
-    setSelectedDungeon(expeditions[id].dungeon);
+    setSelectedExpedition(expeditions[id]);
     setDungeonCursors([]);
     setView(id);
   }
 
   // cheating the effect system to aprroximate an onMount event, but this will need proper handling
   useEffect(() => {
-    var socket = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
-    socket.onmessage = receiveMessage;
+    if (socket.current == null) {
+      console.log('!!! Declaring websocket', Date.now());
+      socket.current = new WebSocket('ws://' + rootUrl + '/feed/dungeon');
+      socket.current.onmessage = receiveMessage;
+    }
 
     // this isn't the best way to do this but auntil I get a moment to decide on a state/query manager it'll do
     fetchRegion().then((r) => { 
@@ -158,7 +231,8 @@ function App() {
       setExpeditions(exs);
     });
 
-    // return () => { socket.close(); };
+    // returning a function is supposed to act as a cleanup when App is destroyed but this seems to be called immediately
+    // return () => { socket.current.close(); };
   }, []);
 
   useEffect(() => {
@@ -168,36 +242,26 @@ function App() {
   let expButtons = '';
   if (expeditions != {}) {
     expButtons = Object.values(expeditions).map(exp =>
-      <li key={exp.id}><button eid={exp.id} onClick={selectDungeon}>{exp.dungeon.name}</button></li>
-    );
+      <li key={exp.id}><button eid={exp.id} onClick={selectExpedition}>{exp.dungeon.name}</button></li>
+      );
   } 
 
   return (
     <>
-      <h1>Yon Dungeon Tymes</h1>
-      <ul id="region-buttons">
-        Regions
-        { region != null && <li><button onClick={() => setView('region')} >{region['name']}</button></li> }
+    <h1>Yon Dungeon Tymes</h1>
+    <ul id="region-buttons">
+      Regions
+      { region != null && <li><button onClick={() => setView('region')} >{region['name']}</button></li> }
       </ul>
       <ul id="dungeon-buttons">Dungeons {expButtons}</ul>
 
       { view == 'region' && <RegionMap region={region} cursors={regionCursors} /> }
 
-      { view != 'region' && <>
-        <DungeonMap dungeon={selectedDungeon} cursors={dungeonCursors} /> }
+      { view != 'region' && <ExpeditionView expedition={selectedExpedition} cursors={dungeonCursors} /> }
 
-        <div id="theparty"><b>Our Party</b><ul></ul></div> 
-
-        { inBattle && <div id="thefoes"><b>Lurking Foes!</b><ul></ul></div> } 
-        </>
-      }
-      
-      <p><b>Event Log</b></p>
-      <div id="event-log">
-          <p>The past is a mystery.</p>
-      </div>
-    </>
-  )
+      <EventLog messages={messageIndex} view={view} />
+      </>
+      )
 }
 
 export default App

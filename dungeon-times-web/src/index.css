@@ -77,3 +77,11 @@ li {
   display: inline;
   margin: 0 10px;
 }
+
+.group ul {
+  margin: 0;
+}
+
+.group li {
+  display: inline-block;
+}
