@@ -20,7 +20,6 @@ def cache_wrapper(locations):
     StringTool.clear_cache()
     StringTool.location = locations[0]
 
-
 class TestStrings:
 
     # Just a brute force test of every normal yaml spec to make (pretty) sure there's no 
@@ -34,12 +33,10 @@ class TestStrings:
                 s = StringTool.random(shortname)
                 assert(type(s) == str)
 
-
     def test_handling(self):
         # the only failure state in StringTool should be requesting a bad file
         with pytest.raises(ValueError):
             StringTool.random('__________')
-
 
     def test_rules(self, cache_wrapper):
         # test the string capitalization
