@@ -1,0 +1,10 @@
+options:
+  - 
+    s: $^literals1 $^literals2
+    w: 1
+
+literals1:
+  - it
+
+literals2:
+  - worked
