@@ -41,7 +41,9 @@ services:
     ports: 
       - "${EXTERNAL_WEB_PORT:?error}:80"
     volumes:
-      - ./web:/usr/share/nginx/html
+      - ./dungeon-times-web:/app
+    environment:
+      NODE_ENV: development
 
   rabbit:
     #image: rabbitmq:management
