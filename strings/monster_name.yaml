@@ -1,1 +1,13 @@
-monster_name.yaml
+options:
+  - 
+    s: $monster_critter
+    w: 1
+  - 
+    s: $monster_lilguy
+    w: 1
+  - 
+    s: $monster_beefcake
+    w: 1
+  - 
+    s: $monster_weirdo
+    w: 1
