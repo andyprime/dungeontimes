@@ -40,4 +40,5 @@ class TestStrings:
 
     def test_rules(self, cache_wrapper):
         # test the string capitalization
+        assert(StringTool.random('general') == 'itworked')
         assert(StringTool.random('cap') == 'It Worked')

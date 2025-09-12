@@ -1,6 +1,6 @@
 options:
   - 
-    s: $literals
+    s: ${literals}
     w: 1
   
 literals:

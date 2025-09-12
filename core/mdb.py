@@ -11,7 +11,8 @@ class MongoService:
         '<class \'core.dungeon.dungeons.Dungeon\'>': 'dungeons',
         '<class \'core.critters.Delver\'>': 'delvers',
         '<class \'core.region.Region\'>': 'regions',
-        '<class \'core.expedition.Expedition\'>': 'expeditions'
+        '<class \'core.expedition.Expedition\'>': 'expeditions',
+        '<class \'core.critters.Band\'>': 'bands'
     }
 
     @classmethod

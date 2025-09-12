@@ -25,7 +25,7 @@ import re
             the string fields in the same file's options object 
 
     String interpolation rules:
-        * Anything starting with a $ is a reference to a source. The tool will match local
+        * Anything encapsulated with ${} is a reference to a source. The tool will match local
           sources first, and failing that will attempt to load a string file matching the name
 
         * Some special characters can be inserted directly after the $ to string manipulation
@@ -59,20 +59,20 @@ class StringTool:
 
             gen_string = main_selection['s']
             # bits = gen_string.split(' ')
-            bits = re.findall('\$[\^\w]+', gen_string)
+            bits = re.findall(r"\$\{[\^\w]+\}", gen_string)
 
             for bit in bits:
                 if bit[0] == '$':
-                    if bit[1] == '^':
-                        index = bit[2:]
+                    if bit[2] == '^':
+                        index = bit[3:-1]
                     else:
-                        index = bit[1:]
+                        index = bit[2:-1]
 
                     if index in self._records[source]:
                         x = random.choice(self._records[source][index])
                     else:
                         x = self.random(index)
-                    if bit[1] == '^':
+                    if bit[2] == '^':
                         x = x.capitalize()                    
                     gen_string = gen_string.replace(bit, x, 1)
 

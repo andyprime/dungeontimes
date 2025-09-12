@@ -1,0 +1,5 @@
+options:
+  - 
+    s: ${last_names}'s ${^cool_nouns_plural}
+    w: 1
+  

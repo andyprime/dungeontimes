@@ -1,13 +1,13 @@
 options:
   - 
-    s: $monster_critter
+    s: ${monster_critter}
     w: 1
   - 
-    s: $monster_lilguy
+    s: ${monster_lilguy}
     w: 1
   - 
-    s: $monster_beefcake
+    s: ${monster_beefcake}
     w: 1
   - 
-    s: $monster_weirdo
+    s: ${monster_weirdo}
     w: 1
