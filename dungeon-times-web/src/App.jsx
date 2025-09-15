@@ -62,6 +62,10 @@ async function fetchExpedition(eid) {
   dungeon['roomFocus'] = null;
   // console.log('Dungeon', dungeon);
 
+  url = '//' + rootUrl + "/band/" + expedition['band'];
+  resp = await fetch(url);
+  let band = await resp.json();
+  
   url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
   resp = await fetch(url);
   let json = await resp.json();
@@ -72,6 +76,7 @@ async function fetchExpedition(eid) {
 
   // this is a convenience flag to avoid having to emit exp. state specifically yet
   expedition['inside'] = false;
+  expedition['band'] = band;
   expedition['dungeon'] = dungeon;
   expedition['delvers'] = delvers;
 
@@ -239,8 +244,13 @@ function App() {
     viewRef.current = view;
   }, [view]);
 
+  let bandButtons = '';
   let expButtons = '';
   if (expeditions != {}) {
+    bandButtons = Object.values(expeditions).map(exp =>
+      <li key={exp.band.id}><button>{exp.band.name}</button></li>
+      );
+
     expButtons = Object.values(expeditions).map(exp =>
       <li key={exp.id}><button eid={exp.id} onClick={selectExpedition}>{exp.dungeon.name}</button></li>
       );
@@ -253,6 +263,7 @@ function App() {
       Regions
       { region != null && <li><button onClick={() => setView('region')} >{region['name']}</button></li> }
       </ul>
+      <ul id="bands-buttons">Bands {bandButtons}</ul>
       <ul id="dungeon-buttons">Dungeons {expButtons}</ul>
 
       { view == 'region' && <RegionMap region={region} cursors={regionCursors} /> }

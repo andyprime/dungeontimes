@@ -28,7 +28,7 @@ import re
         * Anything encapsulated with ${} is a reference to a source. The tool will match local
           sources first, and failing that will attempt to load a string file matching the name
 
-        * Some special characters can be inserted directly after the $ to string manipulation
+        * Some control characters can be inserted as the first character after the ${
 
             ^ - will capitalize the selected string
             (more to come, as needed)
@@ -53,12 +53,15 @@ class StringTool:
         if type(self._records[source]) == list:
             return random.choice(self._records[source])
         else:
-            weights = [x['w'] for x in self._records[source]['options']]
+            try:
+                weights = [x['w'] for x in self._records[source]['options']]
+            except: 
+                raise ValueError('Strings source file missing weight attribute: "{}"'.format(source))
+
             # reminder that choices always returns an array even if you only want 1 result
             main_selection = random.choices(self._records[source]['options'], weights)[0]
 
             gen_string = main_selection['s']
-            # bits = gen_string.split(' ')
             bits = re.findall(r"\$\{[\^\w]+\}", gen_string)
 
             for bit in bits:
@@ -95,7 +98,4 @@ class StringTool:
 if __name__ == "__main__":
 
     for i in range(1, 1000):
-        print(StringTool.random('regular_names'))
-
-    for i in range(1, 1000):
-        print(StringTool.random('dungeon_names'))
+        print(StringTool.random('band_names'))

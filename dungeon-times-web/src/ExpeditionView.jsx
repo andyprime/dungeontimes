@@ -19,7 +19,7 @@ function ExpeditionView({expedition, cursors}) {
   return (
     <>
       <DungeonMap dungeon={expedition.dungeon} cursors={cursors} />
-      <div id="theparty" className="group" ><b>Our Party</b><ul>{delvers}</ul></div> 
+      <div id="theparty" className="group" ><b>{expedition.band.name}</b><ul>{delvers}</ul></div> 
       { inBattle && <div id="thefoes" className="group" ><b>Lurking Foes!</b><ul>{monsters}</ul></div> }
     </>
     );

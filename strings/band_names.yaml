@@ -1,5 +1,10 @@
 options:
   - 
-    s: ${last_names}'s ${^cool_nouns_plural}
+    s: ${any_names}'s ${^cool_nouns_plural}
     w: 1
-  
+  -
+    s: ${^band_type} of the ${^cool_nouns}
+    w: 1
+  -
+    s: The ${^cool_adjectives} ${^cool_nouns_plural}
+    w: 1

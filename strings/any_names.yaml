@@ -1,0 +1,7 @@
+options:
+  - 
+    s: ${first_names}
+    w: 1
+  -
+    s: ${last_names}
+    w: 1
