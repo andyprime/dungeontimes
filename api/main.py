@@ -101,6 +101,20 @@ def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
     d.pop('_id')
     return d
 
+@app.get('/band/')
+def read_bands(db: Database = Depends(db_session)):
+    bs = []
+    for b in db.bands.find():
+        b.pop('_id')
+        bs.append(b)
+    return bs
+
+@app.get("/band/{band_id}")
+def read_band(band_id: UUID, db: Database = Depends(db_session)):
+    b = db.bands.find_one({'id': str(band_id)})
+    b.pop('_id')
+    return b
+
 @app.get("/dungeon/")
 def read_dungeons(db: Database = Depends(db_session)):
     ds = []

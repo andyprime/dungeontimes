@@ -34,49 +34,61 @@ class Settings(BaseSettings):
     rabbit_host: str
 
 def buildExpedition(region):
+    """
+        Making a note here for clarity
+        Strictly speaking the expedition should not be a top level object, eventually the logic of where delvers go
+        and what they do as a group should at the band level but since we're still in this engine demo stage where
+        everything is ephemeral so the hooks to correctly hang that logic simply do not exist yet. For now things
+        can live under expedition as an expedient way to get the data to the client
+    """
+
     # Generate dungeon
-        dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
-                'DEFAULT_HEIGHT': 10,
-                'DEFAULT_WIDTH': 30,
-                'ROOM_HEIGHT_RANGE': (3,4),
-                'ROOM_WIDTH_RANGE': (3,8),
-                'MAX_SPARENESS_RUNS': 5,
-                'MAX_ROOM_ATTEMPTS': 100
-            })
+    dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
+            'DEFAULT_HEIGHT': 10,
+            'DEFAULT_WIDTH': 30,
+            'ROOM_HEIGHT_RANGE': (3,4),
+            'ROOM_WIDTH_RANGE': (3,8),
+            'MAX_SPARENESS_RUNS': 5,
+            'MAX_ROOM_ATTEMPTS': 100
+        })
 
-        # Populate dungeon
-        for room in dungeon.rooms:
-            for i in range(4):
-                room.populate(core.critters.Monster.random())
-
-        did = dungeon.save()
-        dungeon.id = did
-
-        region.place_dungeon(did)
-
-        print('Generated dungeon')
-
-        # create party
-        delvers = []
-        ids = []
+    # Populate dungeon
+    for room in dungeon.rooms:
         for i in range(4):
-            d = core.critters.Delver.random()
-            delvers.append(d)
-            ids.append(d.save())
+            room.populate(core.critters.Monster.random())
 
-        print('Generated delvers')
+    did = dungeon.save()
+    dungeon.id = did
 
-        exp = core.expedition.Expedition(region, dungeon, delvers, None)
-        exp.save()
+    region.place_dungeon(did)
 
-        print('Saved the expedition: {}'.format(exp.id))
+    print('Generated dungeon')
 
-        dungeon.prettyPrint()
-        for room in dungeon.rooms:
-            print('{}: {}'.format(dungeon.rooms.index(room), room))
-        print(delvers)
+    # create party
+    delvers = []
+    ids = []
+    for i in range(4):
+        d = core.critters.Delver.random()
+        delvers.append(d)
+        ids.append(d.save())
 
-        return exp 
+    band = core.critters.Band()
+    band.members = delvers
+    band.save()
+
+    print('Generated delvers')
+
+    exp = core.expedition.Expedition(region, dungeon, band, None)
+    exp.save()
+
+    print('Saved the expedition: {}'.format(exp.id))
+
+    dungeon.prettyPrint()
+    for room in dungeon.rooms:
+        print('{}: {}'.format(dungeon.rooms.index(room), room))
+    print(delvers)
+
+    return exp 
 
 def all_done(es):
     for x in es.values():

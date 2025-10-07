@@ -43,11 +43,12 @@ class Expedition(Persister):
     # Only print the map every X moves
     PRINT_INTERVAL = 5
 
-    def __init__(self, region, dungeon, party, cursor=None, id=None):
+    def __init__(self, region, dungeon, band, cursor=None, id=None):
 
         self.region = region
         self.dungeon = dungeon
-        self.party = party
+        self.band = band
+        self.party = band.members
         self.battle = None
         self.id = str(uuid.uuid1())
         
@@ -129,6 +130,7 @@ class Expedition(Persister):
             'name': 'PLACEHOLDER',
             'complete': False,
             'dungeon': self.dungeon.id,
+            'band': self.band.id,
             'party': [p.id for p in self.party],
             'cursor': self.cursor
         }

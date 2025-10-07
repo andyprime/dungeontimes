@@ -1,6 +1,6 @@
 options:
   - 
-    s: ${^literals1} ${^literals2}
+    s: ${literals1}${literals2}
     w: 1
 
 literals1:

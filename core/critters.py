@@ -237,3 +237,18 @@ class Monster(Creature):
 
     def __repr__(self):
         return self.name + ', ' + self.stock + ', ' + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
+
+
+class Band(Persister):
+
+    def __init__(self):
+        self.id = str(uuid.uuid1())
+        self.name = core.strings.StringTool.random('band_names')
+        self.members = []
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'members': [m.id for m in self.members]
+        }

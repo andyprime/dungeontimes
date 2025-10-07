@@ -1,12 +1,12 @@
 options:
   - 
-    s: $literals of $scary_nouns
+    s: ${literals} of ${scary_nouns}
     w: 1
   - 
-    s: The $literals of $scary_nouns
+    s: The ${literals} of ${scary_nouns}
     w: 1
   - 
-    s: $scary_adjectives $literals
+    s: ${scary_adjectives} ${literals}
     w: 1
   
 literals:

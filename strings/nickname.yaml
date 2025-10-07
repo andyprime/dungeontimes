@@ -1,11 +1,11 @@
 options:
   - 
-    s: $cool_nouns
+    s: ${cool_nouns}
     w: 1
   - 
-    s: $cool_adjectives
+    s: ${cool_adjectives}
     w: 1
   - 
-    s: $cool_verbs
+    s: ${cool_verbs}
     w: 1
   
