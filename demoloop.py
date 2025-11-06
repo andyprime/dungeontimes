@@ -161,38 +161,49 @@ if __name__ == "__main__":
         # if a party doesn't have a todo, create one
         # this should only occur when a band has no active expedition
 
-        print('!!! {}'.format(to_do))
+        print('!!! {}, {}'.format(len(to_do), to_do))
 
         if len(to_do) < len(bands):
+            print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
             for band_id, band in bands.items():
+                unbusy = True
                 for action in to_do:
                     if action['band'] == band_id:
                         print('Band {} has todo'.format(band.name))
-                        continue
-                    
-                print('Band {} has nothing to do'.format(band.name))
-                # possible actions
-                #   - plan expedition
-                #   - carouse
-                #   - shop
-                #   - research dungeons
+                        unbusy = False
+                        break
+                
+                if unbusy:
+                    print('Band {} has nothing to do'.format(band.name))
+                    # possible actions
+                    #   - plan expedition
+                    #   - carouse
+                    #   - shop
+                    #   - research dungeons
 
-                options = []
+                    options = []
 
-                if band.can_carouse():
-                    options.append('carouse')
-                if band.can_shop():
-                    options.append('shop')
+                    if band.can_carouse():
+                        options.append('carouse')
+                    if band.can_shop():
+                        options.append('shop')
 
-                occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
-                available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
-                if len(available_dungeons) > 0:
-                    options.append('plan')
-                if len(available_dungeons) < int(args.dungeons/2):
-                    options.append('research')
+                    occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
+                    available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
+                    if len(available_dungeons) > 0:
+                        options.append('plan')
+                    if len(available_dungeons) < int(args.dungeons/2):
+                        options.append('research')
 
-                selected = random.choice(options)
-                to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
+                    selected = random.choice(options)
+                    to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
+
+
+        if len(to_do) > len(bands):
+            print('='*50)
+            print('Excess todos detected')
+            print(expeditions)
+            print('='*50)
 
         # find the soonest action
 

@@ -187,12 +187,12 @@ function App() {
         setDungeons(d);
       });
     } else if (bits[0] == 'EXP-NEW') {
-      // console.log('EXP-NEW ', bits[1]);
+      console.log('EXP-NEW ', bits[1]);
       fetchExpeditions().then((exs) => {
         setExpeditions(exs);
       });
     } else if (bits[0] == 'EXP-DEL') {
-      // console.log('EXP-DEL ', bits[1]);      
+      console.log('EXP-DEL ', bits[1]);      
       setExpeditions(oldExpeditions => {
         let newExpeditions = {...oldExpeditions};
         delete newExpeditions[bits[1]];

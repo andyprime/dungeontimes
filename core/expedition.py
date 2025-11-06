@@ -71,6 +71,12 @@ class Expedition(Persister):
         self.processors = []
         self.emitters = []
 
+    def __str__(self):
+        return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
+
+    def __repr__(self):
+        return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
+
     def registerProcessor(self, callback):
         self.processors.append(callback)
 
