@@ -1,7 +1,7 @@
 import { useContext, useState, useEffect, useRef } from 'react'
 import './App.css'
 import RegionMap from './RegionMap.jsx'
-import ExpeditionView from './ExpeditionView.jsx'
+import DungeonView from './DungeonView.jsx'
 import EventLog from './EventLog.jsx'
 
 const rootUrl = window.location.hostname + ':8081';
@@ -32,6 +32,48 @@ async function fetchRegion() {
   return region;
 }
 
+async function fetchBands() {
+  let url = '//' + rootUrl + "/bands/";
+  let resp = await fetch(url);
+  let list = await resp.json();
+
+  let bands = {};
+  for (let i in list) {
+    let band = list[i];
+
+    url = url = '//' + rootUrl + '/band/' + band['id'] + '/delvers/';
+    resp = await fetch(url);
+
+    let members = await resp.json();
+    band['members'] = {};
+    for (let j in members) {
+      let m = members[j];
+      band['members'][m['id']] = m;
+    }
+
+    bands[band['id']] = band;
+  }
+
+  return bands;
+}
+
+async function fetchDungeons() {
+  let url = '//' + rootUrl + "/dungeon/";
+  let resp = await fetch(url);
+  let list = await resp.json();
+
+  let dungeons = {};
+  for (let i in list) {
+    let dungeon = list[i];
+    dungeon['cells'] = JSON.parse(dungeon['cells']);
+    dungeon['battling'] = false;
+    dungeon['roomFocus'] = null;
+    dungeons[dungeon['id']] = dungeon;
+  }
+
+  return dungeons;
+}
+
 async function fetchExpeditions() {
   let url = '//' + rootUrl + "/expeditions/";
   let resp = await fetch(url);
@@ -46,39 +88,14 @@ async function fetchExpeditions() {
 }
 
 async function fetchExpedition(eid) {
-  console.log('Fetch expedition', eid);
+  // console.log('Fetch expedition', eid);
 
   let resp = await fetch('//' + rootUrl + "/expedition/" + eid);
   let expedition = await resp.json();
   expedition['type'] = 'dungeon';
-  // console.log('Expedition', expedition);
-
-  let url = '//' + rootUrl + "/dungeon/" + expedition['dungeon'];
-  resp = await fetch(url);
-  let dungeon = await resp.json();
-  // var dungeonName = dungeon['name'];
-  dungeon['cells'] = JSON.parse(dungeon['cells']);
-  dungeon['battling'] = false;
-  dungeon['roomFocus'] = null;
-  // console.log('Dungeon', dungeon);
-
-  url = '//' + rootUrl + "/band/" + expedition['band'];
-  resp = await fetch(url);
-  let band = await resp.json();
-  
-  url = '//' + rootUrl + "/expedition/" + expedition['id'] + "/delvers";
-  resp = await fetch(url);
-  let json = await resp.json();
-  let delvers = [];
-  for (let i in json) {
-    delvers.push(json[i]);
-  }
-
   // this is a convenience flag to avoid having to emit exp. state specifically yet
   expedition['inside'] = false;
-  expedition['band'] = band;
-  expedition['dungeon'] = dungeon;
-  expedition['delvers'] = delvers;
+  // console.log('Expedition', expedition);
 
   return expedition;
 }
@@ -88,18 +105,25 @@ function App() {
   const socket = useRef(null)
 
   const [region, setRegion] = useState(null);
-  const [expeditions, setExpeditions] = useState([]);
-  const [selectedExpedition, setSelectedExpedition] = useState(null);
+  const [bands, setBands] = useState({});
+
+  const [dungeons, setDungeons] = useState({});
+  const [selectedDungeon, setSelectedDungeon] = useState(null);
+
+  const [expeditions, setExpeditions] = useState({abc: 'test'});
 
   const [view, setView] = useState('region');
-  // view will get closured in receiveMessage so we gotta set up a ref and an effect to keep it fresh
+
   const viewRef = useRef(view);
+  const expRef = useRef(expeditions);
+  const bandRef = useRef(bands);
+  const dungeonRef = useRef(dungeons);
 
-  var region2 = region;
-
-  const [regionCursors, setRegionCursors] = useState([]);
+  const [regionCursors, setRegionCursors] = useState({});
   const [dungeonCursors, setDungeonCursors] = useState([]);
   const [messageIndex, setMessages] = useState({region: ['The past is a mystery']});
+
+  // ================================
 
   var receiveMessage = async function (event) {
     let msg = await event.data.text();
@@ -111,15 +135,23 @@ function App() {
       // we wanna track all coordinates but only draw if its the current one
       // [1] = ID, [2] = D/O, [3] = coords
 
+      // console.log('Cursor update', bits, viewRef.current);
+
       if (bits[2] == 'D') {
         if (bits[1] == viewRef.current) {
           setDungeonCursors([bits[3].split(',')]);
         }
       } else {
-        expeditions[bits[1]] = bits[3].split(',');;
-        setRegionCursors(Object.values(expeditions));
+
+        setRegionCursors(oldCursors => {
+            let newCursors = {...oldCursors};
+            newCursors[bits[1]] = bits[3].split(',');
+            console.log('Region cursors: ', newCursors);
+            return newCursors;
+          });
       }        
     } else if (bits[0] == 'NARR') {
+      // console.log(bits);
       setMessages(oldMessages => {
 
         let old = oldMessages[bits[1]];
@@ -134,58 +166,96 @@ function App() {
       });
 
     } else if (bits[0] == 'DNGS') {
+      // Dungeon entrances update message
       let entrances = []
       for (let i = 1; i < bits.length; i++) {
-        entrances.push(JSON.parse(bits[i]));  
+        if (bits[i]) {
+          entrances.push(JSON.parse(bits[i]));  
+        }
       }
 
-      // we can avoid having to ref/effect region here by using the function param of our state
       setRegion(oldRegion => ({
         ...oldRegion, 
         dungeons: entrances
       }));
+    } else if (bits[0] == 'DNG-NEW') {
+      fetchDungeons().then((d) => {
+        setDungeons(d);
+      });
+    }  else if (bits[0] == 'DNG-DEL') {
+      fetchDungeons().then((d) => {
+        setDungeons(d);
+      });
     } else if (bits[0] == 'EXP-NEW') {
+      // console.log('EXP-NEW ', bits[1]);
       fetchExpeditions().then((exs) => {
         setExpeditions(exs);
       });
     } else if (bits[0] == 'EXP-DEL') {
-      delete expeditions[bits[1]];
+      // console.log('EXP-DEL ', bits[1]);      
+      setExpeditions(oldExpeditions => {
+        let newExpeditions = {...oldExpeditions};
+        delete newExpeditions[bits[1]];
+        return newExpeditions;
+      });
+
+      setRegionCursors(oldCursors => {
+        let newCursors = {...oldCursors};
+        delete newCursors[bits[1]];
+        return newCursors;
+      });
+
     } else if (bits[0] == 'BTLS') {
 
-      // the next three sections are kinda gross, need to sort out a better way than updating
-      // the entire expeditions set
-      setExpeditions(oldExpeditions => {
-        if (oldExpeditions[bits[1]] != undefined) {
-          let newExpeditions = Object.assign({}, oldExpeditions);
-          newExpeditions[bits[1]].dungeon.battling = true;
-          newExpeditions[bits[1]].dungeon.roomFocus = bits[2];
-          return newExpeditions;
-        } else {
-          return oldExpeditions;
-        }
-      });      
+      let exp = expRef.current[bits[1]];
+      let dungeonId = exp.dungeon;
+
+      if (exp != undefined) {
+        setDungeons(oldDungeons => {
+          let newDungeons = {...oldDungeons};
+          newDungeons[dungeonId].battling = true;
+          newDungeons[dungeonId].roomFocus = bits[2];
+
+          return newDungeons;
+        });
+
+      } else {
+        console.log('Did not find exp', bits[1]);
+      }
 
     } else if (bits[0] == 'BTLE') {
-      setExpeditions(oldExpeditions => {
-        if (oldExpeditions[bits[1]] != undefined) {
-          let newExpeditions = Object.assign({}, oldExpeditions);
-          newExpeditions[bits[1]].dungeon.battling = false;
-          return newExpeditions;
-        } else {
-          return oldExpeditions;
-        }
-      });     
+
+      let exp = expRef.current[bits[1]];
+      let dungeonId = exp.dungeon;
+
+      if (exp != undefined) {
+        setDungeons(oldDungeons => {
+          let newDungeons = {...oldDungeons};
+
+          newDungeons[dungeonId].battling = false;
+          return newDungeons;
+        });
+
+      } else {
+        console.log('Did not find exp', bits[1]);
+      }      
+
     } else if (bits[0] == 'BTL-UPD') {
+      // this is going to be exceptionally janky for the moment since monsters are not top level objects
+
+      let exp = expRef.current[bits[1]];
       let update = JSON.parse(bits[2]);
-      setExpeditions(oldExpeditions => {
-        if (oldExpeditions[bits[1]] != undefined) {
-          let newExpeditions = Object.assign({}, oldExpeditions);
-          
-          let expedition = newExpeditions[bits[1]];
-          if (update.target[0] == 'm') {
-            // monsters have no id based lookup yet :(
-            let room = expedition.dungeon.rooms.find( room => room.n == expedition.dungeon.roomFocus );
+      // console.log('BTL-UPD ', update);
+
+      if (exp != undefined) {
+        
+        if (update.target[0] == 'm') {
+          // monsters live inside the dungeon, so we update that state
+          setDungeons(oldDungeons => {
+            let newDungeons = {...oldDungeons};
+            let dungeon = newDungeons[exp['dungeon']];
             
+            let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
             if (room) {
               let target = room.occ.find( monster => monster.id == update.target );
               target.chp = update.newhp;
@@ -195,29 +265,49 @@ function App() {
               }
             }
 
-          } else {
-            let target = expedition.delvers.find( delver => delver.id == update.target);
+            return newDungeons;
+          });
+        } else {
+          setBands(oldBands => {
+            let newBands = {...oldBands};
+
+            let band = newBands[exp['band']];
+            let target = Object.values(band.members).find(delver => delver.id == update.target)
+
             target.currenthp = update.newhp;
             if (update['status'] !=  undefined) {
               target['status'] = update['status'];
             }
-          }
 
-          return newExpeditions;
-        } else {
-          return oldExpeditions;
+            return newBands;
+          });
         }
-      });
+
+      } else {
+        console.log('Did not find exp', bits[1]);
+      }   
+
     }
 
   }
 
-  const selectExpedition = function(event) {
+  const bandForDungeon = function(dungeon) {
+    let ex = Object.values(expeditions).find((x) => x.dungeon == dungeon.id)
+    if (ex) {
+      return bands[ex.band];
+    }
+    return null;
+  }
+
+  const selectDungeon = function(event) {
     let id = event.target.getAttribute('eid');
-    setSelectedExpedition(expeditions[id]);
+
     setDungeonCursors([]);
+    setSelectedDungeon(dungeons[id]);
     setView(id);
   }
+
+  // ================================
 
   // cheating the effect system to aprroximate an onMount event, but this will need proper handling
   useEffect(() => {
@@ -232,29 +322,54 @@ function App() {
       setRegion(r);
     });
 
-    fetchExpeditions().then((exs) => {
-      setExpeditions(exs);
+    fetchBands().then((bands) => {
+      setBands(bands);
+    });
+
+    fetchExpeditions().then((exp) => {
+      setExpeditions(exp);
+    });
+
+    fetchDungeons().then((d) => {
+      setDungeons(d);
     });
 
     // returning a function is supposed to act as a cleanup when App is destroyed but this seems to be called immediately
     // return () => { socket.current.close(); };
   }, []);
 
+  // since the handle message function is local we gotta maintain refs to avoid the stale closure problem
+  useEffect(() => {
+    expRef.current = expeditions;
+  }, [expeditions]);
+
+  useEffect(() => {
+    bandRef.current = bands;
+  }, [bands]);
+
+  useEffect(() => {
+    dungeonRef.current = dungeons;
+  }, [dungeons]);
+
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
 
-  let bandButtons = '';
-  let expButtons = '';
-  if (expeditions != {}) {
-    bandButtons = Object.values(expeditions).map(exp =>
-      <li key={exp.band.id}><button>{exp.band.name}</button></li>
-      );
+  // ================================
 
-    expButtons = Object.values(expeditions).map(exp =>
-      <li key={exp.id}><button eid={exp.id} onClick={selectExpedition}>{exp.dungeon.name}</button></li>
+  let bandButtons = '';
+  let dungeonButtons = '';
+  if (bands != {}) {
+    bandButtons = Object.values(bands).map(band =>
+      <li key={band.id}><button>{band.name}</button></li>
+      );
+  }
+  if (dungeons != {}) {
+    dungeonButtons = Object.values(dungeons).map(dungeon =>
+      <li key={dungeon.id}><button eid={dungeon.id} onClick={selectDungeon}>{dungeon.name}</button></li>
       );
   } 
+
 
   return (
     <>
@@ -264,11 +379,11 @@ function App() {
       { region != null && <li><button onClick={() => setView('region')} >{region['name']}</button></li> }
       </ul>
       <ul id="bands-buttons">Bands {bandButtons}</ul>
-      <ul id="dungeon-buttons">Dungeons {expButtons}</ul>
+      <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>
 
       { view == 'region' && <RegionMap region={region} cursors={regionCursors} /> }
 
-      { view != 'region' && <ExpeditionView expedition={selectedExpedition} cursors={dungeonCursors} /> }
+      { view != 'region' && <DungeonView dungeon={selectedDungeon} band={bandForDungeon(selectedDungeon)} cursors={dungeonCursors} /> }
 
       <EventLog messages={messageIndex} view={view} />
       </>

@@ -245,6 +245,13 @@ class Band(Persister):
         self.id = str(uuid.uuid1())
         self.name = core.strings.StringTool.random('band_names')
         self.members = []
+        self.completed = 0
+
+    def can_carouse(self):
+        return self.completed > 0
+
+    def can_shop(self):
+        return self.completed > 0
 
     def data_format(self):
         return {
@@ -252,3 +259,9 @@ class Band(Persister):
             'name': self.name,
             'members': [m.id for m in self.members]
         }
+
+    def __str__(self):
+        return '{} ({})'.format(self.name, self.id)
+
+    def __repr__(self):
+        return '{} ({})'.format(self.name, self.id)

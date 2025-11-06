@@ -101,7 +101,7 @@ def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
     d.pop('_id')
     return d
 
-@app.get('/band/')
+@app.get('/bands/')
 def read_bands(db: Database = Depends(db_session)):
     bs = []
     for b in db.bands.find():
@@ -115,13 +115,26 @@ def read_band(band_id: UUID, db: Database = Depends(db_session)):
     b.pop('_id')
     return b
 
+@app.get("/band/{band_id}/delvers")
+def read_band_delvers(band_id: UUID, db: Database = Depends(db_session)):
+    band = db.bands.find_one({'id': str(band_id)})
+    delvers = list(db.delvers.find({'id': {'$in': band['members']}}))
+    for d in delvers:
+        d.pop('_id')
+
+    return delvers
+
 @app.get("/dungeon/")
 def read_dungeons(db: Database = Depends(db_session)):
     ds = []
-    for d in db.dungeons.find():
+    for d in db.dungeons.find({"complete": False}):
         d.pop('_id')
         ds.append(d)
     return ds
+
+@app.get("/dungeon/basic")
+def read_dungeons_basic(db: Database = Depends(db_session)):
+    return list(db.dungeons.find({}, {"_id": 0, "cells": 0, "rooms": 0}))
 
 @app.get("/dungeon/{dungeon_id}")
 def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
@@ -131,11 +144,7 @@ def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
 
 @app.get("/expeditions/")
 def read_active_expedition(db: Database = Depends(db_session)):
-    es = []
-    for ex in db.expeditions.find():
-        ex.pop('_id')
-        es.append(ex)
-    return es
+    return list(db.expeditions.find({"complete": False}, {"_id": 0}))
 
 @app.get("/expedition/{exp_id}")
 def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):
@@ -143,6 +152,7 @@ def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):
     e.pop('_id')
     return e
 
+# deprecated
 @app.get("/expedition/{exp_id}/delvers")
 def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
     exp = db.expeditions.find_one({'id': str(exp_id)})

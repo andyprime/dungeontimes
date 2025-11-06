@@ -17,6 +17,7 @@ class Dungeon(Persister):
         self.grid = []
         self.rooms = []
         self.regionPalette = 1
+        self.complete = False
 
         self.name = strings.StringTool.random('dungeon_names')
 
@@ -168,6 +169,7 @@ class Dungeon(Persister):
         box = {
             'id': self.id,
             'name': self.name,
+            'complete': self.complete,
             'width': self.width(),
             'height': self.height(),
             'rooms': [r.serialize() for r in self.rooms]

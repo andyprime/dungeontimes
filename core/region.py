@@ -42,9 +42,18 @@ class Region(Persister):
         for e in self.emitters:
             e(msg.encode('ASCII'))
 
+    def emitNarrative(self, s):
+        self.emit('NARR;{};{}'.format(self.id, s))
+
     def emitDungeonLocales(self):
         dungeons = [str(list(c.coords)) for c in self.dungeons.values()]
         self.emit('DNGS;{}'.format(';'.join(dungeons)))
+
+    def emit_new_dungeon(self, dungeon):
+        self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
+
+    def emit_del_dungeon(self, did):
+        self.emit('DNG-DEL;{}'.format(did))
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):
@@ -72,12 +81,16 @@ class Region(Persister):
     def getWeight(self, cell):
         return RCell.WEIGHT[cell.type]
 
-    def place_dungeon(self, dungeon_id):
-        cells = [c for c in self.allCells() if c.type in RCell.DUNGEON_TYPES]
-        self.dungeons[dungeon_id] = random.choice(cells)
+    def place_dungeon(self, dungeon):
+        existing = self.dungeons.values()
+        cells = [c for c in self.allCells() if c.type in RCell.DUNGEON_TYPES and c not in existing]
+        self.dungeons[dungeon.id] = random.choice(cells)
         
     def find_dungeon(self, dungeon_id):
         return self.dungeons[dungeon_id]
+
+    def remove_dungeon(self, dungeon):
+        self.dungeons.pop(dungeon.id, None)
 
     def remove_dungeons(self):
         self.dungeons.clear()

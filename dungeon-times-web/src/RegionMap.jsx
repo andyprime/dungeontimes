@@ -34,11 +34,11 @@ const REGION_CELL_COLORS = {
 }
 
 function RegionMap({region, cursors}) {
-
+  cursors = Object.values(cursors);
   const canvasRef = useRef(null)
 
   const draw = (canvas) => {
-    // console.log('Canvas draw: ', region, cursors);
+    // console.log('Canvas draw: ', cursors);
 
     if (region != null && region.grid != null) {
       canvas.setAttribute('width', (region['width'] * GRID_SIZE) + (region['width'] - 1) + (2 * HORIZONTAL_MARGIN) );
