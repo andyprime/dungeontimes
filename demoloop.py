@@ -57,10 +57,6 @@ def build_dungeon():
             room.populate(core.critters.Monster.random())
 
     dungeon.save()
-    # dungeon.id = did
-
-    # region.place_dungeon(did)
-
     return dungeon
 
 def build_party():

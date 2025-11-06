@@ -12,9 +12,6 @@ function DungeonView({dungeon, band, cursors}) {
     });
   }
 
-  
-  // let bandName = 'BAND NAME HERE';
-
   let inBattle = dungeon.battling;
   let monsters = '';
   if (inBattle) {
