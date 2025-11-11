@@ -33,16 +33,16 @@ class Settings(BaseSettings):
     rabbit_password: str
     rabbit_host: str
 
-def buildExpedition(region):
-    """
-        Making a note here for clarity
-        Strictly speaking the expedition should not be a top level object, eventually the logic of where delvers go
-        and what they do as a group should at the band level but since we're still in this engine demo stage where
-        everything is ephemeral so the hooks to correctly hang that logic simply do not exist yet. For now things
-        can live under expedition as an expedient way to get the data to the client
-    """
+TIME_MAP = {
+    'exp': 20,
+    'plan': 20,
+    'research': 20,
+    'carouse': 60,
+    'shop': 20
+}
 
-    # Generate dungeon
+
+def build_dungeon():
     dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
             'DEFAULT_HEIGHT': 10,
             'DEFAULT_WIDTH': 30,
@@ -52,18 +52,14 @@ def buildExpedition(region):
             'MAX_ROOM_ATTEMPTS': 100
         })
 
-    # Populate dungeon
     for room in dungeon.rooms:
         for i in range(4):
             room.populate(core.critters.Monster.random())
 
-    did = dungeon.save()
-    dungeon.id = did
+    dungeon.save()
+    return dungeon
 
-    region.place_dungeon(did)
-
-    print('Generated dungeon')
-
+def build_party():
     # create party
     delvers = []
     ids = []
@@ -76,19 +72,7 @@ def buildExpedition(region):
     band.members = delvers
     band.save()
 
-    print('Generated delvers')
-
-    exp = core.expedition.Expedition(region, dungeon, band, None)
-    exp.save()
-
-    print('Saved the expedition: {}'.format(exp.id))
-
-    dungeon.prettyPrint()
-    for room in dungeon.rooms:
-        print('{}: {}'.format(dungeon.rooms.index(room), room))
-    print(delvers)
-
-    return exp 
+    return band
 
 def all_done(es):
     for x in es.values():
@@ -100,7 +84,8 @@ if __name__ == "__main__":
     parser  = argparse.ArgumentParser(description="Options for if you're running this outside of the container")
     parser.add_argument('-l', '--local', action='store_true', help='Overrides container hostnames to be localhost so this can be run in a shell without modification.')
     parser.add_argument('-s', '--seed', help="Override random seed generation with the provided value.")
-    parser.add_argument('-e', '--exp', type=int, default=2, help="Number of expeditions to simulate. Default is 2.")
+    parser.add_argument('-b', '--bands', type=int, default=2, help="Number of bands to simulate. Default is 2.")
+    parser.add_argument('-d', '--dungeons', type=int, default=4, help="Number of potential dungeons to maintain.")
     args = parser.parse_args()
 
     print(args)
@@ -131,59 +116,171 @@ if __name__ == "__main__":
 
     emitFn = partial(rabbitHandler, channel)
 
-    result = MongoService.db.regions.delete_many({})
+    print('Destroying any existing entities.')
+    MongoService.db.regions.delete_many({})
+    MongoService.db.expeditions.delete_many({})
+    MongoService.db.dungeons.delete_many({})
+    MongoService.db.delvers.delete_many({})
+    MongoService.db.bands.delete_many({})
 
+    # build region
     region = core.region.RegionGenerate.generate_region()
     region.save()
     region.registerEventEmitter(emitFn)
-    
+
+    # build bands
+    bands = {}
+    for i in range(0, args.bands):
+        b = build_party()
+        bands[b.id] = b
+
+    print('Bands: {}'.format(bands))
+
+    dungeons = {}
+    expeditions = {}
+
+    # seed initial dungeons
+    while len(dungeons) < args.dungeons:
+        print('Only {} dungeons, making another one'.format(len(dungeons)))
+        d = build_dungeon()
+        dungeons[d.id] = d
+        region.place_dungeon(d)
+    # not sure if this is necessary at this stage
+    region.persist()
+    region.emitDungeonLocales()
+
+    to_do = []
+    current_time = 1
     while True:
-        print('Demo loop start!')
-        print('Destroying any existing entities.')
+        print('New loop, time: {}'.format(current_time))
+        dungeon_changes = False
+        # if a party doesn't have a todo, create one
+        # this should only occur when a band has no active expedition
 
-        result = MongoService.db.expeditions.delete_many({})
-        result2 = MongoService.db.dungeons.delete_many({})
-        result3 = MongoService.db.delvers.delete_many({})
-        region.remove_dungeons()
+        print('!!! {}, {}'.format(len(to_do), to_do))
 
-        print('Deleted: {}, {}, {}'.format(result.deleted_count, result2.deleted_count, result3.deleted_count))
+        if len(to_do) < len(bands):
+            print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
+            for band_id, band in bands.items():
+                unbusy = True
+                for action in to_do:
+                    if action['band'] == band_id:
+                        print('Band {} has todo'.format(band.name))
+                        unbusy = False
+                        break
+                
+                if unbusy:
+                    print('Band {} has nothing to do'.format(band.name))
+                    # possible actions
+                    #   - plan expedition
+                    #   - carouse
+                    #   - shop
+                    #   - research dungeons
 
-        expeditions = {}
+                    options = []
 
-        for i in range(0, args.exp):
-            exp = buildExpedition(region) 
-            # starting it off with a low but staggered time
-            expeditions[exp.id] = {'ex': exp, 'time': i+2}
+                    if band.can_carouse():
+                        options.append('carouse')
+                    if band.can_shop():
+                        options.append('shop')
 
-        region.prettyPrint()
+                    occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
+                    available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
+                    if len(available_dungeons) > 0:
+                        options.append('plan')
+                    if len(available_dungeons) < int(args.dungeons/2):
+                        options.append('research')
 
-        for ex in expeditions.values():
-            exchange_name = ex['ex'].id
-            print('Declaring: {}'.format(exchange_name))
-            ex['ex'].registerEventEmitter(emitFn)
-            ex['ex'].emitNew()
+                    selected = random.choice(options)
+                    to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
 
-        region.persist()
-        region.emitDungeonLocales()
 
-        print('Expedition(s) generated, having a little nap')
-        print(expeditions)
-        time.sleep(30)
+        if len(to_do) > len(bands):
+            print('='*50)
+            print('Excess todos detected')
+            print(expeditions)
+            print('='*50)
 
-        current_time = 1
-        print('Start expedition process')
-        while not all_done(expeditions):
-            # this just figures out which expedition has the first scheduled process time
-            ex = reduce(lambda x, y: x if x['time'] < y['time'] else y, expeditions.values())
+        # find the soonest action
 
-            time.sleep(ex['time'] - current_time)
-            current_time = ex['time']
+        to_do.sort(key=lambda a: a['schedule'])
+        do = to_do.pop(0)
+        time.sleep(do['schedule'] - current_time)
+        current_time = do['schedule']
 
-            wakeup = ex['ex'].processTurn()
-            expeditions[ex['ex'].id]['time'] = current_time + wakeup
+        # process action
 
-        print('Expedition over, having a little nap')
-        time.sleep(30)
+        print('Doing: {}'.format(do))
 
-        for ex in expeditions.values():
-            ex['ex'].emitDelete()
+        if (do['action'] == 'exp'):
+            
+            band = bands[do['band']]
+            exp = expeditions[do['band']]
+
+            if exp.over():
+                region.remove_dungeon(exp.dungeon)
+                region.emit_del_dungeon(exp.dungeon.id)
+
+                exp.dungeon.complete = True
+                exp.dungeon.persist()
+
+                exp.emitDelete()
+                exp.persist()
+                dungeon_changes = True
+
+                del expeditions[do['band']]
+                del dungeons[exp.dungeon.id]
+
+            else:
+                delay = exp.processTurn()
+                to_do.append({'action': 'exp', 'band': band.id, 'schedule': current_time + delay})
+
+        elif (do['action'] == 'plan'):
+            
+            band = bands[do['band']]
+
+            print(expeditions.values())
+
+            occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
+            available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
+            dungeon = random.choice(available_dungeons)
+
+            exp = core.expedition.Expedition(region, dungeon, band, None)
+            exp.save()
+
+            exp.registerEventEmitter(emitFn)
+            exp.emitNew()
+            region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name))
+
+            expeditions[band.id] = exp
+
+            to_do.append({'action': 'exp', 'band': band.id, 'schedule': current_time + TIME_MAP['exp']})
+
+        elif (do['action'] == 'research'):
+            d = build_dungeon()
+            dungeons[d.id] = d
+            region.place_dungeon(d)
+            dungeon_changes = True
+
+            region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name))
+            region.emit_new_dungeon(d)
+
+            # adding a little extra chance to keep the dungeon count topped up
+            if random.choice([True, False]):
+                to_do.append({'action': 'research', 'band': band_id, 'schedule': current_time + TIME_MAP['research']})
+
+
+        elif (do['action'] == 'carouse'):
+            band = bands[do['band']]
+            region.emitNarrative('{} are going on a long bender.'.format(band.name))
+        elif (do['action'] == 'shop'):
+            band = bands[do['band']]
+            region.emitNarrative('{} are perusing the markets for the newest delving gear.'.format(band.name))
+        else:
+            print('!!! Unknown loop action: {}'.format(do))
+
+
+
+        # batch this
+        if dungeon_changes:
+            region.emitDungeonLocales()

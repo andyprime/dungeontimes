@@ -4,6 +4,7 @@ import time
 import uuid
 
 from core.battle import Battle
+from core.dungeon.dungeons import Cell
 from core.mdb import Persister
 
 class Expedition(Persister):
@@ -70,6 +71,12 @@ class Expedition(Persister):
         self.processors = []
         self.emitters = []
 
+    def __str__(self):
+        return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
+
+    def __repr__(self):
+        return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
+
     def registerProcessor(self, callback):
         self.processors.append(callback)
 
@@ -92,7 +99,12 @@ class Expedition(Persister):
     def emitCursorUpdate(self):
         c = self.cursor.coords
         self.persist_prop('cursor', c)
-        self.emit('CURSOR;{};{};{},{}'.format(self.id, self.location(), c[0], c[1]))
+        loc = self.location()
+        if loc == 'D':
+            obj = self.dungeon.id
+        else:
+            obj = self.id
+        self.emit('CURSOR;{};{};{},{}'.format(obj, loc, c[0], c[1]))
         
     def emitNarrative(self, s):
         self.emit('NARR;{};{}'.format(self.id, s))        
@@ -125,25 +137,21 @@ class Expedition(Persister):
             return 'O'
 
     def data_format(self):
+        # can't fix the cell/tuple problem here so just detect it
+        c = self.cursor
+        if type(c) != tuple:
+            c = c.coords
+
+        print('Pre persist - {} - {}'.format(type(c), c))
+
         return {
             'id': self.id,
             'name': 'PLACEHOLDER',
-            'complete': False,
+            'complete': self.over(),
             'dungeon': self.dungeon.id,
             'band': self.band.id,
-            'party': [p.id for p in self.party],
-            'cursor': self.cursor
+            'cursor': c
         }
-
-    def begin(self):
-        # this function is not exactly deprecated but it should only be used in the context
-        # of making an expedition run itself
-        while (self.status not in [Expedition.COMPLETE, Expedition.ERROR]):
-            t = self.processTurn()
-            if t:
-                time.sleep(t)
-            else:
-                time.sleep(Expedition.DEFAULT_TURN_DELAY)
 
     def processTurn(self):
         self.steps += 1
