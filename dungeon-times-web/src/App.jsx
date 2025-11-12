@@ -100,6 +100,13 @@ async function fetchExpedition(eid) {
   return expedition;
 }
 
+// in both of these haystack is a document NOT the context index itself
+function hasContext(haystack, needle) {
+  return haystack['context'][needle] != undefined;
+}
+// function getContext(haystack, needle) {
+//   return haystack['context'].find(c => {c[needle] != undefined});
+// }
 
 function App() {
   const socket = useRef(null)
@@ -131,162 +138,174 @@ function App() {
 
     // console.log(msg);
 
-    if (bits[0] == 'CURSOR') {
-      // we wanna track all coordinates but only draw if its the current one
-      // [1] = ID, [2] = D/O, [3] = coords
+    if (bits[0] == 'REV') {
+      
+      let doc = JSON.parse(bits[1]);
 
-      // console.log('Cursor update', bits, viewRef.current);
-
-      if (bits[2] == 'D') {
-        if (bits[1] == viewRef.current) {
-          setDungeonCursors([bits[3].split(',')]);
-        }
-      } else {
-
-        setRegionCursors(oldCursors => {
-            let newCursors = {...oldCursors};
-            newCursors[bits[1]] = bits[3].split(',');
-            console.log('Region cursors: ', newCursors);
-            return newCursors;
-          });
-      }        
-    } else if (bits[0] == 'NARR') {
-      // console.log(bits);
-      setMessages(oldMessages => {
-
-        let old = oldMessages[bits[1]];
-        if (old == undefined) {
-          old = [];
-        }
-        let fresh = old.slice (0, 9);
-        fresh.unshift(bits[2]);
-        let newMsg = {...oldMessages};
-        newMsg[bits[1]] = fresh;
-        return newMsg;
-      });
-
-    } else if (bits[0] == 'DNGS') {
-      // Dungeon entrances update message
-      let entrances = []
-      for (let i = 1; i < bits.length; i++) {
-        if (bits[i]) {
-          entrances.push(JSON.parse(bits[i]));  
-        }
+      if (doc['context'] == undefined) {
+        console.log('!!! Message missing a context field: ', doc);
       }
 
-      setRegion(oldRegion => ({
-        ...oldRegion, 
-        dungeons: entrances
-      }));
-    } else if (bits[0] == 'DNG-NEW') {
-      fetchDungeons().then((d) => {
-        setDungeons(d);
-      });
-    }  else if (bits[0] == 'DNG-DEL') {
-      fetchDungeons().then((d) => {
-        setDungeons(d);
-      });
-    } else if (bits[0] == 'EXP-NEW') {
-      console.log('EXP-NEW ', bits[1]);
-      fetchExpeditions().then((exs) => {
-        setExpeditions(exs);
-      });
-    } else if (bits[0] == 'EXP-DEL') {
-      console.log('EXP-DEL ', bits[1]);      
-      setExpeditions(oldExpeditions => {
-        let newExpeditions = {...oldExpeditions};
-        delete newExpeditions[bits[1]];
-        return newExpeditions;
-      });
+      if (doc['type'] == 'NARRATIVE') {
+        let index = null;
+        
+        if (hasContext(doc, 'dungeon')) {
+          index = doc['context']['dungeon'];
+        } else if (hasContext(doc, 'region')) {
+          // we technically have the region id here but we'll stick with the legacy constant for now
+          index = 'region';
+        }
 
-      setRegionCursors(oldCursors => {
-        let newCursors = {...oldCursors};
-        delete newCursors[bits[1]];
-        return newCursors;
-      });
+        if (index != null) {
+          setMessages(oldMessages => {
+            let newMessages = {...oldMessages};
+            let old = newMessages[index];
+            if (old == undefined) {
+              old = [];
+            }
 
-    } else if (bits[0] == 'BTLS') {
+            let fresh = old.slice(0, 9);
+            fresh.unshift(doc['message']);
+            newMessages[index] = fresh;
+            return newMessages;
+          });
+        }
+      } else if (doc['type'] == 'CURSOR') {
 
-      let exp = expRef.current[bits[1]];
-      let dungeonId = exp.dungeon;
+        if (hasContext(doc, 'dungeon')) {
+          if (doc['context']['dungeon'] == viewRef.current) {
+            setDungeonCursors([doc['coords']]);
+          }
+        } else if (hasContext(doc, 'region')) {
 
-      if (exp != undefined) {
+          setRegionCursors(oldCursors => {
+              let newCursors = {...oldCursors};
+              newCursors[doc['context']['expedition']] = doc['coords'];
+              return newCursors;
+            });
+        }    
+
+      } else if (doc['type'] == 'DUNGEONS') {
+        setRegion(oldRegion => ({
+          ...oldRegion, 
+          dungeons: doc['coords']
+        }));
+      } else if (doc['type'] == 'DUNGEON-NEW') {
+        fetchDungeons().then((d) => {
+          setDungeons(d);
+        });
+      } else if (doc['type'] == 'DUNGEON-DEL') {
+        fetchDungeons().then((d) => {
+          setDungeons(d);
+        });
+      } else if (doc['type'] == 'EXPEDITION-NEW') {
+        fetchExpeditions().then((exs) => {
+          setExpeditions(exs);
+        });
+      } else if (doc['type'] == 'EXPEDITION-DEL') {
+        let exp = doc['context']['expedition'];
+        setExpeditions(oldExpeditions => {
+          let newExpeditions = {...oldExpeditions};
+          delete newExpeditions[exp];
+          return newExpeditions;
+        });
+
+        setRegionCursors(oldCursors => {
+          let newCursors = {...oldCursors};
+          delete newCursors[exp];
+          return newCursors;
+        });
+      } else if (doc['type'] == 'BATTLE-START') {
+        let dungeonId = doc['context']['dungeon'];
+        
         setDungeons(oldDungeons => {
           let newDungeons = {...oldDungeons};
           newDungeons[dungeonId].battling = true;
-          newDungeons[dungeonId].roomFocus = bits[2];
+          newDungeons[dungeonId].roomFocus = doc['room'];
 
           return newDungeons;
         });
 
-      } else {
-        console.log('Did not find exp', bits[1]);
-      }
-
-    } else if (bits[0] == 'BTLE') {
-
-      let exp = expRef.current[bits[1]];
-      let dungeonId = exp.dungeon;
-
-      if (exp != undefined) {
+      } else if (doc['type'] == 'BATTLE-END') {
+        let dungeonId = doc['context']['dungeon'];
+        
         setDungeons(oldDungeons => {
           let newDungeons = {...oldDungeons};
 
           newDungeons[dungeonId].battling = false;
           return newDungeons;
         });
+      }
 
-      } else {
-        console.log('Did not find exp', bits[1]);
-      }      
+      else if (doc['type'] == 'BATTLE-UPDATE') {
+        // this is going to be exceptionally janky for the moment since monsters are not top level objects
 
-    } else if (bits[0] == 'BTL-UPD') {
-      // this is going to be exceptionally janky for the moment since monsters are not top level objects
-
-      let exp = expRef.current[bits[1]];
-      let update = JSON.parse(bits[2]);
-      // console.log('BTL-UPD ', update);
-
-      if (exp != undefined) {
+        let exp = expRef.current[doc['context']['expedition']];
+        let update = doc['details'];
         
-        if (update.target[0] == 'm') {
-          // monsters live inside the dungeon, so we update that state
-          setDungeons(oldDungeons => {
-            let newDungeons = {...oldDungeons};
-            let dungeon = newDungeons[exp['dungeon']];
-            
-            let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
-            if (room) {
-              let target = room.occ.find( monster => monster.id == update.target );
-              target.chp = update.newhp;
 
+        if (exp != undefined) {
+          
+          if (update.target[0] == 'm') {
+            // monsters live inside the dungeon, so we update that state
+            setDungeons(oldDungeons => {
+              let newDungeons = {...oldDungeons};
+              let dungeon = newDungeons[exp['dungeon']];
+              
+              let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
+              if (room) {
+                let target = room.occ.find( monster => monster.id == update.target );
+                target.chp = update.newhp;
+
+                if (update['status'] !=  undefined) {
+                  target['status'] = update['status'];
+                }
+              }
+
+              return newDungeons;
+            });
+          } else {
+            setBands(oldBands => {
+              let newBands = {...oldBands};
+
+              let band = newBands[exp['band']];
+              let target = Object.values(band.members).find(delver => delver.id == update.target)
+
+              target.currenthp = update.newhp;
               if (update['status'] !=  undefined) {
                 target['status'] = update['status'];
               }
-            }
 
-            return newDungeons;
-          });
+              return newBands;
+            });
+          }
+
         } else {
-          setBands(oldBands => {
-            let newBands = {...oldBands};
-
-            let band = newBands[exp['band']];
-            let target = Object.values(band.members).find(delver => delver.id == update.target)
-
-            target.currenthp = update.newhp;
-            if (update['status'] !=  undefined) {
-              target['status'] = update['status'];
-            }
-
-            return newBands;
-          });
+          console.log('Did not find exp', bits[1]);
         }
+      }
 
-      } else {
-        console.log('Did not find exp', bits[1]);
-      }   
 
+    } else if (bits[0] == 'CURSOR') {
+      console.log('!!!! Found legacy CURSOR msg.');
+    } else if (bits[0] == 'NARR') {
+      console.log('!!!! Found legacy NARR msg.');
+    } else if (bits[0] == 'DNGS') {
+      console.log('!!!! Found legacy DNGS msg.');
+    } else if (bits[0] == 'DNG-NEW') {
+      console.log('!!!! Found legacy DNG-NEW msg.');
+    }  else if (bits[0] == 'DNG-DEL') {
+      console.log('!!!! Found legacy DNG-DEL msg.');
+    } else if (bits[0] == 'EXP-NEW') {
+      console.log('!!!! Found legacy EXP-NEW msg.');
+    } else if (bits[0] == 'EXP-DEL') {
+      console.log('!!!! Found legacy EXP-DEL msg.');
+    } else if (bits[0] == 'BTLS') {
+      console.log('!!!! Found legacy BTLS msg.');
+    } else if (bits[0] == 'BTLE') {
+      console.log('!!!! Found legacy BTLE msg.');
+    } else if (bits[0] == 'BTL-UPD') {
+      console.log('!!!! Found legacy BTL-UPD msg.');
     }
 
   }
@@ -369,7 +388,6 @@ function App() {
       <li key={dungeon.id}><button eid={dungeon.id} onClick={selectDungeon}>{dungeon.name}</button></li>
       );
   } 
-
 
   return (
     <>

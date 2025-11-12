@@ -42,18 +42,50 @@ class Region(Persister):
         for e in self.emitters:
             e(msg.encode('ASCII'))
 
-    def emitNarrative(self, s):
-        self.emit('NARR;{};{}'.format(self.id, s))
+    def emitNarrative(self, s, band=None):
+        msg = {
+            'type': 'NARRATIVE',
+            'message': s,
+            'context': {
+                'region': self.id,
+            }
+        }
+        if band:
+            msg['context']['band'] = band
+        self.emit('REV;{}'.format(json.dumps(msg)))
 
     def emitDungeonLocales(self):
-        dungeons = [str(list(c.coords)) for c in self.dungeons.values()]
-        self.emit('DNGS;{}'.format(';'.join(dungeons)))
+        msg = {
+            'type': 'DUNGEONS',
+            'coords': [list(c.coords) for c in self.dungeons.values()],
+            'context': {
+                'region': self.id
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
 
     def emit_new_dungeon(self, dungeon):
-        self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
+        msg = {
+            'type': 'DUNGEON-NEW',
+            'context': {
+                'region': self.id,
+                'dungeon': dungeon.id
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
+
+        # self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
 
     def emit_del_dungeon(self, did):
-        self.emit('DNG-DEL;{}'.format(did))
+        msg = {
+            'type': 'DUNGEON-DEL',
+            'context': {
+                'region': self.id,
+                'dungeon': did
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
+        # self.emit('DNG-DEL;{}'.format(did))
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):

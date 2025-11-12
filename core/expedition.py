@@ -93,33 +93,83 @@ class Expedition(Persister):
         for e in self.emitters:
             e(msg.encode('ASCII'))
 
-    def identified_emit(self, code, msg):
-        self.emit('{};{};{}'.format(code, self.id, msg))
+    # def identified_emit(self, code, msg):
+        # self.emit('{};{};{}'.format(code, self.id, msg))
+
+    def signed_emit(self, msg):
+        msg['context'] = {
+            'expedition': self.id,
+            'dungeon': self.dungeon.id,
+            'band': self.band.id
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
 
     def emitCursorUpdate(self):
-        c = self.cursor.coords
-        self.persist_prop('cursor', c)
+        msg = {
+            'type': 'CURSOR',
+            'coords': self.cursor.coords,
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id
+            }
+        }
         loc = self.location()
         if loc == 'D':
-            obj = self.dungeon.id
+            msg['context']['dungeon'] = self.dungeon.id
         else:
-            obj = self.id
-        self.emit('CURSOR;{};{};{},{}'.format(obj, loc, c[0], c[1]))
-        
+            msg['context']['region'] = self.region.id
+        self.emit('REV;{}'.format(json.dumps(msg)))
+
     def emitNarrative(self, s):
-        self.emit('NARR;{};{}'.format(self.id, s))        
+        msg = {
+            'type': 'NARRATIVE',
+            'message': s,
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id,
+                'dungeon': self.dungeon.id
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
 
     def emitNew(self):
-        self.emit('EXP-NEW;{}'.format(self.id))
+        msg = {
+            'type': 'EXPEDITION-NEW',
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id,
+                'dungeon': self.dungeon.id
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
+        # self.emit('EXP-NEW;{}'.format(self.id))
 
     def emitDelete(self):
-        self.emit('EXP-DEL;{}'.format(self.id))
+        msg = {
+            'type': 'EXPEDITION-DEL',
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id,
+                'dungeon': self.dungeon.id
+            }
+        }
+        self.emit('REV;{}'.format(json.dumps(msg)))
+        # self.emit('EXP-DEL;{}'.format(self.id))
 
     def emitBattle(self, start, roomNo):
+        msg = {
+            'room': roomNo,
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id,
+                'dungeon': self.dungeon.id
+            }
+        }
         if start:
-            self.emit('BTLS;{};{}'.format(self.id, roomNo))
+            msg['type'] = 'BATTLE-START'
         else:
-            self.emit('BTLE;{};{}'.format(self.id, roomNo))
+            msg['type'] = 'BATTLE-END'
+        self.emit('REV;{}'.format(json.dumps(msg)))
 
     def overland(self):
         return self.status in Expedition.OVERLAND_STATES
@@ -287,7 +337,7 @@ class Expedition(Persister):
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.processMessage, self.identified_emit)
+            self.battle = Battle(self.processMessage, self.signed_emit)
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
@@ -312,14 +362,22 @@ class Expedition(Persister):
 
             # this is piggy backing off the battle update emit for now
             body = {
-                'source': p.id,
-                'target': p.id,
-                'dam': -1,
-                'newhp': p.maxhp,
-                'maxhp': p.maxhp,
-                'status': p.status
+                'type': 'BATTLE-UPDATE',
+                'context': {
+                    'expedition': self.id,
+                    'band': self.band.id,
+                    'dungeon': self.dungeon.id
+                },
+                'details': {
+                    'source': p.id,
+                    'target': p.id,
+                    'dam': -1,
+                    'newhp': p.maxhp,
+                    'maxhp': p.maxhp,
+                    'status': p.status
+                }
             }
-            self.emit('BTL-UPD;{};{}'.format(self.id, json.dumps(body)))
+            self.emit('REV;{}'.format(json.dumps(body)))
 
         self.status = Expedition.EXPLORE
 
