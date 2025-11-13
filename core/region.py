@@ -52,7 +52,7 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
-        self.emit('REV;{}'.format(json.dumps(msg)))
+        self.emit(json.dumps(msg))
 
     def emitDungeonLocales(self):
         msg = {
@@ -62,7 +62,7 @@ class Region(Persister):
                 'region': self.id
             }
         }
-        self.emit('REV;{}'.format(json.dumps(msg)))
+        self.emit(json.dumps(msg))
 
     def emit_new_dungeon(self, dungeon):
         msg = {
@@ -72,7 +72,7 @@ class Region(Persister):
                 'dungeon': dungeon.id
             }
         }
-        self.emit('REV;{}'.format(json.dumps(msg)))
+        self.emit(json.dumps(msg))
 
         # self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
 
@@ -84,7 +84,7 @@ class Region(Persister):
                 'dungeon': did
             }
         }
-        self.emit('REV;{}'.format(json.dumps(msg)))
+        self.emit(json.dumps(msg))
         # self.emit('DNG-DEL;{}'.format(did))
 
     # camel name functions are compatibility holdovers from super early prototype code

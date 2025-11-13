@@ -134,178 +134,148 @@ function App() {
 
   var receiveMessage = async function (event) {
     let msg = await event.data.text();
-    let bits = msg.split(';');
+    let doc = JSON.parse(msg);
 
-    // console.log(msg);
+    if (doc['context'] == undefined) {
+      console.log('!!! Message missing a context field: ', doc);
+    }
 
-    if (bits[0] == 'REV') {
+    if (doc['type'] == 'NARRATIVE') {
+      let index = null;
       
-      let doc = JSON.parse(bits[1]);
-
-      if (doc['context'] == undefined) {
-        console.log('!!! Message missing a context field: ', doc);
+      if (hasContext(doc, 'dungeon')) {
+        index = doc['context']['dungeon'];
+      } else if (hasContext(doc, 'region')) {
+        // we technically have the region id here but we'll stick with the legacy constant for now
+        index = 'region';
       }
 
-      if (doc['type'] == 'NARRATIVE') {
-        let index = null;
-        
-        if (hasContext(doc, 'dungeon')) {
-          index = doc['context']['dungeon'];
-        } else if (hasContext(doc, 'region')) {
-          // we technically have the region id here but we'll stick with the legacy constant for now
-          index = 'region';
-        }
-
-        if (index != null) {
-          setMessages(oldMessages => {
-            let newMessages = {...oldMessages};
-            let old = newMessages[index];
-            if (old == undefined) {
-              old = [];
-            }
-
-            let fresh = old.slice(0, 9);
-            fresh.unshift(doc['message']);
-            newMessages[index] = fresh;
-            return newMessages;
-          });
-        }
-      } else if (doc['type'] == 'CURSOR') {
-
-        if (hasContext(doc, 'dungeon')) {
-          if (doc['context']['dungeon'] == viewRef.current) {
-            setDungeonCursors([doc['coords']]);
+      if (index != null) {
+        setMessages(oldMessages => {
+          let newMessages = {...oldMessages};
+          let old = newMessages[index];
+          if (old == undefined) {
+            old = [];
           }
-        } else if (hasContext(doc, 'region')) {
 
-          setRegionCursors(oldCursors => {
-              let newCursors = {...oldCursors};
-              newCursors[doc['context']['expedition']] = doc['coords'];
-              return newCursors;
-            });
-        }    
+          let fresh = old.slice(0, 9);
+          fresh.unshift(doc['message']);
+          newMessages[index] = fresh;
+          return newMessages;
+        });
+      }
+    } else if (doc['type'] == 'CURSOR') {
 
-      } else if (doc['type'] == 'DUNGEONS') {
-        setRegion(oldRegion => ({
-          ...oldRegion, 
-          dungeons: doc['coords']
-        }));
-      } else if (doc['type'] == 'DUNGEON-NEW') {
-        fetchDungeons().then((d) => {
-          setDungeons(d);
-        });
-      } else if (doc['type'] == 'DUNGEON-DEL') {
-        fetchDungeons().then((d) => {
-          setDungeons(d);
-        });
-      } else if (doc['type'] == 'EXPEDITION-NEW') {
-        fetchExpeditions().then((exs) => {
-          setExpeditions(exs);
-        });
-      } else if (doc['type'] == 'EXPEDITION-DEL') {
-        let exp = doc['context']['expedition'];
-        setExpeditions(oldExpeditions => {
-          let newExpeditions = {...oldExpeditions};
-          delete newExpeditions[exp];
-          return newExpeditions;
-        });
+      if (hasContext(doc, 'dungeon')) {
+        if (doc['context']['dungeon'] == viewRef.current) {
+          setDungeonCursors([doc['coords']]);
+        }
+      } else if (hasContext(doc, 'region')) {
 
         setRegionCursors(oldCursors => {
-          let newCursors = {...oldCursors};
-          delete newCursors[exp];
-          return newCursors;
-        });
-      } else if (doc['type'] == 'BATTLE-START') {
-        let dungeonId = doc['context']['dungeon'];
+            let newCursors = {...oldCursors};
+            newCursors[doc['context']['expedition']] = doc['coords'];
+            return newCursors;
+          });
+      }    
+
+    } else if (doc['type'] == 'DUNGEONS') {
+      setRegion(oldRegion => ({
+        ...oldRegion, 
+        dungeons: doc['coords']
+      }));
+    } else if (doc['type'] == 'DUNGEON-NEW') {
+      fetchDungeons().then((d) => {
+        setDungeons(d);
+      });
+    } else if (doc['type'] == 'DUNGEON-DEL') {
+      fetchDungeons().then((d) => {
+        setDungeons(d);
+      });
+    } else if (doc['type'] == 'EXPEDITION-NEW') {
+      fetchExpeditions().then((exs) => {
+        setExpeditions(exs);
+      });
+    } else if (doc['type'] == 'EXPEDITION-DEL') {
+      let exp = doc['context']['expedition'];
+      setExpeditions(oldExpeditions => {
+        let newExpeditions = {...oldExpeditions};
+        delete newExpeditions[exp];
+        return newExpeditions;
+      });
+
+      setRegionCursors(oldCursors => {
+        let newCursors = {...oldCursors};
+        delete newCursors[exp];
+        return newCursors;
+      });
+    } else if (doc['type'] == 'BATTLE-START') {
+      let dungeonId = doc['context']['dungeon'];
+      
+      setDungeons(oldDungeons => {
+        let newDungeons = {...oldDungeons};
+        newDungeons[dungeonId].battling = true;
+        newDungeons[dungeonId].roomFocus = doc['room'];
+
+        return newDungeons;
+      });
+
+    } else if (doc['type'] == 'BATTLE-END') {
+      let dungeonId = doc['context']['dungeon'];
+      
+      setDungeons(oldDungeons => {
+        let newDungeons = {...oldDungeons};
+
+        newDungeons[dungeonId].battling = false;
+        return newDungeons;
+      });
+    }
+
+    else if (doc['type'] == 'BATTLE-UPDATE') {
+      // this is going to be exceptionally janky for the moment since monsters are not top level objects
+
+      let exp = expRef.current[doc['context']['expedition']];
+      let update = doc['details'];
+      
+      if (exp != undefined) {
         
-        setDungeons(oldDungeons => {
-          let newDungeons = {...oldDungeons};
-          newDungeons[dungeonId].battling = true;
-          newDungeons[dungeonId].roomFocus = doc['room'];
+        if (update.target[0] == 'm') {
+          // monsters live inside the dungeon, so we update that state
+          setDungeons(oldDungeons => {
+            let newDungeons = {...oldDungeons};
+            let dungeon = newDungeons[exp['dungeon']];
+            
+            let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
+            if (room) {
+              let target = room.occ.find( monster => monster.id == update.target );
+              target.chp = update.newhp;
 
-          return newDungeons;
-        });
-
-      } else if (doc['type'] == 'BATTLE-END') {
-        let dungeonId = doc['context']['dungeon'];
-        
-        setDungeons(oldDungeons => {
-          let newDungeons = {...oldDungeons};
-
-          newDungeons[dungeonId].battling = false;
-          return newDungeons;
-        });
-      }
-
-      else if (doc['type'] == 'BATTLE-UPDATE') {
-        // this is going to be exceptionally janky for the moment since monsters are not top level objects
-
-        let exp = expRef.current[doc['context']['expedition']];
-        let update = doc['details'];
-        
-
-        if (exp != undefined) {
-          
-          if (update.target[0] == 'm') {
-            // monsters live inside the dungeon, so we update that state
-            setDungeons(oldDungeons => {
-              let newDungeons = {...oldDungeons};
-              let dungeon = newDungeons[exp['dungeon']];
-              
-              let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
-              if (room) {
-                let target = room.occ.find( monster => monster.id == update.target );
-                target.chp = update.newhp;
-
-                if (update['status'] !=  undefined) {
-                  target['status'] = update['status'];
-                }
-              }
-
-              return newDungeons;
-            });
-          } else {
-            setBands(oldBands => {
-              let newBands = {...oldBands};
-
-              let band = newBands[exp['band']];
-              let target = Object.values(band.members).find(delver => delver.id == update.target)
-
-              target.currenthp = update.newhp;
               if (update['status'] !=  undefined) {
                 target['status'] = update['status'];
               }
+            }
 
-              return newBands;
-            });
-          }
-
+            return newDungeons;
+          });
         } else {
-          console.log('Did not find exp', bits[1]);
+          setBands(oldBands => {
+            let newBands = {...oldBands};
+
+            let band = newBands[exp['band']];
+            let target = Object.values(band.members).find(delver => delver.id == update.target)
+
+            target.currenthp = update.newhp;
+            if (update['status'] !=  undefined) {
+              target['status'] = update['status'];
+            }
+
+            return newBands;
+          });
         }
+
+      } else {
+        console.log('Did not find exp', bits[1]);
       }
-
-
-    } else if (bits[0] == 'CURSOR') {
-      console.log('!!!! Found legacy CURSOR msg.');
-    } else if (bits[0] == 'NARR') {
-      console.log('!!!! Found legacy NARR msg.');
-    } else if (bits[0] == 'DNGS') {
-      console.log('!!!! Found legacy DNGS msg.');
-    } else if (bits[0] == 'DNG-NEW') {
-      console.log('!!!! Found legacy DNG-NEW msg.');
-    }  else if (bits[0] == 'DNG-DEL') {
-      console.log('!!!! Found legacy DNG-DEL msg.');
-    } else if (bits[0] == 'EXP-NEW') {
-      console.log('!!!! Found legacy EXP-NEW msg.');
-    } else if (bits[0] == 'EXP-DEL') {
-      console.log('!!!! Found legacy EXP-DEL msg.');
-    } else if (bits[0] == 'BTLS') {
-      console.log('!!!! Found legacy BTLS msg.');
-    } else if (bits[0] == 'BTLE') {
-      console.log('!!!! Found legacy BTLE msg.');
-    } else if (bits[0] == 'BTL-UPD') {
-      console.log('!!!! Found legacy BTL-UPD msg.');
     }
 
   }

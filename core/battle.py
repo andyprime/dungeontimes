@@ -70,9 +70,9 @@ class Battle:
         self.state = Battle.BATTAL
         self.newRound()
 
-    def processMessage(self, message, emit=False):
+    def processMessage(self, message):
         if callable(self.processCallback):
-            self.processCallback(message, emit)
+            self.processCallback(message)
 
     def emit(self, message):
         if callable(self.emitter):
@@ -250,7 +250,12 @@ class Battle:
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 
-        self.processMessage(descriptor, True)
+        self.processMessage(descriptor)
+
+        self.emit({
+            'type': 'NARRATIVE',
+            'message': descriptor
+            })
 
     def applyEffect(self, target, effect, partial=False):
 
