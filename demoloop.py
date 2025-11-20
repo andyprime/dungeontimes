@@ -250,7 +250,7 @@ if __name__ == "__main__":
 
             exp.registerEventEmitter(emitFn)
             exp.emitNew()
-            region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name))
+            region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
 
             expeditions[band.id] = exp
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
             region.place_dungeon(d)
             dungeon_changes = True
 
-            region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name))
+            region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
             region.emit_new_dungeon(d)
 
             # adding a little extra chance to keep the dungeon count topped up
@@ -272,10 +272,10 @@ if __name__ == "__main__":
 
         elif (do['action'] == 'carouse'):
             band = bands[do['band']]
-            region.emitNarrative('{} are going on a long bender.'.format(band.name))
+            region.emitNarrative('{} are going on a long bender.'.format(band.name), band.id)
         elif (do['action'] == 'shop'):
             band = bands[do['band']]
-            region.emitNarrative('{} are perusing the markets for the newest delving gear.'.format(band.name))
+            region.emitNarrative('{} are perusing the markets for the newest delving gear.'.format(band.name), band.id)
         else:
             print('!!! Unknown loop action: {}'.format(do))
 

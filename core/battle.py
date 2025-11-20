@@ -70,13 +70,13 @@ class Battle:
         self.state = Battle.BATTAL
         self.newRound()
 
-    def processMessage(self, message, emit=False):
+    def processMessage(self, message):
         if callable(self.processCallback):
-            self.processCallback(message, emit)
+            self.processCallback(message)
 
-    def emit(self, code, message):
+    def emit(self, message):
         if callable(self.emitter):
-            self.emitter(code, message)
+            self.emitter(message)
 
     def round(self):
         return self.roundCount
@@ -232,20 +232,30 @@ class Battle:
         else:
             descriptor = 'Invalid move type: {}'.format(move)
 
+        
+        # note that this doc will receive the context object when it passes through the exp layer
+        # which also means we're not jsoning it yet
         body = {
-            'source': fellah.id,
-            'target': target.id,
-            'dam': appliedDamage,
-            'newhp': target.currenthp,
-            'maxhp': target.maxhp,
-            'status': target.status
+            'type': 'BATTLE-UPDATE',
+            'details': {
+                'source': fellah.id,
+                'target': target.id,
+                'dam': appliedDamage,
+                'newhp': target.currenthp,
+                'maxhp': target.maxhp,
+                'status': target.status
+            }
         }
-
-        self.emit('BTL-UPD', json.dumps(body))
+        self.emit(body)
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 
-        self.processMessage(descriptor, True)
+        self.processMessage(descriptor)
+
+        self.emit({
+            'type': 'NARRATIVE',
+            'message': descriptor
+            })
 
     def applyEffect(self, target, effect, partial=False):
 
