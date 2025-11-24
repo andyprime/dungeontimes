@@ -1,4 +1,6 @@
 import { useContext, useState, useEffect, useRef } from 'react'
+import { Link, NavLink } from 'react-router'
+
 import './App.css'
 import RegionMap from './RegionMap.jsx'
 import DungeonView from './DungeonView.jsx'
@@ -274,7 +276,7 @@ function App() {
         }
 
       } else {
-        console.log('Did not find exp', bits[1]);
+        console.log('Did not find exp', doc);
       }
     }
 
@@ -362,19 +364,20 @@ function App() {
   return (
     <>
     <h1>Yon Dungeon Tymes</h1>
+    
     <ul id="region-buttons">
       Regions
       { region != null && <li><button onClick={() => setView('region')} >{region['name']}</button></li> }
-      </ul>
-      <ul id="bands-buttons">Bands {bandButtons}</ul>
-      <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>
+    </ul>
+    <ul id="bands-buttons"><Link to="/bands">Bands</Link> {bandButtons}</ul>
+    <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>
 
-      { view == 'region' && <RegionMap region={region} cursors={regionCursors} /> }
+    { view == 'region' && <RegionMap region={region} cursors={regionCursors} /> }
 
-      { view != 'region' && <DungeonView dungeon={selectedDungeon} band={bandForDungeon(selectedDungeon)} cursors={dungeonCursors} /> }
+    { view != 'region' && <DungeonView dungeon={selectedDungeon} band={bandForDungeon(selectedDungeon)} cursors={dungeonCursors} /> }
 
-      <EventLog messages={messageIndex} view={view} />
-      </>
+    <EventLog messages={messageIndex} view={view} />
+    </>
       )
 }
 
