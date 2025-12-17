@@ -1,34 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, Outlet, useParams } from 'react-router';
 
+import { getBands, getBand, getDelvers } from './fetching.js'
+
 const rootUrl = window.location.hostname + ':8081';
-
-const getBands = async function() {
-  let response = await fetch('//' + rootUrl + '/bands');
-  if (!response.ok) {
-    throw new Error('Bands fetch failed.');
-  }
-  return response.json();
-}
-
-const getBand = async function({ queryKey }) {
-  let [_key, bId] = queryKey;
-  let response = await fetch('//' + rootUrl + '/band/' + bId);
-  if (!response.ok) {
-    throw new Error('Band fetch failed.');
-  }
-  return response.json();
-}
-
-const getDelvers = async function({ queryKey }) {
-  let [_key, bId] = queryKey;
-  let response = await fetch('//' + rootUrl + '/band/' + bId + '/delvers');
-  if (!response.ok) {
-    throw new Error('Delver fetch failed.');
-  }
-  return response.json();
-}
-
 
 const Bands = function() {
   
@@ -36,6 +11,8 @@ const Bands = function() {
 
   return (
     <>
+      <Link to="/">Back</Link>
+
       <h1>Band List</h1>
 
       <ul>

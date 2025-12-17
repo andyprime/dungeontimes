@@ -16,6 +16,7 @@ import aio_pika
 
 
 LOG = logging.getLogger('uvicorn.error')
+NO_ID = {"_id": 0}
 
 class Settings(BaseSettings):
     api_origins: str = ''
@@ -110,9 +111,11 @@ def read_bands(db: Database = Depends(db_session)):
     return bs
 
 @app.get("/band/{band_id}")
-def read_band(band_id: UUID, db: Database = Depends(db_session)):
-    b = db.bands.find_one({'id': str(band_id)})
-    b.pop('_id')
+def read_band(band_id: UUID, db: Database = Depends(db_session), include_exp: bool = True):
+    b = db.bands.find_one({'id': str(band_id)}, NO_ID)
+    if include_exp:
+        e = db.expeditions.find_one({}, NO_ID)
+        b['expedition'] = e
     return b
 
 @app.get("/band/{band_id}/delvers")
