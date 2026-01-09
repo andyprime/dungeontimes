@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import './App.css'
 import RegionMap from './RegionMap.jsx'
 import EventLog from './EventLog.jsx'
-import { getRegion, getBands, getDungeons } from './fetching.js'
+import { getRegion, getBands, getDungeons, getExpeditions } from './fetching.js'
 
 // this function and several more to follow are a legacy of the pre-React prototype and 
 // replacement with a robust Query or data management module should be considered a priority
@@ -113,6 +113,7 @@ function App() {
   let regionQuery = useQuery({ queryKey: ['region'], queryFn: getRegion });
   let bandsQuery = useQuery({ queryKey: ['bands'], queryFn: getBands });
   let dungeonsQuery = useQuery({ queryKey: ['dungeons'], queryFn: getDungeons });
+  let expeditionsQuery = useQuery({ queryKey: ['expeditions'], queryFn: getExpeditions });
 
 
   // const [region, setRegion] = useState(null);
@@ -374,6 +375,10 @@ function App() {
     let region = regionQuery.data;
     let regionCursors = [];
     let messageIndex = {};
+
+    if (expeditionsQuery.isSuccess) {
+      expeditionsQuery.data.forEach(e => regionCursors.push(e['location']['region']));
+    }
     
     return (
       <>
@@ -381,7 +386,7 @@ function App() {
       
       <ul id="region-buttons">
         Regions
-        <li><button>{region['name']}</button></li> }
+        <li><button>{region['name']}</button></li>
       </ul>
       <ul id="bands-buttons"><Link to="/bands">Bands</Link> {bandButtons}</ul>
       <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>

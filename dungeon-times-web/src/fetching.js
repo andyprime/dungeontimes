@@ -31,11 +31,8 @@ const getRegion = async function({ queryKey }) {
     throw new Error('Region fetch failed');
   }
 
-  console.log('Boop');
   // region cells are stored funny at the moment
   let region = await response.json();
-
-  console.log('Before the nonsense', region);
 
   let cells = JSON.parse(region['cells']);
   let grid = [...Array(region['width'])];

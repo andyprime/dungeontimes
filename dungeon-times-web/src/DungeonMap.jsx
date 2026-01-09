@@ -25,6 +25,7 @@ function DungeonMap({dungeon, cursors}) {
 
   const draw = (canvas) => {
     // console.log('Dungeon draw: ', dungeon, cursors);
+    console.log('Dungeon draw: ', cursors);
 
     if (dungeon != null) {
 

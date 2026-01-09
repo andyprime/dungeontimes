@@ -20,8 +20,11 @@ from core.mdb import MongoService
 _advHandlerSettings = {}
 
 def rabbitHandler(channel, message):
-    print('$$$$$$$ Emit {}'.format(message))
+    # print('$$$$$$$ Emit {}'.format(message))
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
+
+def stdout_processor(str):
+    print('>>> {}'.format(str))
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
@@ -157,7 +160,7 @@ if __name__ == "__main__":
         # if a party doesn't have a todo, create one
         # this should only occur when a band has no active expedition
 
-        print('!!! {}, {}'.format(len(to_do), to_do))
+        # print('!!! {}, {}'.format(len(to_do), to_do))
 
         if len(to_do) < len(bands):
             print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
@@ -249,6 +252,7 @@ if __name__ == "__main__":
             exp.save()
 
             exp.registerEventEmitter(emitFn)
+            exp.registerProcessor(stdout_processor)
             exp.emitNew()
             region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
 

@@ -1,5 +1,5 @@
 import { Link, Outlet, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import DungeonMap from './DungeonMap.jsx'
 import Portrait from './Portrait.jsx'
@@ -8,6 +8,10 @@ import { getDungeon, getBand, getExpeditions, getDelvers } from './fetching.js'
 
 function Dungeon() {
   let params = useParams();
+
+
+  const queryClient = useQueryClient()
+  console.log('!', queryClient);
 
   // this is gross but it'll work for now
   let dungeonQuery = useQuery({ queryKey: ['dungeons', params.did], queryFn: getDungeon });
@@ -38,10 +42,10 @@ function Dungeon() {
       band = bandQuery.data;
     }
 
-    let cursor = null;
+    let cursors = [];
     if (!!exp) {
-      cursor = exp.cursor;
-      console.log('c', cursor);
+      cursors = [exp.location.dungeon];
+      console.log('c', cursors);
     }
 
     let delvers = [];
@@ -65,7 +69,7 @@ function Dungeon() {
       <>
         <Link to="/">Back</Link>
         <h1>{dungeon.name}</h1>
-        <DungeonMap dungeon={dungeon} cursor={[cursor]} />
+        <DungeonMap dungeon={dungeon} cursors={cursors} />
         { band != null && <div id="theparty" className="group" ><b>{band.name}</b><ul>{delvers}</ul></div> }
         { inBattle && <div id="thefoes" className="group" ><b>Lurking Foes!</b><ul>{monsters}</ul></div> }
       </>

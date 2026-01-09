@@ -56,7 +56,9 @@ class Expedition(Persister):
         
         self.status = Expedition.PREP
 
-        self.cursor = region.homebase
+        self.region_cursor = region.homebase
+        self.dungeon_cursor = None
+
         self.outgoing = True
 
         self.steps = 0
@@ -67,7 +69,7 @@ class Expedition(Persister):
         # Got to log which sections of the map have already been explored
         # So for now we're gonna keep the cell coords in an array to reference
         self.history = []
-        self.history.append(self.cursor)
+        # self.history.append(self.cursor)
 
         self.processors = []
         self.emitters = []
@@ -111,7 +113,7 @@ class Expedition(Persister):
     def emitCursorUpdate(self):
         msg = {
             'type': 'CURSOR',
-            'coords': self.cursor.coords,
+            'coords': self._get_location(),
             'context': {
                 'expedition': self.id,
                 'band': self.band.id
@@ -196,21 +198,30 @@ class Expedition(Persister):
         else:
             return 'O'
 
-    def data_format(self):
+    def _get_location(self):
+        loc = {}
         # can't fix the cell/tuple problem here so just detect it
-        c = self.cursor
-        if type(c) != tuple:
-            c = c.coords
+        dc = self.dungeon_cursor
+        if dc:
+            if type(dc) != tuple:
+                dc = dc.coords
+            loc['dungeon'] = dc
+        rc = self.region_cursor
+        if rc:
+            if type(rc) != tuple:
+                rc = rc.coords
+            loc['region'] = rc
 
-        print('Pre persist - {} - {}'.format(type(c), c))
+        return loc
 
+    def data_format(self):
         return {
             'id': self.id,
             'name': 'PLACEHOLDER',
             'complete': self.over(),
             'dungeon': self.dungeon.id,
             'band': self.band.id,
-            'cursor': c
+            'location': self._get_location()
         }
 
     def processTurn(self):
@@ -247,7 +258,7 @@ class Expedition(Persister):
         else:
             target = self.region.getCell(*self.region.homebase)
 
-        if self.cursor == target:
+        if self.region_cursor == target:
             if self.outgoing:
                 self.emitNarrative('{} has located the entrance to the dungeon.'.format(self.band.name), 'region')
                 self.status = Expedition.READY
@@ -258,12 +269,13 @@ class Expedition(Persister):
             self.move()
         else:
             self.processMessage('Pathing to {}'.format(target))
-            self.path = self.generatePath(self.cursor, self.region, target)
+            self.path = self.generatePath(self.region_cursor, self.region, target)
 
     # Ready
     def runstate_rdy(self):
         self.emitNarrative('The band enters the dungeon, adjusting to the dim light.')
-        self.cursor = self.dungeon.entrance()
+        self.dungeon_cursor = self.dungeon.entrance()
+        self.history.append(self.dungeon_cursor.coords)
         self.path = []
         self.status = Expedition.EXPLORE
 
@@ -278,20 +290,22 @@ class Expedition(Persister):
             self.status = Expedition.EXITING
         elif len(self.path):
             
+            self.processMessage('Standard dungeon move')
+
             self.move()
 
-            if self.cursor.isRoom():
-                if self.cursor.coords not in self.history:
+            if self.dungeon_cursor.isRoom():
+                if self.dungeon_cursor.coords not in self.history:
                     self.emitNarrative('The band has encountered an unexplored room. Get the lanterns ready.')
                     self.status = Expedition.ENCOUNTER
 
                 # TODO: move this to the encounter complete section?
-                for cell in self.dungeon.roomBrethren(self.cursor):
+                for cell in self.dungeon.roomBrethren(self.dungeon_cursor):
                     if cell not in self.history:
                         self.history.append(cell.coords)
 
             else:
-                self.history.append(self.cursor.coords)
+                self.history.append(self.dungeon_cursor.coords)
         else:
             self.processMessage('Moving algorithm did not produce a destination')
             self.status = Expedition.ERROR
@@ -299,7 +313,7 @@ class Expedition(Persister):
     # Encounter
     def runstate_enc(self):
 
-        if self.dungeon.roomAt(self.cursor).occupied():
+        if self.dungeon.roomAt(self.dungeon_cursor).occupied():
             self.emitNarrative('This room is full of jerks! Draw your blades!')
             self.status = Expedition.BATTLE
         else:
@@ -312,27 +326,28 @@ class Expedition(Persister):
             self.move()
         else:
 
-            if self.cursor == self.dungeon.entrance():
+            if self.dungeon_cursor == self.dungeon.entrance():
                 self.emitNarrative('{} has emerged from the depths of {}.'.format(self.band.name, self.dungeon.name))
                 self.status = Expedition.TRAVEL
-                self.cursor = self.region.find_dungeon(self.dungeon.id)
+                # this may no longer be necessary
+                # self.region_cursor = self.region.find_dungeon(self.dungeon.id)
                 self.path = []
                 self.outgoing = False
                 showOverride = True
             else:
                 self.processMessage('Party is ready to leave and plotting a course back to the entrance.')
-                self.path = self.generatePath(self.cursor, self.dungeon, target=self.dungeon.entrance())
+                self.path = self.generatePath(self.dungeon_cursor, self.dungeon, target=self.dungeon.entrance())
 
     # Battle
     def runstate_bat(self):
-        room = self.dungeon.roomAt(self.cursor)
+        room = self.dungeon.roomAt(self.dungeon_cursor)
         if self.battle:
             if self.battle.complete():
                 if any([d.canAct() for d in self.party]) :
                     self.emitNarrative('The band is victorious. Good job team.')
 
                     # clear out the dead monsters
-                    self.dungeon.roomAt(self.cursor).empty()
+                    self.dungeon.roomAt(self.dungeon_cursor).empty()
                     self.battle = None
 
                     self.status = Expedition.RECOVER
@@ -400,9 +415,16 @@ class Expedition(Persister):
 
     def move(self):
         destination = self.path.pop()
-        self.cursor = destination
-        self.processMessage('Moving to {}'.format(self.cursor.coords))
+
+        if self.location() == 'D':
+            self.dungeon_cursor = destination
+            self.processMessage('Moving to D {}'.format(self.dungeon_cursor.coords))
+        else:
+            self.region_cursor = destination
+            self.processMessage('Moving to R {}'.format(self.region_cursor.coords))
+    
         self.emitCursorUpdate()
+        self.persist()
 
     def historyMap(self):
         if self.inDungeon():
@@ -410,7 +432,7 @@ class Expedition(Persister):
                 display = '{}: '.format(str(index).rjust(4, ' '))
 
                 for cell in row:
-                    if cell == self.cursor:
+                    if cell == self.dungeon_cursor:
                         display += 'P'
                     elif self.path and cell in self.path:
                         display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
@@ -420,7 +442,7 @@ class Expedition(Persister):
                         display += cell.symbol()
                 print(display)
         else:
-            self.region.prettyPrint(self.cursor, self.path)
+            self.region.prettyPrint(self.region_cursor, self.path)
         print('\n')
 
     def navigate(self):
@@ -430,14 +452,17 @@ class Expedition(Persister):
         # if there are unexplored cells adjacent to our current location just pick one at random and go there
         # otherwise find the closest unexplored cell and chart a course to there
 
-        neighbors = self.dungeon.getNeighbors(self.cursor)
+        neighbors = self.dungeon.getNeighbors(self.dungeon_cursor)
         easyDirections = [n for n in neighbors if n.coords not in self.history]
 
+        self.processMessage('Navigate middle stage: {} - {}'.format(self.dungeon_cursor, easyDirections))
+
         if easyDirections:
+            self.processMessage('Simple')
             return [random.choice(easyDirections)]
         else:
             # time to Dijkstra
-            return self.generatePath(self.cursor, self.dungeon)
+            return self.generatePath(self.dungeon_cursor, self.dungeon)
 
     def generatePath(self, start, grid, target=None):
         # just a basic dijkstra implementation that stops once it finds an unexplored cell
