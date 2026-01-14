@@ -223,6 +223,7 @@ if __name__ == "__main__":
             if exp.over():
                 region.remove_dungeon(exp.dungeon)
                 region.emit_del_dungeon(exp.dungeon.id)
+                region.persist()
 
                 exp.dungeon.complete = True
                 exp.dungeon.persist()
@@ -268,6 +269,7 @@ if __name__ == "__main__":
 
             region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
             region.emit_new_dungeon(d)
+            region.persist()
 
             # adding a little extra chance to keep the dungeon count topped up
             if random.choice([True, False]):

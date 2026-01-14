@@ -24,7 +24,6 @@ const rootUrl = window.location.hostname + ':8081';
 // }
 
 const getRegion = async function({ queryKey }) {
-  console.log('Start');
   let response = await fetch('//' + rootUrl + '/region');
   if (!response.ok) {
     console.log('Oops', response);

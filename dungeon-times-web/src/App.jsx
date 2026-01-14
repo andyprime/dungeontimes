@@ -169,51 +169,7 @@ function App() {
   //         return newMessages;
   //       });
   //     }
-  //   } else if (doc['type'] == 'CURSOR') {
-
-  //     if (hasContext(doc, 'dungeon')) {
-  //       if (doc['context']['dungeon'] == viewRef.current) {
-  //         setDungeonCursors([doc['coords']]);
-  //       }
-  //     } else if (hasContext(doc, 'region')) {
-
-  //       setRegionCursors(oldCursors => {
-  //           let newCursors = {...oldCursors};
-  //           newCursors[doc['context']['expedition']] = doc['coords'];
-  //           return newCursors;
-  //         });
-  //     }    
-
-  //   } else if (doc['type'] == 'DUNGEONS') {
-  //     setRegion(oldRegion => ({
-  //       ...oldRegion, 
-  //       dungeons: doc['coords']
-  //     }));
-  //   } else if (doc['type'] == 'DUNGEON-NEW') {
-  //     fetchDungeons().then((d) => {
-  //       setDungeons(d);
-  //     });
-  //   } else if (doc['type'] == 'DUNGEON-DEL') {
-  //     fetchDungeons().then((d) => {
-  //       setDungeons(d);
-  //     });
-  //   } else if (doc['type'] == 'EXPEDITION-NEW') {
-  //     fetchExpeditions().then((exs) => {
-  //       setExpeditions(exs);
-  //     });
-  //   } else if (doc['type'] == 'EXPEDITION-DEL') {
-  //     let exp = doc['context']['expedition'];
-  //     setExpeditions(oldExpeditions => {
-  //       let newExpeditions = {...oldExpeditions};
-  //       delete newExpeditions[exp];
-  //       return newExpeditions;
-  //     });
-
-  //     setRegionCursors(oldCursors => {
-  //       let newCursors = {...oldCursors};
-  //       delete newCursors[exp];
-  //       return newCursors;
-  //     });
+  //   } 
   //   } else if (doc['type'] == 'BATTLE-START') {
   //     let dungeonId = doc['context']['dungeon'];
       
@@ -283,22 +239,6 @@ function App() {
     //   }
     // }
 
-  // }
-
-  // const bandForDungeon = function(dungeon) {
-  //   let ex = Object.values(expeditions).find((x) => x.dungeon == dungeon.id)
-  //   if (ex) {
-  //     return bands[ex.band];
-  //   }
-  //   return null;
-  // }
-
-  // const selectDungeon = function(event) {
-  //   let id = event.target.getAttribute('eid');
-
-  //   setDungeonCursors([]);
-  //   setSelectedDungeon(dungeons[id]);
-  //   setView(id);
   // }
 
   // ================================

@@ -7,6 +7,9 @@ import { Bands, Band } from './Bands.jsx';
 import { Dungeon } from './Dungeon.jsx';
 import { rootUrl } from './fetching.js';
 
+const DUNGEON_EVENTS = ['DUNGEONS', 'DUNGEON-NEW', 'DUNGEON-DEL'];
+const EXP_EVENTS = ['EXPEDITION-NEW', 'EXPEDITIOn-DEL'];
+
 function Port() {
   const socket = useRef(null);
 
@@ -16,6 +19,7 @@ function Port() {
     let msg = await event.data.text();
     let doc = JSON.parse(msg);
 
+    // ====================================================
     if (doc['type'] == 'CURSOR') {
       let expId = doc['context']['expedition'];
       let loc = doc['coords'];
@@ -30,6 +34,12 @@ function Port() {
           : old
       });
 
+    } else if (DUNGEON_EVENTS.includes(doc['type'])) {
+      console.log('Dungeon event: ', doc);
+      queryClient.invalidateQueries(['region']);      
+    } else if (EXP_EVENTS.includes(doc['type'])) {
+      console.log('Expedition event: ', doc);
+      queryClient.invalidateQueries(['expeditions']);
     }
   }
 
