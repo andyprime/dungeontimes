@@ -3,15 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import DungeonMap from './DungeonMap.jsx'
 import Portrait from './Portrait.jsx'
+import EventLog from './EventLog.jsx'
 
 import { getDungeon, getBand, getExpeditions, getDelvers } from './fetching.js'
 
 function Dungeon() {
   let params = useParams();
-
-
   const queryClient = useQueryClient()
-  console.log('!', queryClient);
 
   // this is gross but it'll work for now
   let dungeonQuery = useQuery({ queryKey: ['dungeons', params.did], queryFn: getDungeon });
@@ -43,9 +41,12 @@ function Dungeon() {
     }
 
     let cursors = [];
+    let inBattle = false;
     if (!!exp) {
-      cursors = [exp.location.dungeon];
-      console.log('c', cursors);
+      if (!!exp.location.dungeon) {
+        cursors = [exp.location.dungeon];
+      }
+      inBattle = exp['state'] == 'bat'; // this should be a constant but its the only state check we doing atm
     }
 
     let delvers = [];
@@ -55,11 +56,13 @@ function Dungeon() {
       });
     }
 
-    let inBattle = false;
+    
     let monsters = '';
     if (inBattle) {
-      let room = dungeon.rooms.find( room => room.n == dungeon.roomFocus );
-    
+      // just use the cursor to figure out which room they're in
+      let cursor = cursors[0];      
+      let room = dungeon.rooms.find( room => (cursor[0] >= room['c'][0] && cursor[0] < room['c'][0] + room['d'][0]) && (cursor[1] >= room['c'][1] && cursor[1] < room['c'][1] + room['d'][1]) );
+      
       monsters = room.occ.map( (monster, index) => 
         <Portrait key={index} type="monster" person={monster} />
       );
@@ -72,6 +75,8 @@ function Dungeon() {
         <DungeonMap dungeon={dungeon} cursors={cursors} />
         { band != null && <div id="theparty" className="group" ><b>{band.name}</b><ul>{delvers}</ul></div> }
         { inBattle && <div id="thefoes" className="group" ><b>Lurking Foes!</b><ul>{monsters}</ul></div> }
+
+        <EventLog location={dungeon.id} />
       </>
       );
   } else {

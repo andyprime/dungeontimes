@@ -25,7 +25,7 @@ function DungeonMap({dungeon, cursors}) {
 
   const draw = (canvas) => {
     // console.log('Dungeon draw: ', dungeon, cursors);
-    console.log('Dungeon draw: ', cursors);
+    // console.log('Dungeon draw: ', cursors);
 
     if (dungeon != null) {
 
@@ -54,6 +54,7 @@ function DungeonMap({dungeon, cursors}) {
 
           let inCursors = false;
           for (let c in cursors) {
+
             // console.log('Check: ', [x, y], ' vs ', c);
             if (cursors[c][0] == y && cursors[c][1] == x) {
               inCursors = true;

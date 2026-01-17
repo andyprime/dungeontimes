@@ -218,11 +218,16 @@ class Expedition(Persister):
         return {
             'id': self.id,
             'name': 'PLACEHOLDER',
+            'state': self.status,
             'complete': self.over(),
             'dungeon': self.dungeon.id,
             'band': self.band.id,
             'location': self._get_location()
         }
+
+    def _set_state(self, new_state):
+        self.status = new_state
+        self.persist()
 
     def processTurn(self):
         self.steps += 1
@@ -241,13 +246,13 @@ class Expedition(Persister):
                 return Expedition.TASK_DURATIONS[self.status]
         else:
             self.processMessage('Unknown expedition status: {}'.format(self.status))
-            self.status = Expedition.ERROR
+            self._set_state(Expedition.ERROR)
             return False
 
     # Home base starting status
     def runstate_pre(self):
         self.emitNarrative('{} does some last minute shopping in town. Always pack a spare {}.'.format(self.band.name, strings.StringTool.random('useful_item')), 'region')
-        self.status = Expedition.TRAVEL
+        self._set_state(Expedition.TRAVEL)
 
     # overland travel
     def runstate_trv(self):
@@ -261,10 +266,10 @@ class Expedition(Persister):
         if self.region_cursor == target:
             if self.outgoing:
                 self.emitNarrative('{} has located the entrance to the dungeon.'.format(self.band.name), 'region')
-                self.status = Expedition.READY
+                self._set_state(Expedition.READY)
             else:
                 self.emitNarrative('{} has returned home for some well deserved rest.'.format(self.band.name), 'region')
-                self.status = Expedition.COMPLETE
+                self._set_state(Expedition.COMPLETE)
         elif self.path:
             self.move()
         else:
@@ -277,7 +282,7 @@ class Expedition(Persister):
         self.dungeon_cursor = self.dungeon.entrance()
         self.history.append(self.dungeon_cursor.coords)
         self.path = []
-        self.status = Expedition.EXPLORE
+        self._set_state(Expedition.EXPLORE)
 
     # Moving
     def runstate_exp(self):
@@ -287,7 +292,7 @@ class Expedition(Persister):
         if self.path is None:
             self.processMessage('Dungeon fully explored.')
             self.emitNarrative('The band thinks there is no more to explore down here, time to navigate back home.')
-            self.status = Expedition.EXITING
+            self._set_state(Expedition.EXITING)
         elif len(self.path):
             
             self.processMessage('Standard dungeon move')
@@ -297,7 +302,7 @@ class Expedition(Persister):
             if self.dungeon_cursor.isRoom():
                 if self.dungeon_cursor.coords not in self.history:
                     self.emitNarrative('The band has encountered an unexplored room. Get the lanterns ready.')
-                    self.status = Expedition.ENCOUNTER
+                    self._set_state(Expedition.ENCOUNTER)
 
                 # TODO: move this to the encounter complete section?
                 for cell in self.dungeon.roomBrethren(self.dungeon_cursor):
@@ -308,17 +313,17 @@ class Expedition(Persister):
                 self.history.append(self.dungeon_cursor.coords)
         else:
             self.processMessage('Moving algorithm did not produce a destination')
-            self.status = Expedition.ERROR
+            self._set_state(Expedition.ERROR)
 
     # Encounter
     def runstate_enc(self):
 
         if self.dungeon.roomAt(self.dungeon_cursor).occupied():
             self.emitNarrative('This room is full of jerks! Draw your blades!')
-            self.status = Expedition.BATTLE
+            self._set_state(Expedition.BATTLE)
         else:
             self.emitNarrative('This room is empty, oh well.')
-            self.status = Expedition.EXPLORE
+            self._set_state(Expedition.EXPLORE)
 
     # Exiting
     def runstate_ext(self):
@@ -328,7 +333,7 @@ class Expedition(Persister):
 
             if self.dungeon_cursor == self.dungeon.entrance():
                 self.emitNarrative('{} has emerged from the depths of {}.'.format(self.band.name, self.dungeon.name))
-                self.status = Expedition.TRAVEL
+                self._set_state(Expedition.TRAVEL)
                 # this may no longer be necessary
                 # self.region_cursor = self.region.find_dungeon(self.dungeon.id)
                 self.path = []
@@ -350,10 +355,10 @@ class Expedition(Persister):
                     self.dungeon.roomAt(self.dungeon_cursor).empty()
                     self.battle = None
 
-                    self.status = Expedition.RECOVER
+                    self._set_state(Expedition.RECOVER)
                 else:
                     self.emitNarrative('Sadly the band has been bested by the local miscreants.')
-                    self.status = Expedition.SCATTERED
+                    self._set_state(Expedition.SCATTERED)
                 self.emitBattle(False, room.num)
             else:
                 r1 = self.battle.round()
@@ -378,7 +383,7 @@ class Expedition(Persister):
     def runstate_sct(self):
         self.processMessage('Band is scattering')
         self.emitNarrative('Our intrepid band has been scattered to the five winds. Who knows what will become of them.')
-        self.status = Expedition.COMPLETE
+        self._set_state(Expedition.COMPLETE)
 
     # Recover
     def runstate_rec(self):
@@ -406,7 +411,7 @@ class Expedition(Persister):
             }
             self.emit(json.dumps(body))
 
-        self.status = Expedition.EXPLORE
+        self._set_state(Expedition.EXPLORE)
 
     # Complete
     def runstate_cmp(self):
