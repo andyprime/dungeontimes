@@ -20,8 +20,11 @@ from core.mdb import MongoService
 _advHandlerSettings = {}
 
 def rabbitHandler(channel, message):
-    print('$$$$$$$ Emit {}'.format(message))
+    # print('$$$$$$$ Emit {}'.format(message))
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
+
+def stdout_processor(str):
+    print('>>> {}'.format(str))
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
@@ -157,7 +160,7 @@ if __name__ == "__main__":
         # if a party doesn't have a todo, create one
         # this should only occur when a band has no active expedition
 
-        print('!!! {}, {}'.format(len(to_do), to_do))
+        # print('!!! {}, {}'.format(len(to_do), to_do))
 
         if len(to_do) < len(bands):
             print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
@@ -220,6 +223,7 @@ if __name__ == "__main__":
             if exp.over():
                 region.remove_dungeon(exp.dungeon)
                 region.emit_del_dungeon(exp.dungeon.id)
+                region.persist()
 
                 exp.dungeon.complete = True
                 exp.dungeon.persist()
@@ -249,6 +253,7 @@ if __name__ == "__main__":
             exp.save()
 
             exp.registerEventEmitter(emitFn)
+            exp.registerProcessor(stdout_processor)
             exp.emitNew()
             region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
 
@@ -264,6 +269,7 @@ if __name__ == "__main__":
 
             region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
             region.emit_new_dungeon(d)
+            region.persist()
 
             # adding a little extra chance to keep the dungeon count topped up
             if random.choice([True, False]):
