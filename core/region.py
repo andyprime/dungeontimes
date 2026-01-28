@@ -1,6 +1,7 @@
 import uuid
 import json
 import random
+import time
 from core.mdb import Persister
 
 import core.strings as strings
@@ -89,6 +90,9 @@ class Region(Persister):
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):
+        # No negative indexing please
+        if y < 0 or x < 0:
+            return None
         try:
             return self.grid[y][x]
         except:
@@ -272,6 +276,9 @@ class RCell:
     def east(self):
         return (self.h, self.w + 1)
 
+    def southeast(self):
+        return (self.h + 1, self.w + 1)
+
     def all(self):
         a = [self.north(), self.south(), self.east(), self.west()]
         return [x for x in a if x]
@@ -307,6 +314,8 @@ class RegionGenerate:
 
     TOWN_ATTEMPT_CUTOFF = 100
 
+    ROAD_PATH_BLACKLIST = [RCell.TOWN, RCell.CITY]
+
     @classmethod
     def generate_region(self, options={}):
         self.CURRENT_SETTINGS = self.DEFAULT_SETTINGS.copy()
@@ -336,7 +345,7 @@ class RegionGenerate:
         # region.prettyPrint()
 
         # =============================================================================================
-        # self.header('Towns and roads')
+        # self.header('Towns')
 
         total_space = region.height * region.width
         amount = int(total_space * self.CURRENT_SETTINGS['TOWN_AMOUNT_RATIO'])
@@ -348,6 +357,8 @@ class RegionGenerate:
 
         # print('Placeing {} towns'.format(town_count))
         # print('Min spacing: {}'.format(town_spacing))
+
+
 
         while len(existing_towns) < town_count and town_attempts < self.TOWN_ATTEMPT_CUTOFF:
             clear = True
@@ -367,9 +378,16 @@ class RegionGenerate:
             if clear:
                 existing_towns.append(placement)
                 region.grid[placement[0]][placement[1]].type = RCell.TOWN
-                self.path_road(region, region.homebase, placement)
-        
-        # region.prettyPrint()
+                   
+        # =============================================================================================
+        # self.header('Roads')
+
+        # sorting towns by distance to the capital helps the pathing re-use the existing roads most effectively
+        existing_towns.sort(key=lambda t: self.distance(t, region.homebase))
+        for t in existing_towns:
+            self.path_road(region, region.homebase, t)
+            # region.prettyPrint()
+            # print('')
 
         # =============================================================================================
         # self.header('Farms')
@@ -429,44 +447,84 @@ class RegionGenerate:
                 cell.type = type
 
     @classmethod
-    def path_road(self, region, start, end):
-        # gonna keep it really basic with straight-ish lines for now
-        # note that as of this writing this gets run before any non-traversable terrain gets drawn
-        cursor = start
+    def path_road(self, region, homebase, town):
+        path = self.gen_path(town, region, homebase)
 
-        while cursor != end:
-            # First see if either of our options is already a road
-            # this is just a funny way to get 1 or -1
-
-            if end[0] == cursor[0]:
-                yoption = None
-            else:
-                ychange = int((end[0] - cursor[0]) / abs(end[0] - cursor[0]))
-                yoption = (cursor[0] + ychange, cursor[1])
-            if end[1] == cursor[1]:
-                xoption = None
-            else:
-                xchange = int((end[1] - cursor[1]) / abs(end[1] - cursor[1]))
-                xoption = (cursor[0], cursor[1] + xchange)
-
-            if yoption and region.getCell(*yoption).type == RCell.ROAD or not xoption:
-                cursor = yoption
-            elif region.getCell(*xoption).type == RCell.ROAD or not yoption:
-                cursor = xoption
-            else:
-                # otherwise select randomly based on the diff proportions
-                ydiff = self.ydistance(cursor, end)
-                xdiff = self.xdistance(cursor, end)
-                proportion = random.randint(0, ydiff + xdiff - 1)
-
-                if proportion < ydiff:
-                    cursor = yoption
-                else:
-                    cursor = xoption
-
-            cell = region.getCell(*cursor)
-            if cell.type not in [RCell.TOWN, RCell.ROAD]:
+        for cell in path:
+            if cell.type not in self.ROAD_PATH_BLACKLIST:
                 cell.type = RCell.ROAD
+
+    @classmethod
+    def gen_path(self, start, grid, target=None):
+        if type(start) == tuple:
+            start = grid.getCell(*start)
+
+        if type(target) == tuple:
+            target = grid.getCell(*target)
+
+        pathingStart = time.perf_counter()
+
+        distance = {}
+        previous = {}
+        q = []
+        destination = None
+
+        for cell in grid.allCells(navigable=True):
+            distance[cell] = 1000000
+            previous[cell] = None
+            q.append(cell)
+
+        distance[start] = 0
+
+        count = 0
+        while len(q) > 0:
+            count += 1
+            lowest = q[0]
+
+            # This extras business is to randomize directions so the paths are a little random instead of 90 degree angles
+            extras = [lowest]
+            for cell in q:
+                if distance[cell] < distance[lowest]:
+                    lowest = cell
+                    extras = [lowest]
+                elif distance[cell] == distance[lowest]:
+                    extras.append(cell)
+            lowest = random.choice(extras)
+            q.remove(lowest)
+
+            # Our break points are finding the target (the capital) or encountering an existing road network
+            if target and lowest == target:
+                destination = lowest
+                break
+            # ideally we'd stop if we hit a road or another town but that can create disconnected road networks
+            elif lowest.type in [RCell.ROAD] and lowest != start:
+                destination = lowest
+                break
+
+            neighbors = grid.getNeighbors(lowest)
+            for neighbor in [n for n in neighbors if n in q]:
+                weight = grid.getWeight(neighbor)
+                newDistance = distance[lowest] + weight if distance[lowest] else weight
+
+                if newDistance < distance[neighbor]:
+                    distance[neighbor] = newDistance
+                    previous[neighbor] = lowest
+
+        delta = time.perf_counter() - pathingStart
+
+        # self.processMessage('** Pathfinding run complete. Time: {}. Cells examined: {}, Cells remaining: {}'.format(str(delta), count, len(q)))
+
+        if not destination:
+            # this *shouldn't* be possible as long as mapgen has no significant bugs
+            self.processMessage('Pathfinding did not produce a destination')
+            return None
+        
+        path = [destination]
+        while(previous.get(destination, False)):
+            path.append(previous[destination])
+            destination = previous[destination]
+
+        return path
 
     # returns the distance between two positions in terms of orthogonal movement
     @classmethod
@@ -490,10 +548,45 @@ class RegionGenerate:
         s = s.ljust(156, '=')
         print(s)
 
+# Utility function that searches a region for a 2x2 grid of road cells
+# Returns False if there are none, a list of the offending cells otherwise
+def road_grid_check(region):
+    for cell in region.allCells():
+        cells = [cell, region.getCell(*cell.east()), region.getCell(*cell.south()), region.getCell(*cell.southeast())]
+        # a cell being None means we're at the edge and it can't form a square
+        if None in cells:
+            continue
+        types = [c.type for c in cells]
+        if types.count(RCell.ROAD) >= 4:
+            return cells
+
+    return False
 
 if __name__ == "__main__":
     
+    print('Generating region')
+
     r = RegionGenerate.generate_region()
 
+    r.prettyPrint()
 
-    # print(r.serialize())
+    print(road_grid_check(r))
+
+    # -------------------------------
+
+    # print('Running check')
+
+    # count = 0
+    # tests = 100
+
+    # for i in range(tests):
+    #     r = RegionGenerate.generate_region()
+
+    #     check = road_grid_check(r)
+
+    #     if check:
+    #         count += 1
+    #         # r.prettyPrint()
+    #         # print(check)
+
+    # print('Found {} road grids in {} tests'.format(count, tests))
