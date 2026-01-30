@@ -1,8 +1,8 @@
+# this is the development image spec, for prod/deployment images see deployment.yml
 services:
 
   data-store:
     image: mongo
-    restart: always
     ports:
       - "27017:27017"
     environment:
@@ -14,7 +14,6 @@ services:
     build:
       context: .
       dockerfile: containers/dev/api/Dockerfile
-    restart: always
     ports:
       - "8081:80"
     volumes:
@@ -37,20 +36,17 @@ services:
     build:
       context: .
       dockerfile: containers/dev/web/Dockerfile
-    restart: always
     ports: 
       - "${EXTERNAL_WEB_PORT:?error}:80"
     volumes:
-      - ./dungeon-times-web:/app
+      - ./web:/app
     environment:
       NODE_ENV: development
 
   rabbit:
-    #image: rabbitmq:management
     build:
       context: .
       dockerfile: containers/dev/rabbit/Dockerfile
-    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -67,7 +63,6 @@ services:
     build:
       context: .
       dockerfile: containers/dev/dm/Dockerfile
-    # restart: always
     volumes: 
       - ./:/code
     environment:

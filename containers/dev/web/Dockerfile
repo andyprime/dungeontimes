@@ -4,9 +4,9 @@ VOLUME /app
 
 WORKDIR /app
 
-COPY dungeon-times-web/package.json .
+COPY web/package.json .
 
-COPY dungeon-times-web/package-lock.json .
+COPY web/package-lock.json .
 
 RUN npm install
 
