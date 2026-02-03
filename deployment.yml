@@ -38,12 +38,10 @@ services:
         restart: true
 
   web:
-    # container_name: dungeontimes-web-d
     build:
       context: .
       dockerfile: containers/deploy/web/Dockerfile
-    restart: always
-    ports: 
+    ports:
       - "${EXTERNAL_WEB_PORT:?error}:80"
     
   rabbit:
