@@ -4,7 +4,7 @@ import re
 
 '''
      String Tool
-    ------------
+    -------------
 
     This is a little doodad for generating random names with some heirarchical syntax. The only
     call at the moment is StringTool.random('somesource'), which we'll call the root source.
@@ -37,21 +37,30 @@ import re
 
     Note that by default the tool will create a local cache of all files loaded so far. 
 
+
+     Additional parameters
+    -----------------------
+
+    indefinite - if True the string tool with prepend the string with the appropriate indefinite 
+        article, e.g. pizza -> a pizza, apple -> an apple
+
 '''
 
 class StringTool:
+    VOWELS = ['a', 'e', 'i', 'o', 'u']
 
     _records = {}
 
     location = 'strings/'
 
     @classmethod
-    def random(self, source):
+    def random(self, source, indefinite=False):
         if not self._records.get(source, False):
             self._load(source)
 
+        gen_string = ''
         if type(self._records[source]) == list:
-            return random.choice(self._records[source])
+            gen_string = random.choice(self._records[source])
         else:
             try:
                 weights = [x['w'] for x in self._records[source]['options']]
@@ -79,7 +88,12 @@ class StringTool:
                         x = x.capitalize()                    
                     gen_string = gen_string.replace(bit, x, 1)
 
-            return gen_string
+        if indefinite:
+            if gen_string[0].lower() in StringTool.VOWELS:
+                gen_string = 'an ' + gen_string
+            else:
+                gen_string = 'a ' + gen_string
+        return gen_string
 
     @classmethod
     def clear_cache(self):
@@ -97,5 +111,8 @@ class StringTool:
 
 if __name__ == "__main__":
 
-    for i in range(1, 1000):
-        print(StringTool.random('band_names'))
+    for i in range(1, 10):
+        print(StringTool.random('valuables'))
+
+    for i in range(1, 10):
+        print(StringTool.random('valuables', indefinite=True))

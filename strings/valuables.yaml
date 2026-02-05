@@ -1,0 +1,91 @@
+options:
+  - 
+    s: ${gemstone}
+    w: 10
+  - 
+    s: ${descriptor} ${jewelry}
+    w: 10
+  -
+    s: ${descriptor} ${doodad}
+    w: 10
+  -
+    s: ${booze_desc} ${booze}
+    w: 2
+  -
+    s: ${food}
+    w: 1
+
+gemstone:
+  - diamond
+  - ruby
+  - sapphire
+  - emerald
+  - garnet
+  - turquoise
+  - tourmaline
+  - carnelian
+  - malachite
+  - jasper
+  - amethyst
+  - lapis
+  - pearl
+  - opal
+  - peridot
+
+jewelry:
+  - tiara
+  - necklace
+  - pendant
+  - amulet
+  - ring
+  - diadem
+  - circlet
+  - crown
+  - locket
+
+# paintings need different descriptors
+doodad:
+  - snuff box
+  - censor
+  - scroll case
+  - scepter
+  - chalice
+  - tankard
+  - scrimshaw
+  - tome
+  - lamp
+  - horn
+  - harp
+  - lute
+  - comb
+  - bust
+  - figurine
+  - mirror
+  - dice
+  - chess set
+
+descriptor:
+  - runed
+  - exquisite
+  - inscribed
+  - gilded
+  - bejeweled
+  - ancient
+  - enameled
+
+booze:
+  - wine
+  - rum
+  - port
+  - spirits
+
+booze_desc:
+  - goblin
+  - elven
+  - dwarven
+  - ancient
+  - mysterious
+
+food:
+  - wheel of goblin cheese
+  - dwarven fruitcake 

@@ -36,14 +36,14 @@ class Region(Persister):
     def width(self):
         return len(self.grid[0])
 
-    def registerEventEmitter(self, callback):
+    def register_emitter(self, callback):
         self.emitters.append(callback)
 
     def emit(self, msg):
         for e in self.emitters:
             e(msg.encode('ASCII'))
 
-    def emitNarrative(self, s, band=None):
+    def emit_narrative(self, s, band=None):
         msg = {
             'type': 'NARRATIVE',
             'message': s,
@@ -55,7 +55,16 @@ class Region(Persister):
             msg['context']['band'] = band
         self.emit(json.dumps(msg))
 
-    def emitDungeonLocales(self):
+    def emit_bands(self):
+        msg = {
+            'type': 'BANDS',
+            'context': {
+                'region': self.id
+            }
+        }
+        self.emit(json.dumps(msg))
+
+    def emit_dungeon_locales(self):
         msg = {
             'type': 'DUNGEONS',
             'coords': [list(c.coords) for c in self.dungeons.values()],

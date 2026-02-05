@@ -190,3 +190,12 @@ name: Cast Spell
 type: spellcasting
 target: self # spells have their own real target info
 test: spellcasting
+---
+code: THWOMP
+name: Thwomp
+type: instant
+target: melee
+test: thicc
+effect:
+  max targets: 1
+  damage: 3

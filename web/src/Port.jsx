@@ -65,7 +65,13 @@ function Port() {
     else if (BATTLE_EVENTS.includes(doc['type'])) {
       // this is very heavy for updating a single field but its fine for now
       queryClient.invalidateQueries(['expeditions']);
-    } else if (doc['type'] == 'BATTLE-UPDATE') {
+    } 
+
+    else if (doc['type'] == 'BANDS') {
+      queryClient.invalidateQueries(['bands']);
+    }
+
+    else if (doc['type'] == 'BATTLE-UPDATE') {
       let body = doc['details'];
 
       if (body['target'][0] == 'm') {
@@ -98,6 +104,7 @@ function Port() {
             : old
         });
       }
+
     }
 
   }

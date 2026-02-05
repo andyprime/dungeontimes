@@ -105,7 +105,7 @@ def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
 @app.get('/bands/')
 def read_bands(db: Database = Depends(db_session)):
     bs = []
-    for b in db.bands.find():
+    for b in db.bands.find({'active': True}):
         b.pop('_id')
         bs.append(b)
     return bs

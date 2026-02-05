@@ -41,7 +41,8 @@ TIME_MAP = {
     'plan': 20,
     'research': 20,
     'carouse': 60,
-    'shop': 20
+    'shop': 20,
+    'offload': 20
 }
 
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     # build region
     region = core.region.RegionGenerate.generate_region()
     region.save()
-    region.registerEventEmitter(emitFn)
+    region.register_emitter(emitFn)
 
     # build bands
     bands = {}
@@ -150,7 +151,7 @@ if __name__ == "__main__":
         region.place_dungeon(d)
     # not sure if this is necessary at this stage
     region.persist()
-    region.emitDungeonLocales()
+    region.emit_dungeon_locales()
 
     to_do = []
     current_time = 1
@@ -161,6 +162,13 @@ if __name__ == "__main__":
         # this should only occur when a band has no active expedition
 
         # print('!!! {}, {}'.format(len(to_do), to_do))
+
+        if len(bands) < args.bands:
+            print('Making new band')
+            b = build_party()
+            bands[b.id] = b
+            region.emit_narrative('Aspiring delvers have formed a new band, {}.'.format(b.name))
+            region.emit_bands()
 
         if len(to_do) < len(bands):
             print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
@@ -175,34 +183,33 @@ if __name__ == "__main__":
                 if unbusy:
                     print('Band {} has nothing to do'.format(band.name))
                     # possible actions
+                    #   - offload loot, takes precedence
                     #   - plan expedition
                     #   - carouse
                     #   - shop
                     #   - research dungeons
 
-                    options = []
 
-                    if band.can_carouse():
-                        options.append('carouse')
-                    if band.can_shop():
-                        options.append('shop')
+                    if band.has_loot():
+                        selected = 'offload'
+                    else:
+                        options = []
 
-                    occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
-                    available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
-                    if len(available_dungeons) > 0:
-                        options.append('plan')
-                    if len(available_dungeons) < int(args.dungeons/2):
-                        options.append('research')
+                        if band.can_carouse():
+                            options.append('carouse')
+                        if band.can_shop():
+                            options.append('shop')
 
-                    selected = random.choice(options)
+                        occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
+                        available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
+                        if len(available_dungeons) > 0:
+                            options.append('plan')
+                        if len(available_dungeons) < int(args.dungeons/2):
+                            options.append('research')
+
+                        selected = random.choice(options)
+
                     to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
-
-
-        if len(to_do) > len(bands):
-            print('='*50)
-            print('Excess todos detected')
-            print(expeditions)
-            print('='*50)
 
         # find the soonest action
 
@@ -221,6 +228,7 @@ if __name__ == "__main__":
             exp = expeditions[do['band']]
 
             if exp.over():
+
                 region.remove_dungeon(exp.dungeon)
                 region.emit_del_dungeon(exp.dungeon.id)
                 region.persist()
@@ -228,15 +236,22 @@ if __name__ == "__main__":
                 exp.dungeon.complete = True
                 exp.dungeon.persist()
 
-                exp.emitDelete()
+                exp.emit_delete()
                 exp.persist()
                 dungeon_changes = True
 
                 del expeditions[do['band']]
                 del dungeons[exp.dungeon.id]
 
+
+                if exp.failed():
+                    region.emit_narrative('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name))
+                    del bands[band.id]
+                    band.active = False
+                    band.persist()
+
             else:
-                delay = exp.processTurn()
+                delay = exp.process_turn()
                 to_do.append({'action': 'exp', 'band': band.id, 'schedule': current_time + delay})
 
         elif (do['action'] == 'plan'):
@@ -252,10 +267,10 @@ if __name__ == "__main__":
             exp = core.expedition.Expedition(region, dungeon, band, None)
             exp.save()
 
-            exp.registerEventEmitter(emitFn)
-            exp.registerProcessor(stdout_processor)
-            exp.emitNew()
-            region.emitNarrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
+            exp.register_emitter(emitFn)
+            exp.register_processor(stdout_processor)
+            exp.emit_new()
+            region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
 
             expeditions[band.id] = exp
 
@@ -267,7 +282,7 @@ if __name__ == "__main__":
             region.place_dungeon(d)
             dungeon_changes = True
 
-            region.emitNarrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
+            region.emit_narrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
             region.emit_new_dungeon(d)
             region.persist()
 
@@ -275,18 +290,27 @@ if __name__ == "__main__":
             if random.choice([True, False]):
                 to_do.append({'action': 'research', 'band': band_id, 'schedule': current_time + TIME_MAP['research']})
 
+        elif (do['action'] == 'offload'):
+            # sell a random loot item from one of the band
+            band = bands[do['band']]
+
+            for delver in band.members:
+                if len(delver.inventory) > 0:
+                    item = delver.inventory.pop()
+                    print('!!! selling item: {} at {}'.format(item.name, item.value))
+                    region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value))
+                    band.add_wealth(item.value)
+                    break
 
         elif (do['action'] == 'carouse'):
             band = bands[do['band']]
-            region.emitNarrative('{} are going on a long bender.'.format(band.name), band.id)
+            region.emit_narrative('{} are going on a long bender.'.format(band.name), band.id)
         elif (do['action'] == 'shop'):
             band = bands[do['band']]
-            region.emitNarrative('{} are perusing the markets for the newest delving gear.'.format(band.name), band.id)
+            region.emit_narrative('{} are perusing the markets for the newest delving gear.'.format(band.name), band.id)
         else:
             print('!!! Unknown loop action: {}'.format(do))
 
-
-
-        # batch this
+        # we batch the emission of the dungeon entrance message
         if dungeon_changes:
-            region.emitDungeonLocales()
+            region.emit_dungeon_locales()

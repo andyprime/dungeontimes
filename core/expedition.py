@@ -7,6 +7,20 @@ from core.battle import Battle
 from core.dungeon.dungeons import Cell
 from core.mdb import Persister
 import core.strings as strings
+from core.dice import Dice
+
+# this is real baby at the moment but it should be useful later on
+class Valuable:
+
+    @classmethod
+    def random(self):
+        val = Dice.roll('3d10')
+        return Valuable(strings.StringTool.random('valuables', indefinite=True), val)
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        self.weight = 1
 
 class Expedition(Persister):
 
@@ -17,10 +31,12 @@ class Expedition(Persister):
     ENCOUNTER = 'enc'
     BATTLE = 'bat'
     RECOVER = 'rec'
+    SEARCH = 'src'
     EXITING = 'ext'
     SCATTERED = 'sct'
     COMPLETE = 'cmp'
     ERROR = 'err'
+    FAIL = 'fai'
 
     DEFAULT_TURN_DELAY = 2
 
@@ -39,6 +55,8 @@ class Expedition(Persister):
         'ext': 2,
         'sct': 2,
         'cmp': 3,
+        'src': 3,
+        'fai': 3,
         'round_divider': 2
     }
 
@@ -66,6 +84,9 @@ class Expedition(Persister):
         # if set it is the cells we are currently trying to navigate through
         self.path = []
 
+        # general data holder for individual steps that doesn't require making top level properties
+        self.localstate = {}
+
         # Got to log which sections of the map have already been explored
         # So for now we're gonna keep the cell coords in an array to reference
         self.history = []
@@ -80,24 +101,25 @@ class Expedition(Persister):
     def __repr__(self):
         return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
 
-    def registerProcessor(self, callback):
+    def register_processor(self, callback):
         self.processors.append(callback)
 
-    def registerEventEmitter(self, callback):
+    def register_emitter(self, callback):
         self.emitters.append(callback)
 
     def prefix(self):
         return self.id[0:10]
 
     # explicitly for system logging, user facing text goes through emit
-    def processMessage(self, message):
+    def process_message(self, message):
         message = '{} - {}'.format(self.prefix(), message)
         for f in self.processors:
             f(message)
        
     def emit(self, msg):
+        package = json.dumps(msg)
         for e in self.emitters:
-            e(msg.encode('ASCII'))
+            e(package.encode('ASCII'))
 
     # def identified_emit(self, code, msg):
         # self.emit('{};{};{}'.format(code, self.id, msg))
@@ -108,9 +130,9 @@ class Expedition(Persister):
             'dungeon': self.dungeon.id,
             'band': self.band.id
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
-    def emitCursorUpdate(self):
+    def emit_cursor(self):
         msg = {
             'type': 'CURSOR',
             'coords': self._get_location(),
@@ -124,9 +146,9 @@ class Expedition(Persister):
             msg['context']['dungeon'] = self.dungeon.id
         else:
             msg['context']['region'] = self.region.id
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
-    def emitNarrative(self, s, scope='dungeon'):
+    def emit_narrative(self, s, scope='dungeon'):
         msg = {
             'type': 'NARRATIVE',
             'message': s,
@@ -142,9 +164,9 @@ class Expedition(Persister):
         else:
             # should do something here I guess
             pass
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
-    def emitNew(self):
+    def emit_new(self):
         msg = {
             'type': 'EXPEDITION-NEW',
             'context': {
@@ -153,10 +175,9 @@ class Expedition(Persister):
                 'dungeon': self.dungeon.id
             }
         }
-        self.emit(json.dumps(msg))
-        # self.emit('EXP-NEW;{}'.format(self.id))
+        self.emit(msg)
 
-    def emitDelete(self):
+    def emit_delete(self):
         msg = {
             'type': 'EXPEDITION-DEL',
             'context': {
@@ -165,10 +186,9 @@ class Expedition(Persister):
                 'dungeon': self.dungeon.id
             }
         }
-        self.emit(json.dumps(msg))
-        # self.emit('EXP-DEL;{}'.format(self.id))
-
-    def emitBattle(self, start, roomNo):
+        self.emit(msg)
+        
+    def emit_battle(self, start, roomNo):
         msg = {
             'room': roomNo,
             'context': {
@@ -181,19 +201,32 @@ class Expedition(Persister):
             msg['type'] = 'BATTLE-START'
         else:
             msg['type'] = 'BATTLE-END'
-        self.emit(json.dumps(msg))
+        self.emit(msg)
+
+    def emit_band(self):
+        msg = {
+            'type': 'BAND',
+            'context': {
+                'expedition': self.id,
+                'band': self.band.id,
+            }
+        }
+        self.emit(msg)
 
     def overland(self):
         return self.status in Expedition.OVERLAND_STATES
 
-    def inDungeon(self):
+    def indungeon(self):
         return self.status in Expedition.DUNGEON_STATES
 
     def over(self):
-        return self.status in [Expedition.COMPLETE, Expedition.ERROR]
+        return self.status in [Expedition.COMPLETE, Expedition.ERROR, Expedition.FAIL]
+
+    def failed(self):
+        return self.over() and self.status == Expedition.FAIL
 
     def location(self):
-        if self.inDungeon():
+        if self.indungeon():
             return 'D'
         else:
             return 'O'
@@ -229,34 +262,42 @@ class Expedition(Persister):
         self.status = new_state
         self.persist()
 
-    def processTurn(self):
+    def _get_local(self, step):
+        if step not in self.localstate:
+            self.localstate[step] = {}
+        return self.localstate[step]
+
+    def save_local(self, state):
+        self.localstate[self.status] = state
+
+    def process_turn(self):
         self.steps += 1
         showOverride = False
 
         f = getattr(self, 'runstate_' + self.status)
         if f:
-            delayOverride = f()
+            delayOverride = f(self._get_local(self.status))
 
             if self.steps % Expedition.PRINT_INTERVAL == 0 or showOverride:
-                self.historyMap()
+                self.history_map()
 
             if delayOverride:
                 return delayOverride
             else:
                 return Expedition.TASK_DURATIONS[self.status]
         else:
-            self.processMessage('Unknown expedition status: {}'.format(self.status))
+            self.process_message('Unknown expedition status: {}'.format(self.status))
             self._set_state(Expedition.ERROR)
             return False
 
     # Home base starting status
-    def runstate_pre(self):
-        self.emitNarrative('{} does some last minute shopping in town. Always pack a spare {}.'.format(self.band.name, strings.StringTool.random('useful_item')), 'region')
+    def runstate_pre(self, local):
+        self.emit_narrative('{} does some last minute shopping in town. Always pack a spare {}.'.format(self.band.name, strings.StringTool.random('useful_item')), 'region')
         self._set_state(Expedition.TRAVEL)
 
     # overland travel
-    def runstate_trv(self):
-        self.processMessage('Travel')
+    def runstate_trv(self, local):
+        self.process_message('Travel')
 
         if self.outgoing:
             target = self.region.find_dungeon(self.dungeon.id)
@@ -265,43 +306,43 @@ class Expedition(Persister):
 
         if self.region_cursor == target:
             if self.outgoing:
-                self.emitNarrative('{} has located the entrance to the dungeon.'.format(self.band.name), 'region')
+                self.emit_narrative('{} has located the entrance to the dungeon.'.format(self.band.name), 'region')
                 self._set_state(Expedition.READY)
             else:
-                self.emitNarrative('{} has returned home for some well deserved rest.'.format(self.band.name), 'region')
+                self.emit_narrative('{} has returned home for some well deserved rest.'.format(self.band.name), 'region')
                 self._set_state(Expedition.COMPLETE)
         elif self.path:
             self.move()
         else:
-            self.processMessage('Pathing to {}'.format(target))
-            self.path = self.generatePath(self.region_cursor, self.region, target)
+            self.process_message('Pathing to {}'.format(target))
+            self.path = self.generate_path(self.region_cursor, self.region, target)
 
     # Ready
-    def runstate_rdy(self):
-        self.emitNarrative('The band enters the dungeon, adjusting to the dim light.')
+    def runstate_rdy(self, local):
+        self.emit_narrative('The band enters the dungeon, adjusting to the dim light.')
         self.dungeon_cursor = self.dungeon.entrance()
         self.history.append(self.dungeon_cursor.coords)
         self.path = []
         self._set_state(Expedition.EXPLORE)
 
     # Moving
-    def runstate_exp(self):
+    def runstate_exp(self, local):
         if not self.path:
             self.path = self.navigate()
 
         if self.path is None:
-            self.processMessage('Dungeon fully explored.')
-            self.emitNarrative('The band thinks there is no more to explore down here, time to navigate back home.')
+            self.process_message('Dungeon fully explored.')
+            self.emit_narrative('The band thinks there is no more to explore down here, time to navigate back home.')
             self._set_state(Expedition.EXITING)
         elif len(self.path):
             
-            self.processMessage('Standard dungeon move')
+            self.process_message('Standard dungeon move')
 
             self.move()
 
             if self.dungeon_cursor.isRoom():
                 if self.dungeon_cursor.coords not in self.history:
-                    self.emitNarrative('The band has encountered an unexplored room. Get the lanterns ready.')
+                    self.emit_narrative('The band has encountered an unexplored room. Get the lanterns ready.')
                     self._set_state(Expedition.ENCOUNTER)
 
                 # TODO: move this to the encounter complete section?
@@ -312,27 +353,27 @@ class Expedition(Persister):
             else:
                 self.history.append(self.dungeon_cursor.coords)
         else:
-            self.processMessage('Moving algorithm did not produce a destination')
+            self.process_message('Moving algorithm did not produce a destination')
             self._set_state(Expedition.ERROR)
 
     # Encounter
-    def runstate_enc(self):
+    def runstate_enc(self, local):
 
         if self.dungeon.roomAt(self.dungeon_cursor).occupied():
-            self.emitNarrative('This room is full of jerks! Draw your blades!')
+            self.emit_narrative('This room is full of jerks! Draw your blades!')
             self._set_state(Expedition.BATTLE)
         else:
-            self.emitNarrative('This room is empty, oh well.')
+            self.emit_narrative('This room is empty, oh well.')
             self._set_state(Expedition.EXPLORE)
 
     # Exiting
-    def runstate_ext(self):
+    def runstate_ext(self, local):
         if self.path:
             self.move()
         else:
 
             if self.dungeon_cursor == self.dungeon.entrance():
-                self.emitNarrative('{} has emerged from the depths of {}.'.format(self.band.name, self.dungeon.name))
+                self.emit_narrative('{} has emerged from the depths of {}.'.format(self.band.name, self.dungeon.name))
                 self._set_state(Expedition.TRAVEL)
                 # this may no longer be necessary
                 # self.region_cursor = self.region.find_dungeon(self.dungeon.id)
@@ -340,16 +381,16 @@ class Expedition(Persister):
                 self.outgoing = False
                 showOverride = True
             else:
-                self.processMessage('Party is ready to leave and plotting a course back to the entrance.')
-                self.path = self.generatePath(self.dungeon_cursor, self.dungeon, target=self.dungeon.entrance())
+                self.process_message('Party is ready to leave and plotting a course back to the entrance.')
+                self.path = self.generate_path(self.dungeon_cursor, self.dungeon, target=self.dungeon.entrance())
 
     # Battle
-    def runstate_bat(self):
+    def runstate_bat(self, local):
         room = self.dungeon.roomAt(self.dungeon_cursor)
         if self.battle:
             if self.battle.complete():
                 if any([d.canAct() for d in self.party]) :
-                    self.emitNarrative('The band is victorious. Good job team.')
+                    self.emit_narrative('The band is victorious. Good job team.')
 
                     # clear out the dead monsters
                     self.dungeon.roomAt(self.dungeon_cursor).empty()
@@ -357,9 +398,9 @@ class Expedition(Persister):
 
                     self._set_state(Expedition.RECOVER)
                 else:
-                    self.emitNarrative('Sadly the band has been bested by the local miscreants.')
+                    self.emit_narrative('Sadly the band has been bested by the local miscreants.')
                     self._set_state(Expedition.SCATTERED)
-                self.emitBattle(False, room.num)
+                self.emit_battle(False, room.num)
             else:
                 r1 = self.battle.round()
                 self.battle.next()
@@ -368,7 +409,7 @@ class Expedition(Persister):
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.processMessage, self.signed_emit)
+            self.battle = Battle(self.process_message, self.signed_emit)
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
@@ -376,18 +417,21 @@ class Expedition(Persister):
             for d in self.party:
                 self.battle.addParticipant('delver', d)
 
-            self.emitBattle(True, room.num)
+            self.emit_battle(True, room.num)
             self.battle.start()
 
 
-    def runstate_sct(self):
-        self.processMessage('Band is scattering')
-        self.emitNarrative('Our intrepid band has been scattered to the five winds. Who knows what will become of them.')
-        self._set_state(Expedition.COMPLETE)
+    def runstate_sct(self, local):
+        self.process_message('Band is scattering')
+        self.emit_narrative('Our intrepid band has been scattered to the five winds. Who knows what will become of them.')
+        self._set_state(Expedition.FAIL)
 
-    # Recover
-    def runstate_rec(self):
-        self.emitNarrative('The band takes a little breather after a fight.')
+    def runstate_fai(self, local):
+        self.process_message('Entering expeditoin failure state.')
+
+    # Recover, general post-battle business
+    def runstate_rec(self, local):
+        self.emit_narrative('The band takes a little breather after a fight.')
         # for now we're just gonna heal the entire party so we don't die every other fight
         for p in self.party:
             p.recuperate()
@@ -410,29 +454,65 @@ class Expedition(Persister):
                 }
             }
             self.emit(json.dumps(body))
+        
+        self._set_state(Expedition.SEARCH)
 
-        self._set_state(Expedition.EXPLORE)
+    # room search
+    def runstate_src(self, local):
+
+        remaining = local.get('remaining', None)
+        if remaining != None:
+
+            if remaining > 0:
+
+                pos = remaining % self.band.size()
+                delver = self.band.members[pos]
+
+                success = random.uniform(1, 100) > 50
+
+                if success:
+                    val = Valuable.random()
+
+                    if delver.can_hold(val):
+                        delver.give(val)
+
+                    self.emit_narrative('{} found {}'.format(delver.name, val.name))
+                else:
+                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)))    
+
+                local['remaining'] = remaining - 1
+
+            else:
+                self.save_local({})
+                self.emit_narrative('There is no more loot to find here.')
+                self._set_state(Expedition.EXPLORE)
+
+        else:
+            self.emit_narrative('Everyone starts turning the room over for treasure.')
+            local['remaining'] = Dice.roll('2d3')
+            local['order'] = random.shuffle(list(range(0, self.band.size())))
+            
 
     # Complete
     def runstate_cmp(self):
-        self.processMessage('All done. Good hustle')
-        self.processMessage('Total Moves: {}'.format(self.steps))
+        self.process_message('All done. Good hustle')
+        self.process_message('Total Moves: {}'.format(self.steps))
 
     def move(self):
         destination = self.path.pop()
 
         if self.location() == 'D':
             self.dungeon_cursor = destination
-            self.processMessage('Moving to D {}'.format(self.dungeon_cursor.coords))
+            self.process_message('Moving to D {}'.format(self.dungeon_cursor.coords))
         else:
             self.region_cursor = destination
-            self.processMessage('Moving to R {}'.format(self.region_cursor.coords))
+            self.process_message('Moving to R {}'.format(self.region_cursor.coords))
     
-        self.emitCursorUpdate()
+        self.emit_cursor()
         self.persist()
 
-    def historyMap(self):
-        if self.inDungeon():
+    def history_map(self):
+        if self.indungeon():
             for index, row in enumerate(self.dungeon.grid):
                 display = '{}: '.format(str(index).rjust(4, ' '))
 
@@ -460,16 +540,16 @@ class Expedition(Persister):
         neighbors = self.dungeon.getNeighbors(self.dungeon_cursor)
         easyDirections = [n for n in neighbors if n.coords not in self.history]
 
-        self.processMessage('Navigate middle stage: {} - {}'.format(self.dungeon_cursor, easyDirections))
+        self.process_message('Navigate middle stage: {} - {}'.format(self.dungeon_cursor, easyDirections))
 
         if easyDirections:
-            self.processMessage('Simple')
+            self.process_message('Simple')
             return [random.choice(easyDirections)]
         else:
             # time to Dijkstra
-            return self.generatePath(self.dungeon_cursor, self.dungeon)
+            return self.generate_path(self.dungeon_cursor, self.dungeon)
 
-    def generatePath(self, start, grid, target=None):
+    def generate_path(self, start, grid, target=None):
         # just a basic dijkstra implementation that stops once it finds an unexplored cell
 
         if type(start) == tuple:
@@ -520,11 +600,11 @@ class Expedition(Persister):
 
         delta = time.perf_counter() - pathingStart
 
-        self.processMessage('** Pathfinding run complete. Time: {}. Cells examined: {}, Cells remaining: {}'.format(str(delta), count, len(q)))
+        self.process_message('** Pathfinding run complete. Time: {}. Cells examined: {}, Cells remaining: {}'.format(str(delta), count, len(q)))
 
         if not destination:
             # this *shouldn't* be possible as long as mapgen has no significant bugs
-            self.processMessage('Pathfinding did not produce a destination')
+            self.process_message('Pathfinding did not produce a destination')
             return None
         
         path = [destination]

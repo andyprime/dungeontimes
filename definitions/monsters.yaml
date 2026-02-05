@@ -71,6 +71,7 @@ traits:
 moves:
   - BRISTLE
   - SQUARK
+  - THWOMP
 ---
 name: Gelatinous Cube
 code: GELCUBE

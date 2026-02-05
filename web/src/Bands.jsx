@@ -17,7 +17,7 @@ const Bands = function() {
 
       <ul>
       { query.data?.map((band) => (
-        <li key={band.id}><Link to={"/bands/" + band.id}>{band.name}</Link></li>
+        <li key={band.id}><Link to={"/bands/" + band.id}>{band.name}</Link> <p>{band.riches}</p></li>
         )) }
       </ul>
 

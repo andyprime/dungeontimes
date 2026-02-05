@@ -117,6 +117,8 @@ class Delver(Creature):
             self.maxhp = job.hp
             self.currenthp = job.hp
             self.id = str(uuid.uuid1())
+            self.encumberence = 10
+            self.inventory = []
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -133,7 +135,7 @@ class Delver(Creature):
 
     def testThresholds(self, test):
         return (33, 66)
-
+        
     def getSpells(self):
 
         spellIds = []
@@ -148,6 +150,12 @@ class Delver(Creature):
             spells.append(model.Spells.find(id))
 
         return spells
+
+    def can_hold(self, item):
+        return sum([i.weight for i in self.inventory]) + item.weight <= self.encumberence
+
+    def give(self, item):
+        self.inventory.append(item)
 
     def data_format(self):
         return {
@@ -246,6 +254,9 @@ class Band(Persister):
         self.name = core.strings.StringTool.random('band_names')
         self.members = []
         self.completed = 0
+        self.wealth = 0
+        self.lifetime_wealth = 0
+        self.active = True
 
     def can_carouse(self):
         return self.completed > 0
@@ -257,8 +268,31 @@ class Band(Persister):
         return {
             'id': self.id,
             'name': self.name,
-            'members': [m.id for m in self.members]
+            'members': [m.id for m in self.members],
+            'wealth': self.wealth,
+            'lifetime_wealth': self.lifetime_wealth,
+            'active': self.active
         }
+
+    def add_wealth(self, amt):
+        self.wealth += amt
+        self.lifetime_wealth += amt
+
+    def spend_wealth(self, amt):
+        if amt < self.wealth:
+            self.wealth -= amt
+        else:
+            raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
+
+    def has_loot(self):
+        return any([True for mem in self.members if len(mem.inventory) > 0])
+
+    def size(self):
+        return len(self.members)
+
+    def random_member(self, skip=[]):
+        real = [member for member in self.members if member not in skip]
+        return random.choice(real)
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.id)
