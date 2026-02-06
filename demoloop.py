@@ -262,19 +262,23 @@ if __name__ == "__main__":
 
             occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
             available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
-            dungeon = random.choice(available_dungeons)
 
-            exp = core.expedition.Expedition(region, dungeon, band, None)
-            exp.save()
+            if len(available_dungeons) > 0:
+                dungeon = random.choice(available_dungeons)
 
-            exp.register_emitter(emitFn)
-            exp.register_processor(stdout_processor)
-            exp.emit_new()
-            region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
+                exp = core.expedition.Expedition(region, dungeon, band, None)
+                exp.save()
 
-            expeditions[band.id] = exp
+                exp.register_emitter(emitFn)
+                exp.register_processor(stdout_processor)
+                exp.emit_new()
+                region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
 
-            to_do.append({'action': 'exp', 'band': band.id, 'schedule': current_time + TIME_MAP['exp']})
+                expeditions[band.id] = exp
+
+                to_do.append({'action': 'exp', 'band': band.id, 'schedule': current_time + TIME_MAP['exp']})
+            else:
+                region.emit_narrative('{} were going to plan an expedition to the last dungeon but someone beat them to it.')
 
         elif (do['action'] == 'research'):
             d = build_dungeon()
@@ -294,12 +298,20 @@ if __name__ == "__main__":
             # sell a random loot item from one of the band
             band = bands[do['band']]
 
-            for delver in band.members:
+            # make sure to search the members in a random order so this process isn't deterministic
+            order = list(range(0, len(band.members)))
+            random.shuffle(order)
+
+            for i in order:
+                delver = band.members[i]
                 if len(delver.inventory) > 0:
                     item = delver.inventory.pop()
-                    print('!!! selling item: {} at {}'.format(item.name, item.value))
+                    print('Selling item: {} at {}'.format(item.name, item.value))
+                    delver.persist()
                     region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value))
                     band.add_wealth(item.value)
+                    band.persist()
+                    region.emit_band(band)
                     break
 
         elif (do['action'] == 'carouse'):

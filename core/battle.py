@@ -117,7 +117,7 @@ class Battle:
                 self.processMessage('Skipping {}, they are having a rough day'.format(fellah.name))
 
             team_counts = [t.remaining() for t in self.teams.values()]
-            print('!!!!!!!!!!!!!!!!!!!!! {}'.format(team_counts))
+            
             if 0 in team_counts:
                 self.state = Battle.OVER
 

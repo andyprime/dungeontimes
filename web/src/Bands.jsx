@@ -29,9 +29,7 @@ const Bands = function() {
 const Band = function() {
   
   let params = useParams();
-  // let bb = params.bid;
-
-  console.log('bb', params.bid);
+  
   let bandQuery = useQuery({ queryKey: ['bands', params.bid], queryFn: getBands });
   let delverQuery = useQuery({ queryKey: ['delvers', params.bid], queryFn: getDelvers})
 
@@ -45,16 +43,13 @@ const Band = function() {
     let band = bandQuery.data.find((b) => b.id ==params.bid);
     
     if (!!band) {
+      
       return (
         <>
-          <h1>Band Detail</h1>
-
-          {
-            band.name
-          }
+          <h1>{ band.name }</h1>
 
           { delverQuery.data?.map((delver) => (
-            <Delver id={delver.id} d={delver} />
+            <Delver id={delver.id} key={delver.id} d={delver} />
             )) }
 
         </>
@@ -66,11 +61,13 @@ const Band = function() {
 }
 
 const Delver = function({ d }) {
-  console.log(d)
   return (
-    <>
+    <div>
       {d.name}
-    </>
+      <br />
+
+      { d.inventory.length > 0 && <ul>{d.inventory.map((item) => (<li>{item.name}</li>))}</ul> }
+    </div>
     )
 }
 

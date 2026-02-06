@@ -164,7 +164,8 @@ class Delver(Creature):
             'stock': self.stock,
             'job': self.job.code,
             'maxhp': self.maxhp,
-            'currenthp': self.currenthp
+            'currenthp': self.currenthp,
+            'inventory': [i.data_format() for i in self.inventory]
         }
 
     def serialize(self, stringify=False):

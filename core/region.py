@@ -40,8 +40,9 @@ class Region(Persister):
         self.emitters.append(callback)
 
     def emit(self, msg):
+        package = json.dumps(msg)
         for e in self.emitters:
-            e(msg.encode('ASCII'))
+            e(package.encode('ASCII'))
 
     def emit_narrative(self, s, band=None):
         msg = {
@@ -53,7 +54,7 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
     def emit_bands(self):
         msg = {
@@ -62,7 +63,17 @@ class Region(Persister):
                 'region': self.id
             }
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
+
+    def emit_band(self, band):
+        msg = {
+            'type': 'BAND',
+            'context': {
+                'region': self.id,
+                'band': band.id
+            }
+        }
+        self.emit(msg)
 
     def emit_dungeon_locales(self):
         msg = {
@@ -72,7 +83,7 @@ class Region(Persister):
                 'region': self.id
             }
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
     def emit_new_dungeon(self, dungeon):
         msg = {
@@ -82,7 +93,7 @@ class Region(Persister):
                 'dungeon': dungeon.id
             }
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
         # self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
 
@@ -94,8 +105,7 @@ class Region(Persister):
                 'dungeon': did
             }
         }
-        self.emit(json.dumps(msg))
-        # self.emit('DNG-DEL;{}'.format(did))
+        self.emit(msg)
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):

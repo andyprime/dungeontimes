@@ -22,6 +22,13 @@ class Valuable:
         self.value = value
         self.weight = 1
 
+    def data_format(self):
+        return {
+            'name': self.name,
+            'value': self.value,
+            'weight': self.weight
+        }
+
 class Expedition(Persister):
 
     PREP = 'pre'
@@ -116,86 +123,51 @@ class Expedition(Persister):
         for f in self.processors:
             f(message)
        
+    def _build_context(self):
+        context = {
+            'expedition': self.id,
+            'band': self.band.id
+        }
+        if self.indungeon:
+            context['dungeon'] = self.dungeon.id
+        return context
+
     def emit(self, msg):
+        if not msg.get('context', False):
+            msg['context'] = self._build_context()
         package = json.dumps(msg)
         for e in self.emitters:
             e(package.encode('ASCII'))
-
-    # def identified_emit(self, code, msg):
-        # self.emit('{};{};{}'.format(code, self.id, msg))
-
-    def signed_emit(self, msg):
-        msg['context'] = {
-            'expedition': self.id,
-            'dungeon': self.dungeon.id,
-            'band': self.band.id
-        }
-        self.emit(msg)
 
     def emit_cursor(self):
         msg = {
             'type': 'CURSOR',
             'coords': self._get_location(),
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id
-            }
         }
-        loc = self.location()
-        if loc == 'D':
-            msg['context']['dungeon'] = self.dungeon.id
-        else:
-            msg['context']['region'] = self.region.id
         self.emit(msg)
 
-    def emit_narrative(self, s, scope='dungeon'):
+    def emit_narrative(self, s):
         msg = {
             'type': 'NARRATIVE',
             'message': s,
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id                
-            }
         }
-        if scope == 'dungeon':
-            msg['context']['dungeon'] = self.dungeon.id
-        elif scope == 'region':
-            msg['context']['region'] = self.region.id
-        else:
-            # should do something here I guess
-            pass
         self.emit(msg)
 
     def emit_new(self):
         msg = {
             'type': 'EXPEDITION-NEW',
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id,
-                'dungeon': self.dungeon.id
-            }
         }
         self.emit(msg)
 
     def emit_delete(self):
         msg = {
             'type': 'EXPEDITION-DEL',
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id,
-                'dungeon': self.dungeon.id
-            }
         }
         self.emit(msg)
         
     def emit_battle(self, start, roomNo):
         msg = {
             'room': roomNo,
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id,
-                'dungeon': self.dungeon.id
-            }
         }
         if start:
             msg['type'] = 'BATTLE-START'
@@ -206,10 +178,6 @@ class Expedition(Persister):
     def emit_band(self):
         msg = {
             'type': 'BAND',
-            'context': {
-                'expedition': self.id,
-                'band': self.band.id,
-            }
         }
         self.emit(msg)
 
@@ -292,7 +260,7 @@ class Expedition(Persister):
 
     # Home base starting status
     def runstate_pre(self, local):
-        self.emit_narrative('{} does some last minute shopping in town. Always pack a spare {}.'.format(self.band.name, strings.StringTool.random('useful_item')), 'region')
+        self.emit_narrative('{} does some last minute shopping in town. Always pack a spare {}.'.format(self.band.name, strings.StringTool.random('useful_item')))
         self._set_state(Expedition.TRAVEL)
 
     # overland travel
@@ -306,10 +274,10 @@ class Expedition(Persister):
 
         if self.region_cursor == target:
             if self.outgoing:
-                self.emit_narrative('{} has located the entrance to the dungeon.'.format(self.band.name), 'region')
+                self.emit_narrative('{} has located the entrance to the dungeon.'.format(self.band.name))
                 self._set_state(Expedition.READY)
             else:
-                self.emit_narrative('{} has returned home for some well deserved rest.'.format(self.band.name), 'region')
+                self.emit_narrative('{} has returned home for some well deserved rest.'.format(self.band.name))
                 self._set_state(Expedition.COMPLETE)
         elif self.path:
             self.move()
@@ -409,7 +377,7 @@ class Expedition(Persister):
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.process_message, self.signed_emit)
+            self.battle = Battle(self.process_message, self.emit)
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
@@ -436,7 +404,7 @@ class Expedition(Persister):
         for p in self.party:
             p.recuperate()
 
-            # this is piggy backing off the battle update emit for now
+            # this is piggy backing off the battle update emit for now which is why it doesn't get a dedicated function
             body = {
                 'type': 'BATTLE-UPDATE',
                 'context': {
@@ -453,7 +421,7 @@ class Expedition(Persister):
                     'status': p.status
                 }
             }
-            self.emit(json.dumps(body))
+            self.emit(body)
         
         self._set_state(Expedition.SEARCH)
 
@@ -475,8 +443,9 @@ class Expedition(Persister):
 
                     if delver.can_hold(val):
                         delver.give(val)
-
-                    self.emit_narrative('{} found {}'.format(delver.name, val.name))
+                        delver.persist()
+                        self.emit_narrative('{} found {}'.format(delver.name, val.name))
+                        self.emit_band()
                 else:
                     self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)))    
 
