@@ -36,14 +36,15 @@ class Region(Persister):
     def width(self):
         return len(self.grid[0])
 
-    def registerEventEmitter(self, callback):
+    def register_emitter(self, callback):
         self.emitters.append(callback)
 
     def emit(self, msg):
+        package = json.dumps(msg)
         for e in self.emitters:
-            e(msg.encode('ASCII'))
+            e(package.encode('ASCII'))
 
-    def emitNarrative(self, s, band=None):
+    def emit_narrative(self, s, band=None):
         msg = {
             'type': 'NARRATIVE',
             'message': s,
@@ -53,9 +54,28 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
-    def emitDungeonLocales(self):
+    def emit_bands(self):
+        msg = {
+            'type': 'BANDS',
+            'context': {
+                'region': self.id
+            }
+        }
+        self.emit(msg)
+
+    def emit_band(self, band):
+        msg = {
+            'type': 'BAND',
+            'context': {
+                'region': self.id,
+                'band': band.id
+            }
+        }
+        self.emit(msg)
+
+    def emit_dungeon_locales(self):
         msg = {
             'type': 'DUNGEONS',
             'coords': [list(c.coords) for c in self.dungeons.values()],
@@ -63,7 +83,7 @@ class Region(Persister):
                 'region': self.id
             }
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
     def emit_new_dungeon(self, dungeon):
         msg = {
@@ -73,7 +93,7 @@ class Region(Persister):
                 'dungeon': dungeon.id
             }
         }
-        self.emit(json.dumps(msg))
+        self.emit(msg)
 
         # self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
 
@@ -85,8 +105,7 @@ class Region(Persister):
                 'dungeon': did
             }
         }
-        self.emit(json.dumps(msg))
-        # self.emit('DNG-DEL;{}'.format(did))
+        self.emit(msg)
 
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):

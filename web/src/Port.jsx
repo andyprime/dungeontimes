@@ -23,7 +23,7 @@ function Port() {
     let msg = await event.data.text();
     let doc = JSON.parse(msg);
 
-    // ====================================================
+    // =====================================================================================
     if (doc['type'] == 'CURSOR') {
       let expId = doc['context']['expedition'];
       let loc = doc['coords'];
@@ -38,13 +38,19 @@ function Port() {
           : old
       });
 
-    } else if (DUNGEON_EVENTS.includes(doc['type'])) {
+    } 
+    // =====================================================================================
+    else if (DUNGEON_EVENTS.includes(doc['type'])) {
       // console.log('Dungeon event: ', doc);
       queryClient.invalidateQueries(['region']);      
-    } else if (EXP_EVENTS.includes(doc['type'])) {
+    } 
+    // =====================================================================================
+    else if (EXP_EVENTS.includes(doc['type'])) {
       // console.log('Expedition event: ', doc);
       queryClient.invalidateQueries(['expeditions']);
-    } else if (doc['type'] == 'NARRATIVE') {
+    } 
+    // =====================================================================================
+    else if (doc['type'] == 'NARRATIVE') {
       let index = 'region';
       if(!!doc['context']['dungeon']) {
         index = doc['context']['dungeon'];
@@ -62,10 +68,23 @@ function Port() {
       });
 
     } 
+    // =====================================================================================
     else if (BATTLE_EVENTS.includes(doc['type'])) {
       // this is very heavy for updating a single field but its fine for now
       queryClient.invalidateQueries(['expeditions']);
-    } else if (doc['type'] == 'BATTLE-UPDATE') {
+    } 
+    // =====================================================================================
+    else if (doc['type'] == 'BANDS') {
+      // BANDS message indicates a change in the global list of bands, i.e. a new band has formed
+      queryClient.invalidateQueries(['bands']);
+    }
+    else if (doc['type'] == 'BAND') {
+      // currently the BAND message indicates a change to the band itself or a member
+      queryClient.invalidateQueries(['bands', doc['context']['band']]);
+      queryClient.invalidateQueries(['delvers', doc['context']['band']]);
+    }
+    // =====================================================================================
+    else if (doc['type'] == 'BATTLE-UPDATE') {
       let body = doc['details'];
 
       if (body['target'][0] == 'm') {
@@ -98,6 +117,7 @@ function Port() {
             : old
         });
       }
+
     }
 
   }

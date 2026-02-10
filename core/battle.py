@@ -117,6 +117,7 @@ class Battle:
                 self.processMessage('Skipping {}, they are having a rough day'.format(fellah.name))
 
             team_counts = [t.remaining() for t in self.teams.values()]
+            
             if 0 in team_counts:
                 self.state = Battle.OVER
 
@@ -323,27 +324,4 @@ if __name__ == "__main__":
     # seed = '89739eaa-0d70-11ef-899a-3b62a91e32e4'
 
     random.seed(seed)
-    print('Seed : {}'.format(seed))
-
-
-    print(' - Battle Create')
-
-    b = Battle()
-
-    print(' - Add participants')
-
-    for i in range(4):
-        b.addParticipant('monster', core.critters.Monster.random())
-
-    for i in range(4):
-        b.addParticipant('adventurer', core.critters.Delver.random())
-
-    print(' - Start battle')
-
-    b.start()
-
-    while b.state != Battle.OVER:
-        b.round()
-
-    print('Testing complete.')
     print('Seed : {}'.format(seed))
