@@ -2,18 +2,24 @@ import json
 import random
 import uuid
 
-import core.strings
+import core.strings as strings
 from core.dice import Dice
 from core.mdb import Persister
 import definitions.model as model
 
 class Creature(Persister):
 
+    ATTRIBUTES = []
+
+    @classmethod
+    def _build_attr(self):
+        return {attr: Dice.roll('3d6') for attr in self.ATTRIBUTES}
+
     def __init__(self):
         self.status = []
 
     def generateInitiative(self):
-        return Dice.d(1,20)
+        return Dice.roll('1d20')
 
     def __str__(self):
         return self.name + ', ' + self.stock + ' (' + str(self.currenthp) + '/' + str(self.maxhp) +')'
@@ -44,7 +50,7 @@ class Creature(Persister):
             self.currenthp = 0
 
     def applyStatus(self, status, half=False):
-        duration = Dice.d(1,4) + 2
+        duration = Dice.roll('1d4+2')
         if half:
             duration = max(1, int(duration / 2))
         for s in self.status:
@@ -68,9 +74,18 @@ class Creature(Persister):
         self.currenthp = self.maxhp
         self.clearStatus()
 
-    def rollStat(self, stat):
-        target = getattr(self, stat)
-        return Dice.d(1,20) <= target
+    def attribute(self, name):
+        return {
+            'base': self.attr[name],
+            'current': self.calc_attr(name)
+        }
+
+    def attributes(self):
+        return { name: self.attribute(name) for name in type(self).ATTRIBUTES}
+
+    def calc_attr(self, name):
+        # currently we're not modifying these but we will soon
+        return self.attr[name]
 
     def moves(self):
         pass
@@ -93,9 +108,22 @@ class Creature(Persister):
         return t
 
 class Delver(Creature):
+
+    ATTRIBUTES = ['muscularity', 'prowess', 'pendantry', 'diligence', 'cool', 'guile', 'obduracy', 'pizazz']
+
     @classmethod
     def random(self):
-        return Delver(core.strings.StringTool.random('regular_names'), model.Stocks.random(), model.Classes.random())
+        return Delver(strings.StringTool.random('regular_names'), model.Stocks.random(), model.Classes.random())
+
+    @classmethod
+    def random_hobbies(self):
+        hobbies = [strings.StringTool.random('hobbies')]
+        if Dice.roll('1d2') == 2:
+            hobbies.append(strings.StringTool.random('hobbies'))
+        if Dice.roll('1d2') == 2:
+            hobbies.append(strings.StringTool.random('hobbies'))
+        return list(set(hobbies))
+
 
     def __init__(self, name=None, stock=None, job=None, serialized=None):
         super().__init__()
@@ -120,6 +148,14 @@ class Delver(Creature):
             self.id = str(uuid.uuid1())
             self.encumberence = 10
             self.inventory = []
+            self.attr = Delver._build_attr()
+            self.minutia = {
+                'hobbies': Delver.random_hobbies(),
+                'sign': strings.StringTool.random('astrology')
+            }
+
+
+        print(self.attributes())
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -166,7 +202,9 @@ class Delver(Creature):
             'job': self.job.code,
             'maxhp': self.maxhp,
             'currenthp': self.currenthp,
-            'inventory': [i.data_format() for i in self.inventory]
+            'attributes': self.attributes(),
+            'inventory': [i.data_format() for i in self.inventory],
+            'minutia': self.minutia
         }
 
     def serialize(self, stringify=False):
@@ -214,7 +252,7 @@ class Monster(Creature):
             self.currenthp = serialized['chp']
         else:
             self._template = template
-            self.name = core.strings.StringTool.random('monster_' + template.category)
+            self.name = strings.StringTool.random('monster_' + template.category)
             self.stock  = template.name
             self.maxhp = template.hp
             self.currenthp = template.hp
@@ -253,7 +291,7 @@ class Band(Persister):
 
     def __init__(self):
         self.id = str(uuid.uuid1())
-        self.name = core.strings.StringTool.random('band_names')
+        self.name = strings.StringTool.random('band_names')
         self.members = []
         self.completed = 0
         self.wealth = 0

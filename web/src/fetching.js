@@ -98,6 +98,15 @@ const getDelvers = async function({ queryKey }) {
   let [_key, bId] = queryKey;
   let response = await fetch('//' + rootUrl + '/band/' + bId + '/delvers');
   if (!response.ok) {
+    throw new Error('Delvers fetch failed.');
+  }
+  return response.json();
+}
+
+const getDelver = async function({queryKey}) {
+  let [_key, dId] = queryKey;
+  let response = await fetch('//' + rootUrl + '/delver/' + dId);
+  if (!response.ok) {
     throw new Error('Delver fetch failed.');
   }
   return response.json();
@@ -111,4 +120,4 @@ const getExpeditions = async function({ queryKey }) {
   return response.json();
 }
 
-export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getDelvers, getExpeditions }
+export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getDelvers, getDelver, getExpeditions }

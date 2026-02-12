@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query'
 
 import App from './App.jsx';
-import { Bands, Band } from './Bands.jsx';
+import { Bands, Band, Delver } from './Bands.jsx';
 import { Dungeon } from './Dungeon.jsx';
 import { rootUrl } from './fetching.js';
 import { LogContext } from './context.js';
@@ -139,6 +139,7 @@ function Port() {
             <Route path="bands" element={<Bands />}>
               <Route path=":bid" element={<Band />} />
             </Route>
+            <Route path="delvers/:did" element={<Delver />} />
             <Route path="dungeons/:did" element={<Dungeon />} />
           </Routes>
         </BrowserRouter>

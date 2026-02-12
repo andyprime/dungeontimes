@@ -1,6 +1,7 @@
-import yaml
+import argparse
 import random
 import re
+import yaml
 
 '''
      String Tool
@@ -111,8 +112,10 @@ class StringTool:
 
 if __name__ == "__main__":
 
-    for i in range(1, 10):
-        print(StringTool.random('valuables'))
+    parser  = argparse.ArgumentParser(description="Options for running string randomizer tests.")
+    parser.add_argument('-f', '--file', type=str, default="band_names", help="The string file to run.")
+    parser.add_argument('-n', '--number', type=int, default=10, help="Number of strings to generate.")
+    args = parser.parse_args()
 
-    for i in range(1, 10):
-        print(StringTool.random('valuables', indefinite=True))
+    for i in range(1, args.number):
+        print(StringTool.random(args.file))
