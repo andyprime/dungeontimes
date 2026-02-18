@@ -75,6 +75,17 @@ class MongoService:
         else:
             raise ValueError('Did not find collection map for type "{}"'.format(collection))        
 
+    @classmethod
+    def save_event(self, type, uuid, transient, msg):
+        print('Save {}, {}'.format(type, msg))
+        self.db.events.insert_one({
+            'message': msg,
+            'object': uuid,
+            'type': type,
+            'transient': transient
+            })
+
+
 class Persister:
 
     def __init__(self):

@@ -23,6 +23,9 @@ def rabbitHandler(channel, message):
     # print('$$$$$$$ Emit {}'.format(message))
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
+def eventsaver(type, object, transient, msg):
+    MongoService.save_event(type, object, transient, msg)
+
 def stdout_processor(str):
     print('>>> {}'.format(str))
 
@@ -118,8 +121,6 @@ if __name__ == "__main__":
     channel = connection.channel()
     channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
 
-    emitFn = partial(rabbitHandler, channel)
-
     print('Destroying any existing entities.')
     MongoService.db.regions.delete_many({})
     MongoService.db.expeditions.delete_many({})
@@ -127,10 +128,13 @@ if __name__ == "__main__":
     MongoService.db.delvers.delete_many({})
     MongoService.db.bands.delete_many({})
 
+    emitfn = partial(rabbitHandler, channel)
+
     # build region
     region = core.region.RegionGenerate.generate_region()
     region.save()
-    region.register_emitter(emitFn)
+    region.register_emitter(emitfn)
+    region.register_event(partial(eventsaver, 'region', region.id, False))
 
     # build bands
     bands = {}
@@ -269,7 +273,7 @@ if __name__ == "__main__":
                 exp = core.expedition.Expedition(region, dungeon, band, None)
                 exp.save()
 
-                exp.register_emitter(emitFn)
+                exp.register_emitter(emitfn)
                 exp.register_processor(stdout_processor)
                 exp.emit_new()
                 region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)

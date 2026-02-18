@@ -39,6 +39,13 @@ class Region(Persister):
     def register_emitter(self, callback):
         self.emitters.append(callback)
 
+    def register_event(self, callback):
+        self.event_saver = callback
+
+    def save_event(self, msg):
+        if callable(self.event_saver):
+            self.event_saver(msg)
+
     def emit(self, msg):
         package = json.dumps(msg)
         for e in self.emitters:
@@ -54,6 +61,8 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
+        # currently we always want to persist region events
+        self.save_event(msg['message'])
         self.emit(msg)
 
     def emit_bands(self):

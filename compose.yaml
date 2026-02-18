@@ -53,6 +53,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: $RABBIT_USER
       RABBITMQ_DEFAULT_PASS: $RABBIT_PASSWORD
+    user: rabbitmq
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
       interval: 10s
