@@ -14,6 +14,7 @@ class Region(Persister):
         self.id = str(uuid.uuid1())
         self.dungeons = {}
         self.emitters = []
+        self.event_saver = None
 
     def initialize(self, height, width, terrain=None):
         if not terrain:
@@ -42,9 +43,9 @@ class Region(Persister):
     def register_event(self, callback):
         self.event_saver = callback
 
-    def save_event(self, msg):
+    def save_event(self, type, objects, msg):
         if callable(self.event_saver):
-            self.event_saver(msg)
+            self.event_saver(type, objects, msg)
 
     def emit(self, msg):
         package = json.dumps(msg)
@@ -61,8 +62,9 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
-        # currently we always want to persist region events
-        self.save_event(msg['message'])
+            self.save_event('general', [self.id, band], msg['message'])
+        else:
+            self.save_event('general', [self.id], msg['message'])
         self.emit(msg)
 
     def emit_bands(self):

@@ -1,4 +1,5 @@
 import uuid
+import time
 
 from pymongo import MongoClient
 
@@ -76,13 +77,14 @@ class MongoService:
             raise ValueError('Did not find collection map for type "{}"'.format(collection))        
 
     @classmethod
-    def save_event(self, type, uuid, transient, msg):
+    def save_event(self, type, uuids, msg, transient=False):
         print('Save {}, {}'.format(type, msg))
         self.db.events.insert_one({
             'message': msg,
-            'object': uuid,
+            'object': uuids,
             'type': type,
-            'transient': transient
+            'transient': transient,
+            'time': time.time()
             })
 
 

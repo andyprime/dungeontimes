@@ -106,7 +106,7 @@ def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
 @app.get("/delver/{delver_id}/events")
 def read_delver_events(delver_id: UUID, db: Database = Depends(db_session), page: int = 1):
     d = db.events.find({'object': str(delver_id)}, NO_ID).skip( (page - 1) * DEFAULT_PAGING).limit(DEFAULT_PAGING).sort({'_id': -1})
-    return d
+    return list(d)
 
 @app.get('/bands/')
 def read_bands(db: Database = Depends(db_session)):

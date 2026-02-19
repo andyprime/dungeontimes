@@ -112,6 +112,15 @@ const getDelver = async function({queryKey}) {
   return response.json();
 }
 
+const getDelverEvents = async function({queryKey}) {
+  let [_key, dId] = queryKey;
+  let response = await fetch('//' + rootUrl + '/delver/' + dId + '/events');
+  if (!response.ok) {
+    throw new Error('Delver events fetch failed.');
+  }
+  return response.json();
+}
+
 const getExpeditions = async function({ queryKey }) {
   let response = await fetch('//' + rootUrl + '/expeditions');
   if (!response.ok) {
@@ -120,4 +129,4 @@ const getExpeditions = async function({ queryKey }) {
   return response.json();
 }
 
-export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getDelvers, getDelver, getExpeditions }
+export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getDelvers, getDelver, getDelverEvents, getExpeditions }

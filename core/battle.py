@@ -5,6 +5,9 @@ import uuid
 import core.dice
 import core.critters
 
+# this is bad, but the emitter system needs an overhaul so we can live with this for now
+from core.mdb import MongoService 
+
 from definitions.model import Moves
 
 class Team:
@@ -253,6 +256,7 @@ class Battle:
 
         self.processMessage(descriptor)
 
+        MongoService.save_event('battle', [fellah.id, target.id], descriptor, True)
         self.emit({
             'type': 'NARRATIVE',
             'message': descriptor

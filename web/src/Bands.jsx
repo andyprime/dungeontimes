@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, Outlet, useParams } from 'react-router';
 
-import { getBands, getBand, getDelvers, getDelver } from './fetching.js'
+import { getBands, getBand, getDelvers, getDelver, getDelverEvents } from './fetching.js'
 
 const rootUrl = window.location.hostname + ':8081';
 
@@ -73,7 +73,9 @@ const DelverCard = function({ d }) {
 
 const Delver = function({ d }) {
   let params = useParams();
-  let delverQuery = useQuery({ queryKey: ['delver', params.did], queryFn: getDelver})
+  let delverQuery = useQuery({ queryKey: ['delver', params.did], queryFn: getDelver});
+
+  let eventQuery = useQuery({ queryKey: ['delver', params.did, 'events'], queryFn: getDelverEvents});
 
   if (delverQuery.isPending) {
     return <span>Hang on .... </span>
@@ -104,6 +106,10 @@ const Delver = function({ d }) {
         <div>
           <h3>Inventory</h3>
           { delver.inventory.length > 0 && <ul>{delver.inventory.map((item) => (<li>{item.name}</li>))}</ul> }
+        </div>
+        <div>
+          <h3>History</h3>
+          { !!eventQuery.data && <div>{eventQuery.data.map( (event) => (<p key={event.time}>{event.message}</p>)  )}</div> }
         </div>
       </>
       )
