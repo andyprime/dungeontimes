@@ -94,6 +94,15 @@ const getBand = async function({ queryKey }) {
   return response.json();
 }
 
+const getBandEvents = async function({ queryKey }) {
+  let [_key, bId] = queryKey;
+  let response = await fetch('//' + rootUrl + '/band/' + bId + '/events');
+  if (!response.ok) {
+    throw new Error('Band fetch failed.');
+  }
+  return response.json();
+}
+
 const getDelvers = async function({ queryKey }) {
   let [_key, bId] = queryKey;
   let response = await fetch('//' + rootUrl + '/band/' + bId + '/delvers');
@@ -129,4 +138,4 @@ const getExpeditions = async function({ queryKey }) {
   return response.json();
 }
 
-export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getDelvers, getDelver, getDelverEvents, getExpeditions }
+export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getBandEvents, getDelvers, getDelver, getDelverEvents, getExpeditions }

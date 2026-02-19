@@ -133,6 +133,11 @@ def read_band_delvers(band_id: UUID, db: Database = Depends(db_session)):
 
     return delvers
 
+@app.get("/band/{band_id}/events")
+def read_band(band_id: UUID, db: Database = Depends(db_session), page: int = 1):
+    d = db.events.find({'object': str(band_id)}, NO_ID).skip( (page - 1) * DEFAULT_PAGING).limit(DEFAULT_PAGING).sort({'_id': -1})
+    return list(d)
+
 @app.get("/dungeon/")
 def read_dungeons(db: Database = Depends(db_session)):
     ds = []
