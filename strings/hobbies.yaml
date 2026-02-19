@@ -1,0 +1,129 @@
+options:
+  -
+    s: ${sport_mod} ${sport}
+    w: 10
+  -
+    s: ${sport}
+    w: 5
+  -
+    s: collecting ${collection}
+    w: 10
+  -
+    s: ${material} carving
+    w: 10
+  -
+    s: ${fussy_interest}
+    w: 10
+  -
+    s: ${object} ${verb}
+    w: 10
+  -
+    s: miniature ${small_thing} building
+    w: 10
+  -
+    s: ${animal} ${animal_verb}
+    w: 5
+
+sport:
+  - wrestling
+  - pankration
+  - harpastum
+  - axe throwing
+  - spear throwing
+  - track and field
+  - fishing
+  - gymnastics
+  - cow tipping
+  - horse racing
+  - polo
+  - jousting
+  - fencing
+  - curling
+  - boules
+  - lawn bowls
+  - candlepin
+  - skittles
+  - ten-pin
+  - nine-pin
+  - duckpin
+  - bocce
+  - carpet bowls
+  - pétanque
+  - five-pin
+  - keglers
+  - archery
+  - darts
+  - billiards
+  - snooker
+
+sport_mod:
+  - professional
+  - amateur
+  - goblin
+  - high stakes
+
+collection:
+  - curling trading cards
+  - elven figurines
+  - horse figurines
+  - goblin figurins
+  - weird teeth
+  - weird swords
+  - cool knives
+  - orbs
+  - exonumia
+
+material:
+  - scrimshaw
+  - wood
+  - leather
+  - bone
+  - stone
+  - rock
+
+fussy_interest:
+  - numismatics
+  - entomology
+  - falconry
+  - telestics
+
+object:
+  - orb
+  - horse
+  - star
+  - moon
+
+verb:
+  - gazing
+  - pondering
+
+small_thing:
+  - castle
+  - diorama
+  - soldier
+  - terrain
+  - goblin
+
+animal:
+  - dog
+  - cat
+  - horse
+  - goat
+  - hog
+  - auroch
+  - llama
+  - alpaca
+  - rabbit
+  - cavy
+  - capybara
+  - camel
+  - elephant
+  - donkey
+  - bee
+  - marmot
+  - emu
+
+animal_verb:
+  - husbandry
+  - keeping
+  - training

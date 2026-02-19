@@ -14,6 +14,7 @@ class Region(Persister):
         self.id = str(uuid.uuid1())
         self.dungeons = {}
         self.emitters = []
+        self.event_saver = None
 
     def initialize(self, height, width, terrain=None):
         if not terrain:
@@ -39,6 +40,13 @@ class Region(Persister):
     def register_emitter(self, callback):
         self.emitters.append(callback)
 
+    def register_event(self, callback):
+        self.event_saver = callback
+
+    def save_event(self, type, objects, msg):
+        if callable(self.event_saver):
+            self.event_saver(type, objects, msg)
+
     def emit(self, msg):
         package = json.dumps(msg)
         for e in self.emitters:
@@ -54,6 +62,9 @@ class Region(Persister):
         }
         if band:
             msg['context']['band'] = band
+            self.save_event('general', [self.id, band], msg['message'])
+        else:
+            self.save_event('general', [self.id], msg['message'])
         self.emit(msg)
 
     def emit_bands(self):

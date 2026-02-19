@@ -23,6 +23,9 @@ def rabbitHandler(channel, message):
     # print('$$$$$$$ Emit {}'.format(message))
     channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
+def eventsaver(type, object, msg, transient=False):
+    MongoService.save_event(type, object, msg, transient)
+
 def stdout_processor(str):
     print('>>> {}'.format(str))
 
@@ -118,8 +121,6 @@ if __name__ == "__main__":
     channel = connection.channel()
     channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
 
-    emitFn = partial(rabbitHandler, channel)
-
     print('Destroying any existing entities.')
     MongoService.db.regions.delete_many({})
     MongoService.db.expeditions.delete_many({})
@@ -127,10 +128,13 @@ if __name__ == "__main__":
     MongoService.db.delvers.delete_many({})
     MongoService.db.bands.delete_many({})
 
+    emitfn = partial(rabbitHandler, channel)
+
     # build region
     region = core.region.RegionGenerate.generate_region()
     region.save()
-    region.register_emitter(emitFn)
+    region.register_emitter(emitfn)
+    region.register_event(eventsaver)
 
     # build bands
     bands = {}
@@ -167,7 +171,7 @@ if __name__ == "__main__":
             print('Making new band')
             b = build_party()
             bands[b.id] = b
-            region.emit_narrative('Aspiring delvers have formed a new band, {}.'.format(b.name))
+            region.emit_narrative('Aspiring delvers have formed a new band, {}.'.format(b.name), b.id)
             region.emit_bands()
 
         if len(to_do) < len(bands):
@@ -245,10 +249,12 @@ if __name__ == "__main__":
 
 
                 if exp.failed():
-                    region.emit_narrative('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name))
+                    region.emit_narrative('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name), band.id)
                     del bands[band.id]
                     band.active = False
                     band.persist()
+                else:
+                    region.emit_narrative('{} have returned from their daring dungeon expedition.'.format(band.name), band.id)
 
             else:
                 delay = exp.process_turn()
@@ -269,7 +275,7 @@ if __name__ == "__main__":
                 exp = core.expedition.Expedition(region, dungeon, band, None)
                 exp.save()
 
-                exp.register_emitter(emitFn)
+                exp.register_emitter(emitfn)
                 exp.register_processor(stdout_processor)
                 exp.emit_new()
                 region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
@@ -308,7 +314,7 @@ if __name__ == "__main__":
                     item = delver.inventory.pop()
                     print('Selling item: {} at {}'.format(item.name, item.value))
                     delver.persist()
-                    region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value))
+                    region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value), band.id)
                     band.add_wealth(item.value)
                     band.persist()
                     region.emit_band(band)

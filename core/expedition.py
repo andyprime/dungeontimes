@@ -101,6 +101,7 @@ class Expedition(Persister):
 
         self.processors = []
         self.emitters = []
+        self.event_saver = None
 
     def __str__(self):
         return 'Expedition object status: {}. Band: {}, Dungeon:  ({})'.format(self.status, self.band.id, self.dungeon.id)
@@ -113,6 +114,13 @@ class Expedition(Persister):
 
     def register_emitter(self, callback):
         self.emitters.append(callback)
+
+    def register_event(self, callback):
+        self.event_saver = callback
+
+    def save_event(self, type, objects, msg):
+        if callable(self.event_saver):
+            self.event_saver(type, objects, msg)
 
     def prefix(self):
         return self.id[0:10]
@@ -146,11 +154,16 @@ class Expedition(Persister):
         }
         self.emit(msg)
 
-    def emit_narrative(self, s):
+    def emit_narrative(self, s, targets=[]):
         msg = {
             'type': 'NARRATIVE',
             'message': s,
         }
+
+        event_refs = [self.band.id]
+        if targets:
+            event_refs += targets
+        self.save_event('expedition', [self.band.id], s)
         self.emit(msg)
 
     def emit_new(self):
@@ -444,10 +457,10 @@ class Expedition(Persister):
                     if delver.can_hold(val):
                         delver.give(val)
                         delver.persist()
-                        self.emit_narrative('{} found {}'.format(delver.name, val.name))
+                        self.emit_narrative('{} found {}'.format(delver.name, val.name), [delver.id])
                         self.emit_band()
                 else:
-                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)))    
+                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), [delver.id])    
 
                 local['remaining'] = remaining - 1
 

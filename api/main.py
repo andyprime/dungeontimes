@@ -17,6 +17,7 @@ import aio_pika
 
 LOG = logging.getLogger('uvicorn.error')
 NO_ID = {"_id": 0}
+DEFAULT_PAGING = 20
 
 class Settings(BaseSettings):
     api_origins: str = ''
@@ -102,6 +103,11 @@ def read_delver(delver_id: UUID, db: Database = Depends(db_session)):
     d.pop('_id')
     return d
 
+@app.get("/delver/{delver_id}/events")
+def read_delver_events(delver_id: UUID, db: Database = Depends(db_session), page: int = 1):
+    d = db.events.find({'object': str(delver_id)}, NO_ID).skip( (page - 1) * DEFAULT_PAGING).limit(DEFAULT_PAGING).sort({'_id': -1})
+    return list(d)
+
 @app.get('/bands/')
 def read_bands(db: Database = Depends(db_session)):
     bs = []
@@ -126,6 +132,11 @@ def read_band_delvers(band_id: UUID, db: Database = Depends(db_session)):
         d.pop('_id')
 
     return delvers
+
+@app.get("/band/{band_id}/events")
+def read_band(band_id: UUID, db: Database = Depends(db_session), page: int = 1):
+    d = db.events.find({'object': str(band_id)}, NO_ID).skip( (page - 1) * DEFAULT_PAGING).limit(DEFAULT_PAGING).sort({'_id': -1})
+    return list(d)
 
 @app.get("/dungeon/")
 def read_dungeons(db: Database = Depends(db_session)):
@@ -167,10 +178,14 @@ def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
 
 @app.get("/region/")
 def read_region(db: Database = Depends(db_session)):
-    r = db.regions.find_one()
-    r.pop('_id')
+    r = db.regions.find_one({}, NO_ID)
     return r
 
+@app.get("/region/events")
+def read_region_events(db: Database = Depends(db_session), page: int = 1):
+    r = db.regions.find_one({}, NO_ID)
+    d = db.events.find({'object': r['id']}, NO_ID).skip( (page - 1) * DEFAULT_PAGING).limit(DEFAULT_PAGING).sort({'_id': -1})
+    return list(d)
 
 @app.websocket("/feed/dungeon")
 # async def websocket_endpoint(websocket: WebSocket, queue: aio_pika.Queue = Depends(mq_channel)):
