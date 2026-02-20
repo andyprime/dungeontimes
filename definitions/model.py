@@ -47,10 +47,20 @@ class Model:
         raise ValueError('Asked for missing {} with id: {}'.format(self._source, id))
 
     @classmethod
-    def random(self):
+    def random(self, filter=None):
         if len(self._records) == 0:
             self.load()
-        return random.choice(self._records)
+        if callable(filter):
+            return random.choice(self.filter(filter))
+        else:
+            return random.choice(self._records)
+
+    @classmethod
+    def filter(self, callback):
+        if callable(callback):
+            return [r for r in self._records if callback(r)]
+        else:
+            raise ValueError('Can not filter with non-callable argument.')
 
     def __init__(self, props):
         # TODO: maybe complain if we've got a duplicate ID/code/whatev
@@ -161,6 +171,41 @@ class Spells(Model):
             }
         })
 
+class Gear(Model):
+    _source = 'gear.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'slot': Or('head', 'torso', 'hands', 'feet', 'back', 'waist'),
+            'rarity': And(int, lambda n: n >= 0),
+            'value': And(int, lambda n: n >= 0),
+            'sale': bool,
+            'effect': {
+                Optional('style'): And(int, lambda n: n > 0),
+                Optional('armor'): And(int, lambda n: n > 0),
+                Optional('encumberance'): And(int, lambda n: n > 0)
+            }
+        })
+
+class GearMod(Model):
+    _source = 'gearmods.yaml'
+
+    _schema = Schema({
+            'code': And(str, len),
+            'rarity': And(int, lambda n: n >= 0),
+            'prefix': And(str, len),
+            'effect': {
+                Optional('value'): int,
+                Optional('value_mod'): int,
+                Optional('armor'): int,
+                Optional('armor_mod'): int,
+                Optional('style'): int,
+                Optional('style_mod'): int,
+                Optional('rarity'): int
+            }
+
+        })
 
 if __name__ == "__main__":
 
@@ -175,6 +220,13 @@ if __name__ == "__main__":
 
     print('Delvers')
     Classes.load()
+
+    print('Gear')
+    Gear.load()
+
+    print('GearMod')
+    GearMod.load()
+
 
     for monster in Monsters.all():
         for move in monster.moves:

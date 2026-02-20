@@ -1,0 +1,124 @@
+# gear is any equipable item
+#
+# ---------
+#  TORSO
+# ---------
+---
+name: leather armor
+code: leatherarmor
+slot: torso
+rarity: 1
+sale: true
+value: 20
+effect:
+  armor: 1
+---
+name: chain maille
+code: chainmaille
+slot: torso
+rarity: 2
+sale: true
+value: 100
+effect:
+  armor: 3
+---
+name: plate harness
+code: platearmor
+slot: torso
+rarity: 4
+sale: true
+value: 400
+effect:
+  armor: 8
+---
+name: academic robe
+code: acrobe
+slot: torso
+rarity: 2
+sale: true
+value: 60
+effect:
+  armor: 1
+  style: 1
+# ---------
+#  HEAD
+# ---------
+---
+name: leather cap
+code: leatherarmor
+slot: head
+rarity: 1
+sale: true
+value: 10
+effect:
+  armor: 1
+---
+name: mortar board
+code: mortarb
+slot: head
+rarity: 3
+sale: true
+value: 20
+effect:
+  armor: 1
+  style: 1
+---
+name: skull cap
+code: skullcap
+slot: head
+rarity: 2
+sale: true
+value: 40
+effect:
+  armor: 2
+# ---------
+#  HANDS
+# ---------
+---
+name: gauntlets
+code: gauntlets
+slot: hands
+rarity: 2
+sale: true
+value: 20
+effect:
+  armor: 1
+---
+name: bangles
+code: bangles
+slot: hands
+rarity: 1
+sale: true
+value: 10
+effect:
+  style: 1
+# ---------
+#  FEET
+# ---------
+
+# ---------
+#  WAIST
+# ---------
+
+# ---------
+#  BACK
+# ---------
+---
+name: backpack
+code: backpack
+slot: back
+rarity: 1
+sale: true
+value: 20
+effect:
+  encumberance: 4
+---
+name: cloak
+code: cloak
+slot: back
+rarity: 1
+sale: true
+value: 20
+effect:
+  style: 3
+  
