@@ -1,0 +1,24 @@
+---
+name: healing potion
+code: healpotion
+rarity: 2
+value: 20
+application: fast
+effect:
+  healing: 2d6
+---
+name: potion of heroism
+code: pheroism
+rarity: 3
+value: 20
+application: fast
+effect:
+  bonus_hp: 15
+---
+name: healer's kit
+code: healkit
+rarity: 1
+value: 20
+application: slow
+effect:
+  healing: 2d6

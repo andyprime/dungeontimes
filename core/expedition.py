@@ -8,26 +8,7 @@ from core.dungeon.dungeons import Cell
 from core.mdb import Persister
 import core.strings as strings
 from core.dice import Dice
-
-# this is real baby at the moment but it should be useful later on
-class Valuable:
-
-    @classmethod
-    def random(self):
-        val = Dice.roll('3d10')
-        return Valuable(strings.StringTool.random('valuables', indefinite=True), val)
-
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-        self.weight = 1
-
-    def data_format(self):
-        return {
-            'name': self.name,
-            'value': self.value,
-            'weight': self.weight
-        }
+import core.doodads as doodads
 
 class Expedition(Persister):
 
@@ -452,12 +433,25 @@ class Expedition(Persister):
                 success = random.uniform(1, 100) > 50
 
                 if success:
-                    val = Valuable.random()
 
-                    if delver.can_hold(val):
-                        delver.give(val)
+                    type = random.uniform(1, 100)
+
+                    if type < 70:
+                        item = doodads.Valuable.generate()
+                    elif type < 90:
+                        item = doodads.Consumable.generate()
+                    else:
+                        item = doodads.Equipable.generate()
+
+                    if delver.will_wear(item):
+                        delver.wear(item)
                         delver.persist()
-                        self.emit_narrative('{} found {}'.format(delver.name, val.name), [delver.id])
+                        self.emit_narrative('{} found {} and put it on.'.format(delver.name, item.name), [delver.id])
+                        self.emit_band()
+                    elif delver.can_hold(item):
+                        delver.give(item)
+                        delver.persist()
+                        self.emit_narrative('{} found {}'.format(delver.name, item.name), [delver.id])
                         self.emit_band()
                 else:
                     self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), [delver.id])    

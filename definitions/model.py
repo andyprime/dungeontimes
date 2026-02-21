@@ -64,6 +64,7 @@ class Model:
 
     def __init__(self, props):
         # TODO: maybe complain if we've got a duplicate ID/code/whatev
+        self.raw = props
         for prop in props:
             setattr(self, prop, props[prop])
 
@@ -180,7 +181,6 @@ class Gear(Model):
             'slot': Or('head', 'torso', 'hands', 'feet', 'back', 'waist'),
             'rarity': And(int, lambda n: n >= 0),
             'value': And(int, lambda n: n >= 0),
-            'sale': bool,
             'effect': {
                 Optional('style'): And(int, lambda n: n > 0),
                 Optional('armor'): And(int, lambda n: n > 0),
@@ -207,6 +207,21 @@ class GearMod(Model):
 
         })
 
+class Consumable(Model):
+    _source = 'consumables.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'rarity': And(int, lambda n: n >= 0),
+            'value': And(int, lambda n: n >= 0),
+            'application': Or('fast', 'slow'),
+            'effect': {
+                Optional('healing'): And(str, len),
+                Optional('bonus_hp'): And(int, lambda n: n > 0)
+            }
+        })
+
 if __name__ == "__main__":
 
     print('Moves')
@@ -226,6 +241,9 @@ if __name__ == "__main__":
 
     print('GearMod')
     GearMod.load()
+
+    print('Consumable')
+    Consumable.load()
 
 
     for monster in Monsters.all():

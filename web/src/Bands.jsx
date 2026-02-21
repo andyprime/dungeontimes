@@ -111,7 +111,15 @@ const Delver = function({ d }) {
         </div>
         <div>
           <h3>Inventory</h3>
-          { delver.inventory.length > 0 && <ul>{delver.inventory.map((item) => (<li>{item.name}</li>))}</ul> }
+          <ul>
+            <li><b>Gear</b>
+              { delver.gear.length > 0 && <div>{delver.gear.map((item) => (<p>{item.name}</p>))}</div> }
+            </li>
+            <li>
+              <b>Loot</b>
+              { delver.inventory.length > 0 && <div>{delver.inventory.map((item) => (<p>{item.name}</p>))}</div> }
+            </li>
+          </ul>
         </div>
         <div>
           <h3>History</h3>
