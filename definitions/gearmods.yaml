@@ -1,0 +1,57 @@
+# modifiers for gear to create a little variance
+---
+code: heavy
+rarity: 1
+prefix: heavy
+effect:
+  armor: 1
+  style: -1
+  value_mod: 10
+---
+code: stylish
+rarity: 2
+prefix: stylish
+effect:
+  style: 2
+  value_mod: 25
+---
+code: lumpy
+rarity: 3
+prefix: lumpy
+effect:
+  value_mod: -25
+---
+code: gilded
+rarity: 3
+prefix: gilded
+effect:
+  rarity: 1
+  value_mod: 50
+---
+code: plain
+rarity: 1
+prefix: plain
+effect:
+  rarity: -1
+  value_mod: -15
+---
+code: goblin
+rarity: 2
+prefix: goblin
+effect:
+  style: 1
+  value: 10
+---
+code: studded
+rarity: 1
+prefix: studded
+effect:
+  armor: 1
+  value_mod: 10
+---
+code: spikey
+rarity: 2
+prefix: spikey
+effect:
+  pass: pass
+  value_mod: 5

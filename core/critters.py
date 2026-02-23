@@ -140,7 +140,7 @@ class Delver(Creature):
             self.id = serialized['id']
         else:
             self.name = name
-            # note that for the moment stock just contains a name string, this will need to be more involved later
+            self.gear_priority = random.choice(['armor', 'style'])
             self.stock = stock.name
             self.job = job
             self.maxhp = job.hp
@@ -149,13 +149,11 @@ class Delver(Creature):
             self.encumberence = 10
             self.inventory = []
             self.attr = Delver._build_attr()
+            self.gear = {}
             self.minutia = {
                 'hobbies': Delver.random_hobbies(),
                 'sign': strings.StringTool.random('astrology')
             }
-
-
-        print(self.attributes())
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -191,6 +189,38 @@ class Delver(Creature):
     def can_hold(self, item):
         return sum([i.weight for i in self.inventory]) + item.weight <= self.encumberence
 
+    def will_wear(self, item):
+        if item.wearable():
+            slot = item.slot
+            # for now, if we don't have any gear in that slot, go for it
+            if not self.gear.get(slot, False):
+                return True
+            x = self.evaluate_gear(item)
+            y = self.evaluate_gear(self.gear[slot])
+            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('Gear eval: {} {} vs {} {}'.format(item.name, x, self.gear[slot].name, y))
+            if x > y:
+                return True
+
+        return False
+
+    # this returns a numeric value that indicates how good this delver considers this item
+    # note that this function is not intended to be consistent, as in there is no garuantee
+    # that the same item will always return the same number
+    def evaluate_gear(self, item):
+        value = 0
+        # currently we're only deciding between armor and style
+        for prop in ['armor', 'style']:
+            if prop == self.gear_priority:
+                value += item.effect[prop] * random.uniform(1.5, 1.8)
+            else:
+                value += item.effect[prop] * random.uniform(0.6, 0.75)
+
+        return value
+
+    def wear(self, item):
+        self.gear[item.slot] = item
+
     def give(self, item):
         self.inventory.append(item)
 
@@ -203,6 +233,7 @@ class Delver(Creature):
             'maxhp': self.maxhp,
             'currenthp': self.currenthp,
             'attributes': self.attributes(),
+            'gear': [i.data_format() for i in self.gear.values()],
             'inventory': [i.data_format() for i in self.inventory],
             'minutia': self.minutia
         }

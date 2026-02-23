@@ -9,7 +9,6 @@ from schema import Schema, And, Or, Optional
   There might be a better name than model because of that but its not coming to me atm
 '''
 
-
 class Model:
 
     _records = []
@@ -47,16 +46,26 @@ class Model:
         raise ValueError('Asked for missing {} with id: {}'.format(self._source, id))
 
     @classmethod
-    def random(self):
+    def random(self, filter=None):
         if len(self._records) == 0:
             self.load()
-        return random.choice(self._records)
+        if callable(filter):
+            return random.choice(self.filter(filter))
+        else:
+            return random.choice(self._records)
+
+    @classmethod
+    def filter(self, callback):
+        if callable(callback):
+            return [r for r in self._records if callback(r)]
+        else:
+            raise ValueError('Can not filter with non-callable argument.')
 
     def __init__(self, props):
         # TODO: maybe complain if we've got a duplicate ID/code/whatev
+        self.raw = props
         for prop in props:
             setattr(self, prop, props[prop])
-
 
 class Moves(Model):
 
@@ -90,7 +99,6 @@ class Moves(Model):
     def __repr__(self):
         return 'Move ({})'.format(self.code)
 
-
 class Spells(Model):
     _source = 'spells.yaml'
 
@@ -111,7 +119,6 @@ class Critter(Model):
 
 class Delver(Critter):
     pass
-
 
 class Monsters(Critter):
 
@@ -161,6 +168,58 @@ class Spells(Model):
             }
         })
 
+class Gear(Model):
+    _source = 'gear.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'slot': Or('head', 'torso', 'hands', 'feet', 'back', 'waist'),
+            'rarity': And(int, lambda n: n >= 0),
+            'value': And(int, lambda n: n >= 0),
+            'effect': {
+                Optional('pass'): 'pass', # placeholder value
+                Optional('style'): And(int, lambda n: n > 0),
+                Optional('armor'): And(int, lambda n: n > 0),
+                Optional('encumberance'): And(int, lambda n: n > 0),
+                Optional('attribute'): [ And(str, len), And(int, lambda n: n > 0) ]
+            }
+        })
+
+class GearMod(Model):
+    _source = 'gearmods.yaml'
+
+    _schema = Schema({
+            'code': And(str, len),
+            'rarity': And(int, lambda n: n >= 0),
+            'prefix': And(str, len),
+            'effect': {
+                Optional('pass'): 'pass', # placeholder value
+                Optional('value'): int,
+                Optional('value_mod'): int,
+                Optional('armor'): int,
+                Optional('armor_mod'): int,
+                Optional('style'): int,
+                Optional('style_mod'): int,
+                Optional('rarity'): int,
+            }
+
+        })
+
+class Consumable(Model):
+    _source = 'consumables.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'rarity': And(int, lambda n: n >= 0),
+            'value': And(int, lambda n: n >= 0),
+            'application': Or('fast', 'slow'),
+            'effect': {
+                Optional('healing'): And(str, len),
+                Optional('bonus_hp'): And(int, lambda n: n > 0)
+            }
+        })
 
 if __name__ == "__main__":
 
@@ -175,6 +234,15 @@ if __name__ == "__main__":
 
     print('Delvers')
     Classes.load()
+
+    print('Gear')
+    Gear.load()
+
+    print('GearMod')
+    GearMod.load()
+
+    print('Consumable')
+    Consumable.load()
 
     for monster in Monsters.all():
         for move in monster.moves:
@@ -207,12 +275,9 @@ if __name__ == "__main__":
         else:
             pass
 
-
     print('All recorded statuses: {}'.format(set(allStatus)))
-
+    
     print(' --- ')
-
-
     orphanMoves = []
     for move in Moves.all():
         foundIt = False
@@ -235,9 +300,6 @@ if __name__ == "__main__":
         orphanMoves.append(move.name)
 
     print('Moves with no users: {}'.format(set(orphanMoves)))
-
-
-
 
     print(Monsters.all())
     print(Moves.all())

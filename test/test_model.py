@@ -4,7 +4,7 @@ import definitions
 
 # Currently none of the models have any special features unique to them, so this should be enough
 
-@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks'])
+@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Consumable'])
 def test_coreModelFeatures(className):
     c = getattr(definitions.model, className)
 
