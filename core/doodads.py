@@ -3,6 +3,7 @@ import definitions.model as model
 from core.dice import Dice
 import core.strings as strings
 
+
 class Item:
 
     def __init__(self, props):
@@ -29,7 +30,6 @@ class Item:
 
     def __repr__(self):
         return 'Item: {}'.format(self.name)
-
 
 class Equipable(Item):
     
@@ -95,7 +95,6 @@ class Consumable(Item):
         self.code = props['code']
         self.rarity = props['rarity']
         self.effect = props['effect']
-
 
 class Valuable(Item):
 

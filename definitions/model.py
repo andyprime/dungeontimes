@@ -9,7 +9,6 @@ from schema import Schema, And, Or, Optional
   There might be a better name than model because of that but its not coming to me atm
 '''
 
-
 class Model:
 
     _records = []
@@ -68,7 +67,6 @@ class Model:
         for prop in props:
             setattr(self, prop, props[prop])
 
-
 class Moves(Model):
 
     _source = 'moves.yaml'
@@ -101,7 +99,6 @@ class Moves(Model):
     def __repr__(self):
         return 'Move ({})'.format(self.code)
 
-
 class Spells(Model):
     _source = 'spells.yaml'
 
@@ -122,7 +119,6 @@ class Critter(Model):
 
 class Delver(Critter):
     pass
-
 
 class Monsters(Critter):
 
@@ -182,9 +178,11 @@ class Gear(Model):
             'rarity': And(int, lambda n: n >= 0),
             'value': And(int, lambda n: n >= 0),
             'effect': {
+                Optional('pass'): 'pass', # placeholder value
                 Optional('style'): And(int, lambda n: n > 0),
                 Optional('armor'): And(int, lambda n: n > 0),
-                Optional('encumberance'): And(int, lambda n: n > 0)
+                Optional('encumberance'): And(int, lambda n: n > 0),
+                Optional('attribute'): [ And(str, len), And(int, lambda n: n > 0) ]
             }
         })
 
@@ -196,13 +194,14 @@ class GearMod(Model):
             'rarity': And(int, lambda n: n >= 0),
             'prefix': And(str, len),
             'effect': {
+                Optional('pass'): 'pass', # placeholder value
                 Optional('value'): int,
                 Optional('value_mod'): int,
                 Optional('armor'): int,
                 Optional('armor_mod'): int,
                 Optional('style'): int,
                 Optional('style_mod'): int,
-                Optional('rarity'): int
+                Optional('rarity'): int,
             }
 
         })
@@ -245,7 +244,6 @@ if __name__ == "__main__":
     print('Consumable')
     Consumable.load()
 
-
     for monster in Monsters.all():
         for move in monster.moves:
             Moves.find(move)
@@ -277,12 +275,9 @@ if __name__ == "__main__":
         else:
             pass
 
-
     print('All recorded statuses: {}'.format(set(allStatus)))
-
+    
     print(' --- ')
-
-
     orphanMoves = []
     for move in Moves.all():
         foundIt = False
@@ -305,9 +300,6 @@ if __name__ == "__main__":
         orphanMoves.append(move.name)
 
     print('Moves with no users: {}'.format(set(orphanMoves)))
-
-
-
 
     print(Monsters.all())
     print(Moves.all())

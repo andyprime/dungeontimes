@@ -12,6 +12,14 @@ value: 20
 effect:
   armor: 1
 ---
+name: padded armor
+code: parmor
+slot: torso
+rarity: 1
+value: 20
+effect:
+  armor: 1
+---
 name: chain maille
 code: chainmaille
 slot: torso
@@ -86,11 +94,52 @@ effect:
 # ---------
 #  FEET
 # ---------
-
+---
+name: leather boots
+code: lboots
+slot: feet
+rarity: 2
+value: 25
+effect:
+  style: 1
+  armor: 1
+---
+name: sandals
+code: sandals
+slot: feet
+rarity: 1
+value: 15
+effect:
+  style: 1
 # ---------
 #  WAIST
 # ---------
-
+---
+name: belt
+code: belt
+slot: waist
+rarity: 1
+value: 10
+effect:
+  pass: pass
+  style: 1
+---
+name: muscle belt
+code: mbelt
+slot: waist
+rarity: 2
+value: 30
+effect:
+  style: 1
+  attribute: ['muscularity', 1]
+---
+name: sash
+code: sash
+slot: waist
+rarity: 1
+value: 15
+effect:
+  style: 2
 # ---------
 #  BACK
 # ---------
