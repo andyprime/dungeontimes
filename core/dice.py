@@ -2,6 +2,11 @@ import random
 
 class Dice:
 
+    EASE_MAP = {
+        'low': 2,
+        'high': 1
+    }
+
     @classmethod
     def roll(self, s):
         # right now this just handles single die pools with one optional modifier
@@ -25,6 +30,26 @@ class Dice:
         return fin
 
     @classmethod
+    def boundedgamma(self, low, high, ease='low'):
+        # this is all a little over-described in case I need to revisit
+        # side note/todo, the larger the range requested the more likely the ceiling will 
+        # inflate the occurence of the highest result
+        shape = 1
+        scale = Dice.EASE_MAP[ease]
+        expected_mean = shape * scale
+        variance = shape*(scale*scale) # variance is std-dev^2
+        ceiling = expected_mean + 3*variance
+        x = min(random.gammavariate(shape, scale), ceiling - 0.1)
+
+        range_size = high - low + 1
+        band_size = ceiling / range_size
+        p = x / band_size
+        band = int(p)
+        result = low + band
+
+        return result
+
+    @classmethod
     def d(self, n, size=None):
         if size is None:
             return random.randint(1, n)
@@ -35,6 +60,33 @@ class Dice:
             return total
 
 if __name__ == "__main__":
+
+    mean = 3
+    nums = []
+    total = 0
+    runs = 10000
+    for i in range(runs):
+        x = Dice.boundedgamma(1, 3, 'high')
+        nums.append(x)
+        total += x
+
+    print('Mean: {}'.format(total / len(nums)))
+    print('Min: {}'.format(min(nums)))
+    print('Max: {}'.format(max(nums)))
+
+    breakdown = {}
+    for n in nums:
+        m = round(n)
+        if(breakdown.get(m, False)):
+            breakdown[m] += 1
+        else:
+            breakdown[m] = 1
+    
+    print('Base - ')
+    for n, c in sorted(breakdown.items()):
+        print('{}: {} - {}%'.format(n, c, round(c/runs * 100, 2)))
+
+    print('')
 
     print('Test d6')
     for i in range(1,10):
