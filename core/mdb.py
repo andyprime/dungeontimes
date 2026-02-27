@@ -13,7 +13,8 @@ class MongoService:
         '<class \'core.critters.Delver\'>': 'delvers',
         '<class \'core.region.Region\'>': 'regions',
         '<class \'core.expedition.Expedition\'>': 'expeditions',
-        '<class \'core.critters.Band\'>': 'bands'
+        '<class \'core.critters.Band\'>': 'bands',
+        '<class \'core.region.City\'>': 'cities'
     }
 
     @classmethod
@@ -93,15 +94,26 @@ class Persister:
     def __init__(self):
         pass
 
+    def _children(self):
+        return []
+
     def data_format(self):
         raise ValueError('You must override the data_format method.')
 
     def save(self):
         MongoService.save(self)
+
+        for child in self._children():
+            child.save()
+
         return self.id
 
     def persist(self):
         MongoService.persist(self)
+
+        for child in self._children():
+            child.persist()
+
         return self.id
 
     def persist_prop(self, prop, value):

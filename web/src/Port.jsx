@@ -4,11 +4,12 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import App from './App.jsx';
 import { Bands, Band, Delver } from './Bands.jsx';
+import { City } from './City.jsx'
 import { Dungeon } from './Dungeon.jsx';
 import { rootUrl } from './fetching.js';
 import { LogContext } from './context.js';
 
-const DUNGEON_EVENTS = ['DUNGEONS', 'DUNGEON-NEW', 'DUNGEON-DEL'];
+const REGION_EVENTS = ['REGION', 'DUNGEONS', 'DUNGEON-NEW', 'DUNGEON-DEL'];
 const EXP_EVENTS = ['EXPEDITION-NEW', 'EXPEDITIOn-DEL'];
 const BATTLE_EVENTS = ['BATTLE-START', 'BATTLE-END'];
 
@@ -40,13 +41,12 @@ function Port() {
 
     } 
     // =====================================================================================
-    else if (DUNGEON_EVENTS.includes(doc['type'])) {
-      // console.log('Dungeon event: ', doc);
+    else if (REGION_EVENTS.includes(doc['type'])) {
+      // region events are pretty uncommon, so we can probably safely eat the refetch costs
       queryClient.invalidateQueries(['region']);      
     } 
     // =====================================================================================
     else if (EXP_EVENTS.includes(doc['type'])) {
-      // console.log('Expedition event: ', doc);
       queryClient.invalidateQueries(['expeditions']);
     } 
     // =====================================================================================
@@ -141,6 +141,7 @@ function Port() {
             </Route>
             <Route path="delvers/:did" element={<Delver />} />
             <Route path="dungeons/:did" element={<Dungeon />} />
+            <Route path="city" element={<City />} />
           </Routes>
         </BrowserRouter>
       </LogContext>

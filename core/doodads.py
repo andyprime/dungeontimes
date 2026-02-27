@@ -1,5 +1,6 @@
-import definitions.model as model
+import uuid
 
+import definitions.model as model
 from core.dice import Dice
 import core.strings as strings
 
@@ -7,7 +8,7 @@ import core.strings as strings
 class Item:
 
     def __init__(self, props):
-
+        self.id = str(uuid.uuid1())
         self.weight = 1
         self.name = props['name']
         self.value = props['value']
@@ -20,6 +21,7 @@ class Item:
 
     def data_format(self):
         return {
+            'id': self.id,
             'name': self.name,
             'value': self.value,
             'weight': self.weight
@@ -70,6 +72,7 @@ class Equipable(Item):
 
     def data_format(self):
         base = {
+            'id': self.id,
             'slot': self.slot,
             'code': self.code,
             'rarity': self.rarity,

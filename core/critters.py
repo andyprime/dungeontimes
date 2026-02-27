@@ -253,6 +253,29 @@ class Delver(Creature):
         else:
             return c
 
+class Hireling(Creature):
+
+    @classmethod
+    def generate(self, maxquality):
+        return Hireling()
+
+    def __init__(self):
+        super().__init__()
+
+        self.id = str(uuid.uuid1())
+        self.name = strings.StringTool.random('regular_names')
+        self.stock = model.Stocks.random().name
+        self.maxhp = 10
+        self.currenthp = 10
+        self.encumberence = 10
+        self.inventory = []
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'profession': 'hireling'
+        }
 
 class Monster(Creature):
 

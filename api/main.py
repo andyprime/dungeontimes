@@ -179,7 +179,14 @@ def read_expedition_delvers(exp_id: UUID, db: Database = Depends(db_session)):
 @app.get("/region/")
 def read_region(db: Database = Depends(db_session)):
     r = db.regions.find_one({}, NO_ID)
+    c = db.cities.find_one({}, NO_ID)
+    r['city'] = c
     return r
+
+@app.get("/cities/")
+def read_region(db: Database = Depends(db_session)):
+    c = db.cities.find_one({}, NO_ID)
+    return c
 
 @app.get("/region/events")
 def read_region_events(db: Database = Depends(db_session), page: int = 1):

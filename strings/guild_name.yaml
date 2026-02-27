@@ -1,0 +1,46 @@
+options:
+  -
+    s: ${^type} of ${^vocation} and ${^vocation}
+    w: 1
+  -
+    s: ${^adj} ${^type} of ${^vocation} and ${^vocation}
+    w: 1
+  
+type:
+  - guild
+  - union
+  - federation
+  - league
+  - society
+
+adj:
+  - noble
+  - goodly
+  - dignified
+  - charitable
+  - excellent
+  - grand
+  - honorable
+  - august
+  - beneficent
+  - humble
+
+vocation:
+  - lamp lighters
+  - stevedores
+  - porters
+  - chaperones
+  - drivers
+  - custodians
+  - sentries
+  - criers
+  - mourners
+  - barbers
+  - couriers
+  - churls
+  - grooms
+  - hewers
+  - grinders
+  - limners
+  - porters
+  - rat catchers
