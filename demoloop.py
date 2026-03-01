@@ -48,6 +48,7 @@ TIME_MAP = {
     'shop': 20,
     'offload': 20,
     'restock': 5000,
+    'exp_delay': 500 # time after an expedition before a band can start another to allow downtime
 }
 
 
@@ -204,7 +205,7 @@ if __name__ == "__main__":
 
                     occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
                     available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
-                    if len(available_dungeons) > 0:
+                    if len(available_dungeons) > 0 and (band.last_exp == None or band.last_exp + TIME_MAP['exp_delay'] < current_time):
                         options.append('plan')
                     if len(available_dungeons) < int(args.dungeons/2):
                         options.append('research')
@@ -249,6 +250,7 @@ if __name__ == "__main__":
                     band.active = False
                     band.persist()
                 else:
+                    band.last_exp = current_time
                     region.emit_narrative('{} have returned from their daring dungeon expedition.'.format(band.name), band.id)
 
             else:
@@ -306,6 +308,7 @@ if __name__ == "__main__":
                 if len(delver.inventory) > 0:
                     item = delver.inventory.pop()
                     print('Selling item: {} at {}'.format(item.name, item.value))
+                    delver.add_wealth(item.value)
                     delver.persist()
                     region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value), band.id)
                     band.add_wealth(item.value)
@@ -318,7 +321,28 @@ if __name__ == "__main__":
             region.emit_narrative('{} are going on a long bender.'.format(band.name), band.id)
         elif (do['action'] == 'shop'):
             band = bands[do['band']]
-            region.emit_narrative('{} are perusing the markets for the newest delving gear.'.format(band.name), band.id)
+
+            # for the moment we're gonna do a little hack to approximate delver specific actions
+            order = do.get('order', False)
+            if not order:
+                order = list(range(0, len(band.members)))
+                random.shuffle(order)
+
+            delver = band.members[order.pop()]
+
+            shop = random.choice([v for v in region.city.venues if v.type == core.region.Venue.SHOP])
+            options = [i for i in shop.stock if delver.will_buy(i)]
+            item = random.choice(options)
+            delver.purchase(item)
+            delver.persist()
+            region.emit_band(band)
+            region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+
+            # every one gets a turn before we move on
+            if order:
+                to_do.append({'action': 'shop', 'band': band.id, 'schedule': current_time + TIME_MAP['shop'], 'order': order})
+            
+
         elif (do['action'] == 'restock'):
 
             for i in range(5):
