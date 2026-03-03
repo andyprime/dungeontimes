@@ -125,35 +125,27 @@ class Delver(Creature):
         return list(set(hobbies))
 
 
-    def __init__(self, name=None, stock=None, job=None, serialized=None):
+    def __init__(self, name=None, stock=None, job=None):
         super().__init__()
 
-        if serialized:
-            if type(serialized) == str:
-                serialized = json.loads(serialized)
+        self.name = name
+        self.gear_priority = random.choice(['armor', 'style'])
+        self.stock = stock.name
+        self.job = job
+        self.maxhp = job.hp
+        self.currenthp = job.hp
+        self.id = str(uuid.uuid1())
+        self.encumberence = 10
+        self.inventory = []
+        self.wealth = 0
+        self.lifetime_wealth = 0
+        self.attr = Delver._build_attr()
+        self.gear = {}
+        self.minutia = {
+            'hobbies': Delver.random_hobbies(),
+            'sign': strings.StringTool.random('astrology')
+        }
 
-            self.name = serialized['name']
-            self.stock = serialized['stock']
-            self.job = model.Classes.find(serialized['job'])
-            self.maxhp = serialized['maxhp']
-            self.currenthp = serialized['currenthp']
-            self.id = serialized['id']
-        else:
-            self.name = name
-            self.gear_priority = random.choice(['armor', 'style'])
-            self.stock = stock.name
-            self.job = job
-            self.maxhp = job.hp
-            self.currenthp = job.hp
-            self.id = str(uuid.uuid1())
-            self.encumberence = 10
-            self.inventory = []
-            self.attr = Delver._build_attr()
-            self.gear = {}
-            self.minutia = {
-                'hobbies': Delver.random_hobbies(),
-                'sign': strings.StringTool.random('astrology')
-            }
         self.team = None # temp code for battles
 
     def __str__(self):
@@ -186,6 +178,16 @@ class Delver(Creature):
 
         return spells
 
+    def add_wealth(self, amt):
+        self.wealth += amt
+        self.lifetime_wealth += amt
+
+    def spend_wealth(self, amt):
+        if amt < self.wealth:
+            self.wealth -= amt
+        else:
+            raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
+
     def can_hold(self, item):
         return sum([i.weight for i in self.inventory]) + item.weight <= self.encumberence
 
@@ -203,6 +205,29 @@ class Delver(Creature):
                 return True
 
         return False
+
+    def will_buy(self, item):
+        if item.value > self.wealth:
+            return False
+
+        if item.consumable():
+            # consumables
+            return self.can_hold(item) and sum([i.weight for i in self.inventory if i.consumable()]) < self.encumberence / 2
+        elif item.wearable():
+            return self.will_wear(item)
+        else:
+            # this shouldn't happen but just in case
+            return False
+
+    def purchase(self, item):
+        if item.value > self.wealth:
+            raise ValueError('Delver {} spent more money then they had.'.format(self.name))
+
+        self.wealth = int(self.wealth - item.value)
+        if item.consumable():
+            self.give(item)
+        elif item.wearable():
+            self.wear(item)
 
     # this returns a numeric value that indicates how good this delver considers this item
     # note that this function is not intended to be consistent, as in there is no garuantee
@@ -253,6 +278,29 @@ class Delver(Creature):
         else:
             return c
 
+class Hireling(Creature):
+
+    @classmethod
+    def generate(self, maxquality):
+        return Hireling()
+
+    def __init__(self):
+        super().__init__()
+
+        self.id = str(uuid.uuid1())
+        self.name = strings.StringTool.random('regular_names')
+        self.stock = model.Stocks.random().name
+        self.maxhp = 10
+        self.currenthp = 10
+        self.encumberence = 10
+        self.inventory = []
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'profession': 'hireling'
+        }
 
 class Monster(Creature):
 
@@ -325,15 +373,20 @@ class Band(Persister):
         self.name = strings.StringTool.random('band_names')
         self.members = []
         self.completed = 0
+        # wealth and lifetime wealth are the same thing until band level acquisitions become a thing
         self.wealth = 0
         self.lifetime_wealth = 0
         self.active = True
+        self.last_exp = None
 
     def can_carouse(self):
-        return self.completed > 0
+        return self.has_money()
 
     def can_shop(self):
-        return self.completed > 0
+        return self.has_money()
+
+    def has_money(self):
+        return [d for d in self.members if d.wealth > 0]
 
     def data_format(self):
         return {

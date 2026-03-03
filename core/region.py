@@ -2,9 +2,12 @@ import uuid
 import json
 import random
 import time
-from core.mdb import Persister
 
+from core.mdb import Persister
 import core.strings as strings
+from core.dice import Dice
+import core.doodads as doodads
+import core.critters as critters
 
 class Region(Persister):
 
@@ -65,6 +68,15 @@ class Region(Persister):
             self.save_event('general', [self.id, band], msg['message'])
         else:
             self.save_event('general', [self.id], msg['message'])
+        self.emit(msg)
+
+    def emit_self(self):
+        msg = {
+            'type': 'REGION',
+            'context': {
+                'region': self.id
+            }
+        }
         self.emit(msg)
 
     def emit_bands(self):
@@ -191,24 +203,12 @@ class Region(Persister):
             'height': self.height,
             'homebase': self.homebase,
             'dungeons': [list(e.coords) for e in self.dungeons.values()],
-            'cells': json.dumps([c.serialize(False) for c in self.allCells()])
+            'cells': json.dumps([c.serialize(False) for c in self.allCells()]),
+            'city': self.city.id
         }
 
-    def serialize(self, stringify=False):
-        # just need a basic way to encode the dungeon as a single string, nothing fancy
-        box = {
-            'id': self.id,
-            'name': self.name,
-            'width': self.width,
-            'height': self.height,
-            'homebase': self.homebase,
-            'dungeons': [list(e.coords) for e in self.dungeons.values()],
-            'cells': [c.serialize(False) for c in self.allCells()]
-        }
-        if stringify:
-            return json.dumps(box)
-        else:
-            return box
+    def _children(self):
+        return [self.city]
 
 class RCell:
 
@@ -274,9 +274,8 @@ class RCell:
     def __init__(self, type=None):
         if type and type not in RCell.ALL_TYPES:
             raise ValueError('Invalid Region Cell type: {}'.format(type))
-
         self.type = type
-        self.name = None
+        
 
     @property
     def coords(self):
@@ -315,8 +314,6 @@ class RCell:
 
     def serialize(self, stringify=False):
         box = [self.type, self.h, self.w]
-        if self.name:
-            box.append(self.name)
         if stringify:
             return json.dumps(box)
         else:
@@ -327,6 +324,93 @@ class RCell:
 
     def __repr__(self):
         return 'RC {}'.format(self._coords)
+
+
+class City(Persister):
+
+    @classmethod
+    def generate(self):
+        city = City(strings.StringTool.random('city_names'))
+
+        for i in range(0, Dice.roll('1d3+1')):
+            city.venues.append(Venue.generate(Venue.SHOP))
+
+        for i in range(0, Dice.roll('1d3+1')):
+            city.venues.append(Venue.generate(Venue.GUILD))
+
+        return city
+
+    def __init__(self, name):
+        self.id = str(uuid.uuid1())
+        self.name = name
+        self.venues = []
+
+    def data_format(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'venues': [ven.data_format() for ven in self.venues]
+        }
+
+    def __str__(self):
+        return 'City: {}'.format(self.name)
+
+    def __repr__(self):
+        return 'City: {}'.format(self.name)
+
+
+class Venue:
+
+    SHOP = 'shop'
+    GUILD = 'guild'
+
+    GEAR_RATIO = 75
+
+    @classmethod
+    def generate(self, type):
+        v = Venue(strings.StringTool.random('{}_name'.format(type)), type, Dice.boundedgamma(1, 3, 'high'))
+        v.restock()
+        return v
+
+    def __init__(self, name, type, quality):
+        self.id = str(uuid.uuid1())
+        self.name = name
+        self.type = type
+        self.quality = quality
+        self.stock = []
+
+    def restock(self):
+        self.stock = []
+        for i in range(Dice.roll('1d3+3')):
+            item = self.random_item()
+            self.stock.append(item)
+
+    def remove_item(self, item):
+        self.stock.remove(item)
+
+    def random_item(self):
+        if self.type == Venue.SHOP:
+            if Dice.roll('1d100') < Venue.GEAR_RATIO:
+                return doodads.Equipable.generate(self.quality)
+            else:
+                return doodads.Consumable.generate(self.quality)
+        elif self.type == Venue.GUILD:
+            return critters.Hireling.generate(self.quality)
+
+    def data_format(self):
+        return {
+            'name': self.name,
+            'type': self.type,
+            'quality': self.quality,
+            'stock': [item.data_format() for item in self.stock]
+        }
+
+    def __str__(self):
+        return 'Venue: {}, Stock: {}'.format(self.name, len(self.stock))
+
+    def __repr__(self):
+        return 'Venue: {}, Stock: {}'.format(self.name, len(self.stock))
+
 
 class RegionGenerate:
 
@@ -369,8 +453,8 @@ class RegionGenerate:
 
         # friendly reminder we do (y, x) because that's more convenient to display
         region.grid[y][x].type = RCell.CITY
-        region.grid[y][x].name = strings.StringTool.random('city_names')
         region.homebase = (y, x)
+        region.city = City.generate()
 
         # region.prettyPrint()
 

@@ -48,8 +48,8 @@ function App() {
       <h1>Yon Dungeon Tymes</h1>
       
       <ul id="region-buttons">
-        Regions
-        <li><button>{region['name']}</button></li>
+        Cities
+        <li><Link to={"/city/"}><button>{region['city']['name']}</button></Link></li>
       </ul>
       <ul id="bands-buttons"><Link to="/bands">Bands</Link> {bandButtons}</ul>
       <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>

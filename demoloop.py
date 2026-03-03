@@ -11,6 +11,7 @@ import pika
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import core
+from core.dice import Dice
 import core.dungeon.generate
 import core.expedition
 import core.region
@@ -45,7 +46,9 @@ TIME_MAP = {
     'research': 20,
     'carouse': 60,
     'shop': 20,
-    'offload': 20
+    'offload': 20,
+    'restock': 5000,
+    'exp_delay': 500 # time after an expedition before a band can start another to allow downtime
 }
 
 
@@ -127,6 +130,7 @@ if __name__ == "__main__":
     MongoService.db.dungeons.delete_many({})
     MongoService.db.delvers.delete_many({})
     MongoService.db.bands.delete_many({})
+    MongoService.db.cities.delete_many({})
 
     emitfn = partial(rabbitHandler, channel)
 
@@ -159,14 +163,17 @@ if __name__ == "__main__":
 
     to_do = []
     current_time = 1
+
+    for venue in region.city.venues:
+        to_do.append({'action': 'restock', 'venue': venue.id, 'schedule': current_time + TIME_MAP['restock'] + Dice.roll('1d3') * 1000})
+
+    print(to_do)
+
     while True:
         print('New loop, time: {}'.format(current_time))
         dungeon_changes = False
-        # if a party doesn't have a todo, create one
-        # this should only occur when a band has no active expedition
 
-        # print('!!! {}, {}'.format(len(to_do), to_do))
-
+        # 1. Check to see if we lost a band and create a replacement
         if len(bands) < args.bands:
             print('Making new band')
             b = build_party()
@@ -174,58 +181,47 @@ if __name__ == "__main__":
             region.emit_narrative('Aspiring delvers have formed a new band, {}.'.format(b.name), b.id)
             region.emit_bands()
 
-        if len(to_do) < len(bands):
-            print('Band activity check: {}, {}'.format(len(to_do), len(bands)))
-            for band_id, band in bands.items():
-                unbusy = True
-                for action in to_do:
-                    if action['band'] == band_id:
-                        print('Band {} has todo'.format(band.name))
-                        unbusy = False
-                        break
-                
-                if unbusy:
-                    print('Band {} has nothing to do'.format(band.name))
-                    # possible actions
-                    #   - offload loot, takes precedence
-                    #   - plan expedition
-                    #   - carouse
-                    #   - shop
-                    #   - research dungeons
+        # 2. Check to see if any bands don't have anything to do
+        for band_id, band in bands.items():
+            if not any(t.get('band') == band_id for t in to_do):
+                print('Band {} has nothing to do'.format(band.name))
 
+                # possible actions
+                #   - offload loot, takes precedence
+                #   - plan expedition
+                #   - carouse
+                #   - shop
+                #   - research dungeons
 
-                    if band.has_loot():
-                        selected = 'offload'
-                    else:
-                        options = []
+                if band.has_loot():
+                    selected = 'offload'
+                else:
+                    options = []
 
-                        if band.can_carouse():
-                            options.append('carouse')
-                        if band.can_shop():
-                            options.append('shop')
+                    if band.can_carouse():
+                        options.append('carouse')
+                    if band.can_shop():
+                        options.append('shop')
 
-                        occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
-                        available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
-                        if len(available_dungeons) > 0:
-                            options.append('plan')
-                        if len(available_dungeons) < int(args.dungeons/2):
-                            options.append('research')
+                    occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
+                    available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
+                    if len(available_dungeons) > 0 and (band.last_exp == None or band.last_exp + TIME_MAP['exp_delay'] < current_time):
+                        options.append('plan')
+                    if len(available_dungeons) < int(args.dungeons/2):
+                        options.append('research')
 
-                        selected = random.choice(options)
+                    selected = random.choice(options)
 
-                    to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
+                to_do.append({'action': selected, 'band': band_id, 'schedule': current_time + TIME_MAP[selected]})
 
-        # find the soonest action
+        # 3. Find the soonest action
 
         to_do.sort(key=lambda a: a['schedule'])
         do = to_do.pop(0)
         time.sleep(do['schedule'] - current_time)
         current_time = do['schedule']
 
-        # process action
-
-        print('Doing: {}'.format(do))
-
+        # 4. Process action
         if (do['action'] == 'exp'):
             
             band = bands[do['band']]
@@ -254,6 +250,7 @@ if __name__ == "__main__":
                     band.active = False
                     band.persist()
                 else:
+                    band.last_exp = current_time
                     region.emit_narrative('{} have returned from their daring dungeon expedition.'.format(band.name), band.id)
 
             else:
@@ -263,8 +260,6 @@ if __name__ == "__main__":
         elif (do['action'] == 'plan'):
             
             band = bands[do['band']]
-
-            print(expeditions.values())
 
             occupied_dungeons = [e.dungeon.id for e in expeditions.values()]
             available_dungeons = [d for d in dungeons.values() if d.id not in occupied_dungeons]
@@ -313,6 +308,7 @@ if __name__ == "__main__":
                 if len(delver.inventory) > 0:
                     item = delver.inventory.pop()
                     print('Selling item: {} at {}'.format(item.name, item.value))
+                    delver.add_wealth(item.value)
                     delver.persist()
                     region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value), band.id)
                     band.add_wealth(item.value)
@@ -325,7 +321,50 @@ if __name__ == "__main__":
             region.emit_narrative('{} are going on a long bender.'.format(band.name), band.id)
         elif (do['action'] == 'shop'):
             band = bands[do['band']]
-            region.emit_narrative('{} are perusing the markets for the newest delving gear.'.format(band.name), band.id)
+
+            # for the moment we're gonna do a little hack to approximate delver specific actions
+            order = do.get('order', False)
+            if not order:
+                order = list(range(0, len(band.members)))
+                random.shuffle(order)
+
+            delver = band.members[order.pop()]
+
+            shop = random.choice([v for v in region.city.venues if v.type == core.region.Venue.SHOP])
+
+            options = [i for i in shop.stock if delver.will_buy(i)]
+            
+            if len(options):
+                item = random.choice(options)
+
+                delver.purchase(item)
+                shop.remove_item(item)
+
+                delver.persist()
+                region.city.persist()
+                region.emit_band(band)
+                region.emit_self()
+                region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+            else:
+                region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
+
+            # every one gets a turn before we move on
+            if order:
+                to_do.append({'action': 'shop', 'band': band.id, 'schedule': current_time + TIME_MAP['shop'], 'order': order})
+            
+
+        elif (do['action'] == 'restock'):
+
+            for i in range(5):
+                print('!'*50)
+
+            venue = next(v for v in region.city.venues if v.id == do['venue'])
+            venue.restock()
+            region.city.persist()
+            region.emit_self()
+
+            to_do.append({'action': 'restock', 'venue': venue.id, 'schedule': current_time + TIME_MAP['restock'] + Dice.roll('1d3') * 1000})
+
         else:
             print('!!! Unknown loop action: {}'.format(do))
 
