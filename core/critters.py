@@ -213,7 +213,7 @@ class Delver(Creature):
         if item.consumable():
             # consumables
             return self.can_hold(item) and sum([i.weight for i in self.inventory if i.consumable()]) < self.encumberence / 2
-        elif item.equipable():
+        elif item.wearable():
             return self.will_wear(item)
         else:
             # this shouldn't happen but just in case

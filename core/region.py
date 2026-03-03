@@ -385,6 +385,9 @@ class Venue:
             item = self.random_item()
             self.stock.append(item)
 
+    def remove_item(self, item):
+        self.stock.remove(item)
+
     def random_item(self):
         if self.type == Venue.SHOP:
             if Dice.roll('1d100') < Venue.GEAR_RATIO:

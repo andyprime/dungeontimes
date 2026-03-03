@@ -331,12 +331,22 @@ if __name__ == "__main__":
             delver = band.members[order.pop()]
 
             shop = random.choice([v for v in region.city.venues if v.type == core.region.Venue.SHOP])
+
             options = [i for i in shop.stock if delver.will_buy(i)]
-            item = random.choice(options)
-            delver.purchase(item)
-            delver.persist()
-            region.emit_band(band)
-            region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+            
+            if len(options):
+                item = random.choice(options)
+
+                delver.purchase(item)
+                shop.remove_item(item)
+
+                delver.persist()
+                region.city.persist()
+                region.emit_band(band)
+                region.emit_self()
+                region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+            else:
+                region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
 
             # every one gets a turn before we move on
             if order:
