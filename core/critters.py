@@ -178,6 +178,15 @@ class Delver(Creature):
 
         return spells
 
+    def has_loot(self):
+        return any([ True for item in self.inventory if not item.consumable() ])
+
+    def will_carouse(self):
+        return self.wealth > 0
+
+    def will_shop(self):
+        return self.wealth > 0
+
     def add_wealth(self, amt):
         self.wealth += amt
         self.lifetime_wealth += amt
@@ -379,12 +388,6 @@ class Band(Persister):
         self.active = True
         self.last_exp = None
 
-    def can_carouse(self):
-        return self.has_money()
-
-    def can_shop(self):
-        return self.has_money()
-
     def has_money(self):
         return [d for d in self.members if d.wealth > 0]
 
@@ -409,10 +412,13 @@ class Band(Persister):
             raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
 
     def has_loot(self):
-        return any([True for mem in self.members if len(mem.inventory) > 0])
+        return any([True for mem in self.members if mem.has_loot()])
 
     def size(self):
         return len(self.members)
+
+    def get(self, id):
+        return next(m for m in self.members if m.id == id)
 
     def random_member(self, skip=[]):
         real = [member for member in self.members if member not in skip]

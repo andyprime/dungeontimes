@@ -14,9 +14,13 @@ class DungeonMaster:
         'plan': 20,
         'research': 20,
         'carouse': 60,
-        'shop': 20,
+        'shop': (20,30),
+        'train': (60.80),
+        'idle': (60, 80),
         'offload': 20,
         'restock': (5000, 8000),
+        'downtime': 50,
+        'downtime_end': 100,
         'exp_delay': 500 # time after an expedition before a band can start another to allow downtime
     }
 
@@ -143,12 +147,12 @@ class DungeonMaster:
                     if band.has_loot():
                         selected = 'offload'
                     else:
-                        options = []
+                        options = ['downtime']
 
-                        if band.can_carouse():
-                            options.append('carouse')
-                        if band.can_shop():
-                            options.append('shop')
+                        # if band.can_carouse():
+                        #     options.append('carouse')
+                        # if band.can_shop():
+                        #     options.append('shop')
 
                         occupied_dungeons = [e.dungeon.id for e in self.expeditions.values()]
                         available_dungeons = [d for d in self.dungeons.values() if d.id not in occupied_dungeons]
@@ -271,20 +275,53 @@ class DungeonMaster:
                 self.region.emit_band(band)
                 break
 
+    def action_downtime(self, do):
+        band = self.bands[do['id']]
+
+        self.region.emit_narrative('{} split up to get some things done.'.format(band.name))
+
+        partiers = []
+        for delver in band.members:
+            options = ['train', 'idle']
+            if delver.will_carouse():
+                options.append('carouse')
+            if delver.will_shop():
+                options.append('shop')
+
+            selection = random.choice(options)
+            if selection == 'carouse':
+                partiers.append(delver)
+            else:
+                self.new_task(selection, band.id, extras=delver.id)
+
+        if len(partiers):
+            self.new_task('carouse', band.id, extras=[d.id for d in partiers])
+
+        self.new_task('downtime_end', band.id)
+
+    def action_downtime_end(self, do):
+        # we don't really do anything here, this just gets put into the to dos so the band has an active task
+        band = self.bands[do['id']]
+        self.region.emit_narrative('{} are done with their downtime.'.format(band.name))
+
     def action_carouse(self, do):
         band = self.bands[do['id']]
-        self.region.emit_narrative('{} are going on a long bender.'.format(band.name), band.id)
+        delvers = [band.get(d) for d in do['extras']]
+
+        for delver in delvers:
+            delver.spend_wealth(min(delver.wealth, Dice.roll('3d20')))
+
+        if len(delvers) == 1:
+            msg = '{} is going on a long bender.'.format(delvers[0].name)
+        else:
+            first = [d.name for d in delvers[0:len(delvers)-1]].join(', ')
+            msg = '{}, and {} are going on a long bender. '.format(first, delvers[-1].name)
+
+        self.region.emit_narrative(msg, band.id)
         
     def action_shop(self, do):
         band = self.bands[do['id']]
-
-        # for the moment we're gonna do a little hack to approximate delver specific actions
-        order = do.get('extras', {}).get('order', None)
-        if not order:
-            order = list(range(0, len(band.members)))
-            random.shuffle(order)
-
-        delver = band.members[order.pop()]
+        delver = band.get(do['extras'])
 
         shop = random.choice([v for v in self.region.city.venues if v.type == core.region.Venue.SHOP])
 
@@ -303,18 +340,26 @@ class DungeonMaster:
             self.region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
         else:
             self.region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
+    
+    def action_idle(self, do):
+        band = self.bands[do['id']]
+        delver = band.get(do['extras'])
 
-        # every one gets a turn before we move on
-        if order:
-            self.new_task('shop', band.id, extras={'order': order})
-                
+        self.region.emit_narrative('{} spends their free time mostly farting around.'.format(delver.name))
+
+    def action_train(self, do):
+        band = self.bands[do['id']]
+        delver = band.get(do['extras'])
+
+        self.region.emit_narrative('{} went on a training montage.'.format(delver.name))
+
     def action_restock(self, do):
         for i in range(5):
             print('!'*50)
 
-        venue = next(v for v in region.city.venues if v.id == do['venue'])
+        venue = next(v for v in self.region.city.venues if v.id == do['venue'])
         venue.restock()
-        region.city.persist()
-        region.emit_self()
+        self.region.city.persist()
+        self.region.emit_self()
 
-        to_do.append({'action': 'restock', 'venue': venue.id, 'schedule': current_time + TIME_MAP['restock'] + Dice.roll('1d3') * 1000})
+        self.new_task('restock', venue.id)
