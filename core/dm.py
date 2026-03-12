@@ -178,7 +178,7 @@ class DungeonMaster:
 
             # we batch the emission of the dungeon entrance message
             if dungeon_changes:
-                region.emit_dungeon_locales()
+                self.region.emit_dungeon_locales()
 
 
     def action_exp(self, do):
