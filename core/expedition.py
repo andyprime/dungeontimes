@@ -259,8 +259,6 @@ class Expedition(Persister):
 
     # overland travel
     def runstate_trv(self, local):
-        self.process_message('Travel')
-
         if self.outgoing:
             target = self.region.find_dungeon(self.dungeon.id)
         else:
@@ -516,10 +514,7 @@ class Expedition(Persister):
         neighbors = self.dungeon.getNeighbors(self.dungeon_cursor)
         easyDirections = [n for n in neighbors if n.coords not in self.history]
 
-        self.process_message('Navigate middle stage: {} - {}'.format(self.dungeon_cursor, easyDirections))
-
         if easyDirections:
-            self.process_message('Simple')
             return [random.choice(easyDirections)]
         else:
             # time to Dijkstra

@@ -33,6 +33,13 @@ class MongoService:
         return MongoService.COLLECTION_MAP.get(flat_type, False)
 
     @classmethod
+    def hard_reset(self):
+        print('Destroying any existing entities.')
+        for collection in self.COLLECTION_MAP.values():
+            c = getattr(self.db, collection)
+            c.delete_many({})
+        
+    @classmethod
     def save(self, object):
         collection = self.get_collection(object)
 
