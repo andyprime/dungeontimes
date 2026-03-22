@@ -13,7 +13,7 @@ function EventLog({location}) {
 
   return (
     <div id="event-log">
-      <b>Event Log ({location}):</b>
+      <h2>Event Log ({location})</h2>
       { messages }
     </div>
   )

@@ -44,20 +44,11 @@ function App() {
     }
     
     return (
-      <>
-      <h1>Yon Dungeon Tymes</h1>
-      
-      <ul id="region-buttons">
-        Cities
-        <li><Link to={"/city/"}><button>{region['city']['name']}</button></Link></li>
-      </ul>
-      <ul id="bands-buttons"><Link to="/bands">Bands</Link> {bandButtons}</ul>
-      <ul id="dungeon-buttons">Dungeons {dungeonButtons}</ul>
+      <div className="flex flex-col content-center">
+        <RegionMap region={region} cursors={regionCursors} />
 
-      <RegionMap region={region} cursors={regionCursors} />
-
-      <EventLog location='region' />
-      </>
+        <EventLog location='region' />
+      </div>
         )
   }
 }

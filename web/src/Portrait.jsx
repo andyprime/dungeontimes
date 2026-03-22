@@ -17,20 +17,20 @@ function Portrait({type, person}) {
 
   if(type=='delver') {
     return (
-      <li>
+      <div>
         <p>{person.name}</p>
         <p>{person.stock} {JOB_NAMES[person.job]}</p>
         <p>{person.currenthp} / {person.maxhp} {statusLine}</p>
-      </li>
+      </div>
       );
   } else {
     // monster field names are super abbreviated from old attempts to minimize transmit size
     return (
-      <li>
+      <div>
         <p>{person.n}</p>
         <p>{person.t}</p>
         <p>{person.chp} / {person.mhp} {statusLine}</p>
-      </li>
+      </div>
       );
   }
 }

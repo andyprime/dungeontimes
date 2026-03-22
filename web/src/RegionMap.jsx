@@ -88,10 +88,10 @@ function RegionMap({region, cursors}) {
   }, [draw])
 
   return (
-    <>
-    <h3>The Region of {region['name']}</h3>
-    <canvas ref={canvasRef} />
-    </>
+    <div>
+      <h2>{region['name']}</h2>
+      <canvas ref={canvasRef} />
+    </div>
     )
 
 }

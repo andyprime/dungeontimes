@@ -5,7 +5,23 @@ import DungeonMap from './DungeonMap.jsx'
 import Portrait from './Portrait.jsx'
 import EventLog from './EventLog.jsx'
 
-import { getDungeon, getBand, getExpeditions, getDelvers } from './fetching.js'
+import { getDungeon, getDungeons, getBand, getExpeditions, getDelvers } from './fetching.js'
+
+function Dungeons() {
+  let dungeonQuery = useQuery({ queryKey: ['dungeons'], queryFn: getDungeons });
+
+  return (
+    <>
+      <div><h1>Dungeons</h1></div>
+      <div className="grid grid-cols-4 gap-4">
+        { dungeonQuery.data?.map((dungeon) => (
+          <div key={dungeon.id}><Link to={"/dungeons/" + dungeon.id}>{dungeon.name}</Link></div>
+          )) }
+      </div>
+      <Outlet />
+    </>
+    );
+}
 
 function Dungeon() {
   let params = useParams();
@@ -70,11 +86,12 @@ function Dungeon() {
     
     return (
       <>
-        <Link to="/">Back</Link>
         <h1>{dungeon.name}</h1>
         <DungeonMap dungeon={dungeon} cursors={cursors} />
-        { band != null && <div id="theparty" className="group" ><b>{band.name}</b><ul>{delvers}</ul></div> }
-        { inBattle && <div id="thefoes" className="group" ><b>Lurking Foes!</b><ul>{monsters}</ul></div> }
+
+        { band != null && <div id="theparty"><div><h2>{band.name}</h2></div> <div className="grid grid-cols-4 gap-4"> {delvers} </div></div> }
+
+        { inBattle && <div id="thefoes" className="group" ><h2>Lurking Foes!</h2><div className="grid grid-cols-4 gap-4">{monsters}</div></div> }
 
         <EventLog location={dungeon.id} />
       </>
@@ -84,4 +101,4 @@ function Dungeon() {
   }
 }
 
-export { Dungeon }
+export { Dungeon, Dungeons }

@@ -4,4 +4,7 @@
     h1 {
         font-size: var(--text-4xl);
     }
+    h2 {
+        font-size: var(--text-2xl);
+    }
 }

@@ -1,11 +1,11 @@
 import { useContext, useState, useEffect, useRef } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query'
 
 import App from './App.jsx';
 import { Bands, Band, Delver } from './Bands.jsx';
 import { City } from './City.jsx'
-import { Dungeon } from './Dungeon.jsx';
+import { Dungeon, Dungeons } from './Dungeon.jsx';
 import { rootUrl } from './fetching.js';
 import { LogContext } from './context.js';
 
@@ -131,21 +131,35 @@ function Port() {
   }, []);
 
   return (
-    <>
-      <LogContext value={logs}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<App />} />
-            <Route path="bands" element={<Bands />}>
-              <Route path=":bid" element={<Band />} />
-            </Route>
-            <Route path="delvers/:did" element={<Delver />} />
-            <Route path="dungeons/:did" element={<Dungeon />} />
-            <Route path="city" element={<City />} />
-          </Routes>
-        </BrowserRouter>
-      </LogContext>
-    </>
+    <BrowserRouter>
+      <div className="flex flex-col">
+        <header className="flex flex-row">
+          <Link to="/"><div className="py-2 px-4">Yon Dungeon Tymes</div></Link>
+          <Link to="/city/"><button className="py-2 px-4">City</button></Link>
+          <Link to="/bands/"><button className="py-2 px-4">Bands</button></Link>
+          <Link to="/dungeons/"><button className="py-2 px-4">Dungeons</button></Link>
+        </header>
+        <main className="flex flex-grow p-4 justify-center">
+          <div className="flex flex-col min-w-xl">
+            <LogContext value={logs}>
+              
+              <Routes>
+                <Route path="/" element={<App />} />
+                <Route path="bands" element={<Bands />}>
+                  <Route path=":bid" element={<Band />} />
+                </Route>
+                <Route path="delvers/:did" element={<Delver />} />
+                <Route path="dungeons" element={<Dungeons />}>
+                  <Route path=":did" element={<Dungeon />} />
+                </Route>
+                <Route path="city" element={<City />} />
+              </Routes>
+              
+            </LogContext>
+          </div>
+        </main>
+      </div>
+    </BrowserRouter>
     )
 }
 
