@@ -11,4 +11,3 @@ COPY web/package-lock.json .
 RUN npm install
 
 CMD [ "npx",  "vite" ]
-#CMD [ "tail", "-f", "/dev/null"]
