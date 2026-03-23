@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, NavLink } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 
-import './App.css'
 import RegionMap from './RegionMap.jsx'
 import EventLog from './EventLog.jsx'
 import { getRegion, getBands, getDungeons, getExpeditions } from './fetching.js'
