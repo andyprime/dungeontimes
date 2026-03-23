@@ -314,7 +314,7 @@ class DungeonMaster:
         if len(delvers) == 1:
             msg = '{} is going on a long bender.'.format(delvers[0].name)
         else:
-            first = [d.name for d in delvers[0:len(delvers)-1]].join(', ')
+            first = ', '.join(d.name for d in delvers[0:len(delvers)-1])
             msg = '{}, and {} are going on a long bender. '.format(first, delvers[-1].name)
 
         self.region.emit_narrative(msg, band.id)

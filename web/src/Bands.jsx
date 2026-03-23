@@ -11,16 +11,14 @@ const Bands = function() {
 
   return (
     <>
-      <Link to="/">Back</Link>
+      <div><h1>Registered Bands</h1></div>
 
-      <h1>Band List</h1>
-
-      <ul>
-      { query.data?.map((band) => (
-        <li key={band.id}><Link to={"/bands/" + band.id}>{band.name}</Link> <p>{band.riches}</p></li>
-        )) }
-      </ul>
-
+      <div className="grid grid-cols-4 gap-4">
+        { query.data?.map((band) => (
+          <div key={band.id}><Link to={"/bands/" + band.id}>{band.name}</Link> <p>{band.riches}</p></div>
+          )) }
+      </div>
+      
       <Outlet />
     </>
     );
@@ -47,14 +45,16 @@ const Band = function() {
       
       return (
         <>
-          <h1>{ band.name }</h1>
+          <div><h1>{ band.name }</h1></div>
 
-          { delverQuery.data?.map((delver) => (
-            <Link key={delver.id} to={"/delvers/" + delver.id}><DelverCard id={delver.id} d={delver} /></Link>
-            )) }
+          <div className="grid grid-cols-4 gap-4">
+            { delverQuery.data?.map((delver) => (
+              <Link key={delver.id} to={"/delvers/" + delver.id}><DelverCard id={delver.id} d={delver} /></Link>
+              )) }
+          </div>
 
           <div>
-            <h3>History</h3>
+            <h2>History</h2>
             { !!eventQuery.data && <div>{eventQuery.data.map( (event) => (<p key={event.time}>{event.message}</p>)  )}</div> }
           </div>
 
@@ -68,7 +68,7 @@ const Band = function() {
 
 const DelverCard = function({ d }) {
   return (
-    <div style={{margin: '5px', border: '1px solid black'}}>
+    <div className="p-4 bg-gray-200 rounded-lg">
       {d.name}
       <br />
 
@@ -110,7 +110,7 @@ const Delver = function({ d }) {
           </table>
         </div>
         <div>
-          <h3>Inventory</h3>
+          <h2>Inventory</h2>
           <ul>
             <li><b>Gear</b>
               { delver.gear.length > 0 && <div>{delver.gear.map((item) => (<p>{item.name}</p>))}</div> }
@@ -122,7 +122,7 @@ const Delver = function({ d }) {
           </ul>
         </div>
         <div>
-          <h3>History</h3>
+          <h2>History</h2>
           { !!eventQuery.data && <div>{eventQuery.data.map( (event) => (<p key={event.time}>{event.message}</p>)  )}</div> }
         </div>
       </>

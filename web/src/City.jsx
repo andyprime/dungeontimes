@@ -22,8 +22,6 @@ function City() {
 
     return (
       <>
-        <Link to="/">Back</Link>
-
         <h1>{city['name']}</h1>
         
         <h3>Shops</h3>

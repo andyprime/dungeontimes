@@ -40,6 +40,8 @@ services:
       - "${EXTERNAL_WEB_PORT:?error}:80"
     volumes:
       - ./web:/app
+      # - ./web/package.json:/app/package.json
+      # - ./web/package-lock.json:/app/package-lock.json
     environment:
       NODE_ENV: development
 

@@ -192,7 +192,7 @@ class Delver(Creature):
         self.lifetime_wealth += amt
 
     def spend_wealth(self, amt):
-        if amt < self.wealth:
+        if amt <= self.wealth:
             self.wealth -= amt
         else:
             raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
