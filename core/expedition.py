@@ -4,7 +4,7 @@ import time
 import uuid
 
 from core.battle import Battle
-from core.dungeon.dungeons import Cell
+from core.dungeon.dungeons import DungeonCell
 from core.mdb import Persister
 import core.strings as strings
 from core.dice import Dice
@@ -203,8 +203,6 @@ class Expedition(Persister):
             loc['dungeon'] = dc
         rc = self.region_cursor
         if rc:
-            if type(rc) != tuple:
-                rc = rc.coords
             loc['region'] = rc
 
         return loc
@@ -480,7 +478,7 @@ class Expedition(Persister):
             self.process_message('Moving to D {}'.format(self.dungeon_cursor.coords))
         else:
             self.region_cursor = destination
-            self.process_message('Moving to R {}'.format(self.region_cursor.coords))
+            self.process_message('Moving to R {}'.format(self.region_cursor))
     
         self.emit_cursor()
         self.persist()

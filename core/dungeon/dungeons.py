@@ -1,6 +1,9 @@
 import uuid
 import json
 
+from typing import NamedTuple
+from enum import IntEnum
+
 from core.mdb import Persister
 import core.critters
 import core.strings as strings
@@ -16,7 +19,10 @@ class Dungeon(Persister):
         self.id = str(uuid.uuid1())        
         self.grid = []
         self.rooms = []
+        # I'm still not a big fan of the region stuff living in here but not
+        # gonna solve that right now
         self.regionPalette = 1
+        self.region_map = {}
         self.complete = False
 
         self.name = strings.StringTool.random('dungeon_names')
@@ -42,10 +48,7 @@ class Dungeon(Persister):
         for i in range(len(self.grid)):
             self.grid[i] = []
             for j in range(width):
-                border = i == 0 or j == 0 or i == (height - 1) or (j == width - 1)
-                c = Cell(border)
-                c.coords = (i, j)
-                self.grid[i].append(c)
+                self.grid[i].append(DungeonCell(i, j, Tiles.SOLID))
 
     def height(self):
         return len(self.grid)
@@ -57,10 +60,18 @@ class Dungeon(Persister):
         return len(self.rooms)
 
     def getCell(self, x, y):
+        if y < 0 or x < 0:
+            return None
         try:
             return self.grid[x][y]
         except:
             return None
+
+    # Cells are immutable so we can't just update the type during construction
+    def update_cell(self, cell, newtype):
+        newcell = self.grid[cell[0]][cell[1]]._replace(type=newtype)
+        self.grid[cell[0]][cell[1]] = newcell
+        return newcell
 
     def entrance(self):
         for cell in self.allCells():
@@ -131,7 +142,7 @@ class Dungeon(Persister):
             for cell in row:
                 if cell == highlight:
                     display += 'P'
-                elif cell.type == Cell.ROOM:
+                elif cell.type == Tiles.ROOM:
                     room = self.roomAt(cell)
                     roomNumber = self.rooms.index(room) + 1
 
@@ -141,9 +152,9 @@ class Dungeon(Persister):
                     # this could come left a cell when the room no is 2 digits but I've already spent too much time here
                     displayStart = room.coords[1] + int(room.width / 2)
 
-                    if cell.coords[0] == displayLine:
-                        if (cell.coords[1] >= displayStart) and (cell.coords[1] < displayStart + displayLength):
-                            display += str(roomNumber)[cell.coords[1] - displayStart]
+                    if cell[0] == displayLine:
+                        if (cell[1] >= displayStart) and (cell[1] < displayStart + displayLength):
+                            display += str(roomNumber)[cell[1] - displayStart]
                         else:
                             display += cell.symbol()
                     else:
@@ -154,6 +165,9 @@ class Dungeon(Persister):
 
             print(display)
 
+    def region_for(self, cell):
+        return self.region_map.get(cell, None)
+
     def regionPrint(self):
 
         for index, row in enumerate(self.grid):
@@ -161,7 +175,8 @@ class Dungeon(Persister):
             display = '{}: '.format(str(index).rjust(4, ' '))
 
             for cell in row:
-                display += cell.regionSymbol()
+                region = self.region_for(cell)
+                display += cell.regionSymbol(region)
 
             print(display)
 
@@ -176,12 +191,12 @@ class Dungeon(Persister):
         }
 
         cells = {}
-        for t in Cell.realTypes():
+        for t in DungeonCell.REAL:
             code = 't' + str(t)
             cells[code] = []
             for cell in self.allCells():
                 if cell.type == t:
-                    cells[code].append(cell.coords)
+                    cells[code].append((cell.h, cell.w))
         box['cells'] = json.dumps(cells)
 
         return box
@@ -196,7 +211,7 @@ class Dungeon(Persister):
         }
 
         # TODO: save some space by switching to a single string approach
-        for t in Cell.realTypes():
+        for t in DungeonCell.REAL:
             code = 't' + str(t)
             box['cells'][code] = []
             for cell in self.allCells():
@@ -234,10 +249,11 @@ class Dungeon(Persister):
         try:
             for i in range(top_bound, bottom_bound):
                 for j in range(left_bound, right_bound):
-                    if self.grid[i][j].type != Cell.SOLID:
+                    if self.grid[i][j].type != Tiles.SOLID:
                         return False
-        except:
+        except Exception as ex:
             print('Uh oh')
+            print(ex)
             print('TL Coords: {}, {}'.format(coords[0], coords[1]))
             print('BR Coords: {}, {}'.format(coords[0] + room.height, coords[1] + room.width))
             print('Room size: {}, {}'.format(room.height, room.width))
@@ -247,8 +263,6 @@ class Dungeon(Persister):
         return True
 
     def carveRoom(self, room, coords):
-        # we're gonna assume you already ran canRoomFit I guess
-
         room.coords = coords
 
         self.rooms.append(room)
@@ -262,69 +276,50 @@ class Dungeon(Persister):
 
         for i in range(top_bound, bottom_bound):
             for j in range(left_bound, right_bound):
-                self.grid[i][j].type = Cell.ROOM
-                self.grid[i][j].region = self.regionPalette
+                self.update_cell((i, j), Tiles.ROOM)
+                self.region_map[self.grid[i][j]] = self.regionPalette
+                
         self.newRegion()
 
     def carvePassage(self, cell):
-        if type(cell) is tuple:
-            cell = self.getCell(*cell)
-
-        # TODO: maybe throw an exception if its not solid
-        cell.type = Cell.PASSAGE
-        cell.region = self.regionPalette
+        # cells are immutable, so only work with the new one
+        newcell = self.update_cell(cell, Tiles.PASSAGE)
+        self.region_map[newcell] = self.regionPalette
+        return newcell
 
     def isSafeCarvable(self, cell, ignore=[]):
         # safe carvable means it won't create any incidental connections between regions during dungeon gen
         # right now this doesn't test the cell itself, which *shouldn't* be a problem, I hope
         # this also doesn't want to create any diagonal not-exactly-a-connections
 
-        if type(cell) is tuple:
-            cell = self.getCell(*cell)
-
-        if cell.border:
-            return False
-
-        tests = []
-        tests.append( self.getCell(*cell.north()) )
-        tests.append( self.getCell(*cell.south()) )
-        tests.append( self.getCell(*cell.east()) )
-        tests.append( self.getCell(*cell.west()) )
-
-        tests.append( self.getCell(*cell.northWest()) )
-        tests.append( self.getCell(*cell.southWest()) )
-        tests.append( self.getCell(*cell.northEast()) )
-        tests.append( self.getCell(*cell.southEast()) )
-
+        tests = cell.all() + cell.extras()
         for test in tests:
-            c = self.getCell(test.h, test.w)
+            c = self.getCell(test[0], test[1])
             if c in ignore:
                 continue
-
-            if c and c.type != Cell.SOLID:
+            if c:
+                if c.type != Tiles.SOLID:
+                    return False
+            else:
                 return False
         return True
 
     def getPossibleCarves(self, cell, ignores=[]):
-        if type(cell) is tuple:
-            cell = self.getCell(*cell)
-
         options = []
 
         ignores = [self.getCell(*c) for c in cell.all()]
         ignores.append(cell)
 
-        for dir in Cell.directions():
+        for dir in Directions:
             test_cell = self.getCell(*cell.byCode(dir))
 
-            if test_cell.type != Cell.PASSAGE and self.isSafeCarvable(test_cell, ignores):
-                options.append(dir)
+            if test_cell:
+                if test_cell.type != Tiles.PASSAGE and self.isSafeCarvable(test_cell, ignores):
+                    options.append(dir)
 
         return options
 
-
-class Cell:
-
+class Tiles(IntEnum):
     SOLID = 1
     ROOM = 2
     PASSAGE = 3
@@ -332,29 +327,20 @@ class Cell:
     ENTRANCE = 5
     CONNECTOR = 6
 
+class Directions(IntEnum):
     NORTH = 100
     SOUTH = 101
     EAST = 102
     WEST = 103
 
+class DungeonCell(NamedTuple):
+    h: int
+    w: int
+    type: Tiles = Tiles.SOLID
+
     ALL_TYPE = [1, 2, 3, 4, 5, 6]
     NAVIGABLE = [2, 3, 4, 5]
-
-    TRANSLATE = {
-        1: 'solid',
-        2: 'room',
-        3: 'passage',
-        4: 'doorway',
-        5: 'entrance',
-        6: 'BUILD UTIL'
-    }
-
-    TRANSLATE_DIR = {
-        100: 'North',
-        101: 'South',
-        102: 'East',
-        103: 'West'
-    }
+    REAL = [Tiles.ROOM, Tiles.PASSAGE, Tiles.DOORWAY, Tiles.ENTRANCE]
 
     PRETTY = {
         1: '▓',
@@ -365,94 +351,45 @@ class Cell:
         6: '!'
     }
 
-    @classmethod
-    def directions(self):
-        return [self.NORTH, self.SOUTH, self.EAST, self.WEST]
-
-    @classmethod
-    def realTypes(self):
-        return [self.ROOM, self.PASSAGE, self.DOORWAY, self.ENTRANCE]
-
-    def __init__(self, border=False, type=None):
-        if type and type not in Cell.ALL_TYPE:
-            raise ValueError('Invalid Cell type: {}'.format(type))
-        self.type = type
-        # Note that we can't use static variable as parameter defaults in Python, so do this manually
-        if self.type is None:
-            self.type = Cell.SOLID
-        self._coords = None
-        self.h = None
-        self.w = None
-        # TODO: border was a dumb experiment, pull it out
-        self.border = border
-        self.region = None
-
-    @property
-    def coords(self):
-        return self._coords
-
-    @coords.setter
-    def coords(self, coords):
-        self._coords = coords
-        self.h = coords[0]
-        self.w = coords[1]
-
     def symbol(self):
-        if self.border and False:
-            return '#'
-        else:
-            return Cell.PRETTY[self.type]
+        return DungeonCell.PRETTY[self.type]
 
     def positiveSymbol(self):
         # some cell symbols are too blank to appear well when we use a non-standard color to highlight special cells
-        if self.type == Cell.PASSAGE:
-            return Cell.PRETTY[Cell.SOLID]
+        if self.type == Tiles.PASSAGE:
+            return DungeonCell.PRETTY[Tiles.SOLID]
         else:
             return self.symbol()
 
     def navigable(self):
-        return self.type in Cell.NAVIGABLE
+        return self.type in DungeonCell.NAVIGABLE
 
-    def regionSymbol(self):
-        if self.type == Cell.CONNECTOR:
+    # This refers to the region subsystem of dungeon generation not the broader geographic entity
+    def regionSymbol(self, region):
+        if self.type == Tiles.CONNECTOR:
             return '!'
-        elif self.region == None:
-            return Cell.PRETTY[1]
+        elif region == None:
+            return DungeonCell.PRETTY[Tiles.SOLID]
         else:
             # just get a nice unique ascii symbol
-            return chr(33 + self.region)
+            return chr(33 + region)
 
     def north(self):
-        if self.h == 0:
-            return False
-        else:
-            return (self.h - 1, self.w)
+        return (self.h - 1, self.w)
 
     def south(self):
-        if self.h != 0 and self.border:
-            return False
-        else:
-            return (self.h + 1, self.w)
+        return (self.h + 1, self.w)
 
     def west(self):
-        if self.w == 0:
-            return False
-        else:
-            return (self.h, self.w - 1)
+        return (self.h, self.w - 1)
 
     def east(self):
-        if self.w != 0 and self.border:
-            return False
-        else:
-            return (self.h, self.w + 1)
+        return (self.h, self.w + 1)
 
     # note that the diagonals are only used in carvability checks
     # to avoid diagonal connections
     def northEast(self):
-        if self.h == 0:
-            return False
-        else:
-            return (self.h -1, self.w + 1)
+        return (self.h -1, self.w + 1)
 
     def northWest(self):
         return (self.h - 1, self.w - 1)
@@ -467,14 +404,18 @@ class Cell:
         a = [self.north(), self.south(), self.east(), self.west()]
         return [x for x in a if x]
 
+    def extras(self):
+        a = [self.northEast(), self.northWest(), self.southEast(), self.southWest()]
+        return [x for x in a if x]
+
     def byCode(self, code):
-        if code == Cell.NORTH:
+        if code == Directions.NORTH:
             return self.north()
-        elif code == Cell.SOUTH:
+        elif code == Directions.SOUTH:
             return self.south()
-        elif code == Cell.EAST:
+        elif code == Directions.EAST:
             return self.east()
-        elif code == Cell.WEST:
+        elif code == Directions.WEST:
             return self.west()
         else:
             return None
@@ -492,13 +433,6 @@ class Cell:
             return json.dumps([self.type, self.h, self.w])
         else:
             return [self.type, self.h, self.w]
-
-    def __str__(self):
-        # this one is basically just for printing/debug
-        return 'Cell: {}, {}'.format(Cell.TRANSLATE[self.type], self._coords)
-
-    def __repr__(self):
-        return 'C {}'.format(self._coords)
 
 class Room:
 
@@ -549,9 +483,8 @@ class Room:
             return box
 
     def __contains__(self, c):
-        if type(c) == Cell:
-            # print('1 {}, 2{}'.format(c, self.coords))
-            if (c.coords[0] >= self.coords[0] and c.coords[0] < self.coords[0] + self.height) and (c.coords[1] >= self.coords[1] and c.coords[1] < self.coords[1] + self.width):
+        if type(c) == DungeonCell:
+            if (c[0] >= self.coords[0] and c[0] < self.coords[0] + self.height) and (c[1] >= self.coords[1] and c[1] < self.coords[1] + self.width):
                 return True
             else:
                 return False
