@@ -357,7 +357,7 @@ class DungeonMaster:
         for i in range(5):
             print('!'*50)
 
-        venue = next(v for v in self.region.city.venues if v.id == do['venue'])
+        venue = next(v for v in self.region.city.venues if v.id == do['id'])
         venue.restock()
         self.region.city.persist()
         self.region.emit_self()

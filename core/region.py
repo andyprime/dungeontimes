@@ -3,6 +3,9 @@ import json
 import random
 import time
 
+from typing import NamedTuple
+from enum import IntEnum
+
 from core.mdb import Persister
 import core.strings as strings
 from core.dice import Dice
@@ -28,8 +31,7 @@ class Region(Persister):
         for i in range(len(self.grid)):
             self.grid[i] = []
             for j in range(width):
-                c = RCell(RCell.PLAIN)
-                c.coords = (i, j)
+                c = RegionCell(i, j, Terrain.PLAIN)
                 self.grid[i].append(c)
 
     @property
@@ -101,7 +103,7 @@ class Region(Persister):
     def emit_dungeon_locales(self):
         msg = {
             'type': 'DUNGEONS',
-            'coords': [list(c.coords) for c in self.dungeons.values()],
+            'coords': [list(e.just_coords()) for e in self.dungeons.values()],
             'context': {
                 'region': self.id
             }
@@ -140,6 +142,12 @@ class Region(Persister):
         except:
             return None
 
+    # Cells are immutable so we can't just update the type during construction
+    def update_cell(self, cell, newtype):
+        newcell = self.grid[cell[0]][cell[1]]._replace(type=newtype)
+        self.grid[cell[0]][cell[1]] = newcell
+        return newcell
+
     def allCells(self, typeFilter=None, navigable=None):
         bucket = []
         for i in range(0, self.height):
@@ -157,11 +165,11 @@ class Region(Persister):
         return [self.getCell(*x) for x in cell.all() if self.getCell(*x) and self.getCell(*x).navigable()]
 
     def getWeight(self, cell):
-        return RCell.WEIGHT[cell.type]
+        return RegionCell.WEIGHT[cell.type]
 
     def place_dungeon(self, dungeon):
         existing = self.dungeons.values()
-        cells = [c for c in self.allCells() if c.type in RCell.DUNGEON_TYPES and c not in existing]
+        cells = [c for c in self.allCells() if c.type in RegionCell.DUNGEON_TYPES and c not in existing]
         self.dungeons[dungeon.id] = random.choice(cells)
         
     def find_dungeon(self, dungeon_id):
@@ -202,7 +210,7 @@ class Region(Persister):
             'width': self.width,
             'height': self.height,
             'homebase': self.homebase,
-            'dungeons': [list(e.coords) for e in self.dungeons.values()],
+            'dungeons': [list(e.just_coords()) for e in self.dungeons.values()],
             'cells': json.dumps([c.serialize(False) for c in self.allCells()]),
             'city': self.city.id
         }
@@ -210,8 +218,7 @@ class Region(Persister):
     def _children(self):
         return [self.city]
 
-class RCell:
-
+class Terrain(IntEnum):
     CITY = 1
     FARMLAND = 2
     ROAD = 3
@@ -224,6 +231,11 @@ class RCell:
     PLAIN = 10
     TOWN = 11
 
+class RegionCell(NamedTuple):
+    h: int
+    w: int
+    type: Terrain
+    
     ALL_TYPES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     DUNGEON_TYPES = [4, 7, 9, 10]
     NAVIGABLE = [1, 2, 3, 4, 5, 7, 9, 10, 11]
@@ -243,20 +255,6 @@ class RCell:
         11: 'o'
     }
 
-    TRANSLATE = {
-        1: 'City',
-        2: 'Farm',
-        3: 'Road',
-        4: 'Forest',
-        5: 'River',
-        6: 'Water',
-        7: 'Hills',
-        8: 'Mtn.',
-        9: 'Desert',
-        10: 'Plain',
-        11: 'Town'
-    }
-
     WEIGHT = {
         1: 3,
         2: 2,
@@ -271,27 +269,14 @@ class RCell:
         11: 2
     }
 
-    def __init__(self, type=None):
-        if type and type not in RCell.ALL_TYPES:
-            raise ValueError('Invalid Region Cell type: {}'.format(type))
-        self.type = type
-        
-
-    @property
-    def coords(self):
-        return self._coords
-
-    @coords.setter
-    def coords(self, coords):
-        self._coords = coords
-        self.h = coords[0]
-        self.w = coords[1]
+    def just_coords(self):
+        return (self.h, self.w)
 
     def navigable(self):
-        return self.type in RCell.NAVIGABLE
+        return self.type in RegionCell.NAVIGABLE
 
     def symbol(self):
-        return RCell.PRETTY[self.type]
+        return RegionCell.PRETTY[self.type]
 
     def north(self):
         return (self.h - 1, self.w)
@@ -318,13 +303,6 @@ class RCell:
             return json.dumps(box)
         else:
             return box
-
-    def __str__(self):
-        return 'R Cell: {}, {}'.format(RCell.TRANSLATE[self.type], self._coords)
-
-    def __repr__(self):
-        return 'RC {}'.format(self._coords)
-
 
 class City(Persister):
 
@@ -417,7 +395,7 @@ class RegionGenerate:
     DEFAULT_SETTINGS = {
         'DEFAULT_HEIGHT': 40,
         'DEFAULT_WIDTH': 80,
-        'DEFAULT_TERRAIN': RCell.PLAIN,
+        'DEFAULT_TERRAIN': Terrain.PLAIN,
         'TOWN_AMOUNT_RATIO': 0.0021,
         'TOWN_SPACING_RATIO': 0.15,
         'FARMLAND_RADIUS': 3,
@@ -428,7 +406,7 @@ class RegionGenerate:
 
     TOWN_ATTEMPT_CUTOFF = 100
 
-    ROAD_PATH_BLACKLIST = [RCell.TOWN, RCell.CITY]
+    ROAD_PATH_BLACKLIST = [Terrain.TOWN, Terrain.CITY]
 
     @classmethod
     def generate_region(self, options={}):
@@ -452,7 +430,8 @@ class RegionGenerate:
         x = random.randint(width_range[0], width_range[1])
 
         # friendly reminder we do (y, x) because that's more convenient to display
-        region.grid[y][x].type = RCell.CITY
+        region.update_cell((y, x), Terrain.CITY)
+        # region.grid[y][x].type = Terrain.CITY
         region.homebase = (y, x)
         region.city = City.generate()
 
@@ -491,7 +470,8 @@ class RegionGenerate:
 
             if clear:
                 existing_towns.append(placement)
-                region.grid[placement[0]][placement[1]].type = RCell.TOWN
+                region.update_cell((placement[0], placement[1]), Terrain.TOWN)
+                # region.grid[placement[0]][placement[1]].type = RCell.TOWN
                    
         # =============================================================================================
         # self.header('Roads')
@@ -509,14 +489,15 @@ class RegionGenerate:
         # lets not be clever about this
         for cell in region.allCells():
             close_enough = False
-            if self.distance(cell.coords, region.homebase) <= self.CURRENT_SETTINGS['FARMLAND_RADIUS'] + 1:
+            if self.distance(cell, region.homebase) <= self.CURRENT_SETTINGS['FARMLAND_RADIUS'] + 1:
                 close_enough = True
             for town in existing_towns:
-                if self.distance(cell.coords, town) <= self.CURRENT_SETTINGS['FARMLAND_RADIUS']:
+                if self.distance(cell, town) <= self.CURRENT_SETTINGS['FARMLAND_RADIUS']:
                     close_enough = True
 
             if close_enough and cell.type == self.CURRENT_SETTINGS['DEFAULT_TERRAIN']:
-                cell.type = RCell.FARMLAND
+                region.update_cell(cell, Terrain.FARMLAND)
+                # cell.type = Terrain.FARMLAND
 
         # region.prettyPrint()
 
@@ -524,7 +505,7 @@ class RegionGenerate:
         # =============================================================================================
         # self.header('Other Terrain')
 
-        terrain_options = [RCell.FOREST, RCell.HILLS, RCell.MOUNTAIN, RCell.DESERT]
+        terrain_options = [Terrain.FOREST, Terrain.HILLS, Terrain.MOUNTAIN, Terrain.DESERT]
 
         all_locales = existing_towns.copy()
         all_locales.append(region.homebase)
@@ -542,11 +523,11 @@ class RegionGenerate:
 
                 clear = True
                 for pos in all_locales:
-                    if self.distance(pos, cell.coords) <= 4:
+                    if self.distance(pos, cell) <= 4:
                         clear = False
                 if clear:
                     radius = random.randint(4, 8)
-                    self.draw_terrain(region, cell.coords, radius, terrain)
+                    self.draw_terrain(region, cell, radius, terrain)
                     successes += 1
 
         # region.prettyPrint()
@@ -557,8 +538,9 @@ class RegionGenerate:
     @classmethod
     def draw_terrain(self, region, center, radius, type):
         for cell in region.allCells():
-            if self.distance(cell.coords, center) <= radius and cell.type not in RCell.PERSISTENT:
-                cell.type = type
+            if self.distance(cell, center) <= radius and cell.type not in RegionCell.PERSISTENT:
+                region.update_cell(cell, type)
+                # cell.type = type
 
     @classmethod
     def path_road(self, region, homebase, town):
@@ -566,7 +548,8 @@ class RegionGenerate:
 
         for cell in path:
             if cell.type not in self.ROAD_PATH_BLACKLIST:
-                cell.type = RCell.ROAD
+                region.update_cell(cell, Terrain.ROAD)
+                # cell.type = Terrain.ROAD
 
     @classmethod
     def gen_path(self, start, grid, target=None):
@@ -611,7 +594,7 @@ class RegionGenerate:
                 destination = lowest
                 break
             # ideally we'd stop if we hit a road or another town but that can create disconnected road networks
-            elif lowest.type in [RCell.ROAD] and lowest != start:
+            elif lowest.type in [Terrain.ROAD] and lowest != start:
                 destination = lowest
                 break
 
@@ -671,20 +654,27 @@ def road_grid_check(region):
         if None in cells:
             continue
         types = [c.type for c in cells]
-        if types.count(RCell.ROAD) >= 4:
+        if types.count(Terrain.ROAD) >= 4:
             return cells
 
     return False
 
 if __name__ == "__main__":
     
-    print('Generating region')
+    print('Start')
 
-    r = RegionGenerate.generate_region()
+    c = RegionCell(1, 2, Terrain.CITY)
 
-    r.prettyPrint()
+    print(c)
+    print(c.north())
 
-    print(road_grid_check(r))
+    # print('Generating region')
+
+    # r = RegionGenerate.generate_region()
+
+    # r.prettyPrint()
+
+    # print(road_grid_check(r))
 
     # -------------------------------
 

@@ -3,7 +3,8 @@ import uuid
 
 from core.dungeon.dungeons import Dungeon
 from core.dungeon.dungeons import Room
-from core.dungeon.dungeons import Cell
+from core.dungeon.dungeons import DungeonCell
+from core.dungeon.dungeons import Tiles
 import core.critters
 import strings
 
@@ -135,28 +136,27 @@ class DungeonFactoryAlpha:
 
                 cursor = dungeon.getCell(i, j)
 
-                if cursor.type == Cell.SOLID:
-                    e = dungeon.getCell(*cursor.east()).region
-                    w = dungeon.getCell(*cursor.west()).region
-
-                    n = dungeon.getCell(*cursor.north()).region
-                    s = dungeon.getCell(*cursor.south()).region
-
+                if cursor.type == Tiles.SOLID:
+                    e = dungeon.region_for(dungeon.getCell(*cursor.east()))
+                    w = dungeon.region_for(dungeon.getCell(*cursor.west()))
+                    
+                    n = dungeon.region_for(dungeon.getCell(*cursor.north()))
+                    s = dungeon.region_for(dungeon.getCell(*cursor.south()))
+                    
                     if (e != None and w != None and e != w):
-                        cursor.type = Cell.CONNECTOR
+                        dungeon.update_cell(cursor, Tiles.CONNECTOR)
                         connectorCells[(i, j)] = [e, w]
                     elif n != None and s != None and n != s:
-                        cursor.type = Cell.CONNECTOR
+                        dungeon.update_cell(cursor, Tiles.CONNECTOR)
                         connectorCells[(i, j)] = [n, s]
-
 
         # print('After connector creation')
         # dungeon.regionPrint()
-
+        
         # sub step 2: pick a random starting room
         roomCursor = random.choice(dungeon.rooms)
         # that room's region will eventually become the only region as we open doors
-        regionCollapse = dungeon.getCell(*roomCursor.coords).region
+        regionCollapse = dungeon.region_for(dungeon.getCell(*roomCursor.coords))
 
         # print('Collapsing to: {}'.format(regionCollapse))
 
@@ -176,7 +176,7 @@ class DungeonFactoryAlpha:
                 # Try to find a solution first that doesn't involve two adjacent door cells by finding an uncarved cell that could act as a bridge
                 # so we're looking for a solid tile with no adjcaent regions but with neighbors that are adjacent to our main region and any other one
                 remediated = False
-                solids = dungeon.allCells(Cell.SOLID)
+                solids = dungeon.allCells(Tiles.SOLID)
                 for cell in solids:
                     neighbors = cell.all()
                     x = [dungeon.getCell(*n).type for n in neighbors]
@@ -189,7 +189,7 @@ class DungeonFactoryAlpha:
                             c1 = dungeon.getCell(*n1)
                             for n2 in c1.all():
                                 c2 = dungeon.getCell(*n2) 
-                                if c2.type in [Cell.PASSAGE, Cell.ROOM]:
+                                if c2.type in [Tiles.PASSAGE, Tiles.ROOM]:
                                     if c2.region == regionCollapse:
                                         homeOptions.append( (c1, c2.type) )
                                     if c2.region != regionCollapse:
@@ -201,19 +201,19 @@ class DungeonFactoryAlpha:
                             away = random.choice(awayOptions)
                             # now that we've found a valid set of three cells, we can carve them manually
                             # before proceeding onto the region collapse sub-step for our "away" region
-                            cell.type = Cell.PASSAGE
+                            cell.type = Tiles.PASSAGE
                             cell.region = regionCollapse
 
                             homeCell = home[0]
                             homeType = home[1]
-                            homeCell.type = Cell.PASSAGE if homeType == Cell.PASSAGE else Cell.DOORWAY
+                            homeCell.type = Tiles.PASSAGE if homeType == Tiles.PASSAGE else Tiles.DOORWAY
                             homeCell.region = regionCollapse
 
                             awayCell = away[0]
                             awayType = away[1]
                             awayRegion = away[2]
 
-                            awayCell.type = Cell.PASSAGE if awayType == Cell.PASSAGE else Cell.DOORWAY
+                            awayCell.type = Tiles.PASSAGE if awayType == Tiles.PASSAGE else Tiles.DOORWAY
                             awayCell.region = regionCollapse
                             
                             remediated = True
@@ -232,7 +232,7 @@ class DungeonFactoryAlpha:
                 # change the connector into a doorway, it needs a region since it used to be nothing
                 # print('Opening connector at: {}'.format(selectedConnector))
                 selectedCell = dungeon.getCell(*selectedConnector)
-                self.makeDoor(selectedCell, regionCollapse)
+                self.makeDoor(dungeon, selectedCell, regionCollapse)
 
                 # find the region opposite the doorway and collapse it, there should only ever be 2 items in those lists
 
@@ -260,11 +260,11 @@ class DungeonFactoryAlpha:
                 if adjacent:
                     # print('Closing adjacent: {}'.format(coords))
                     toClose = dungeon.getCell(*coords)
-                    toClose.type = Cell.SOLID
+                    dungeon.update_cell(toClose, Tiles.SOLID)
                 elif random.randint(1,100) < self.CURRENT_SETTINGS['CHANCE_EXTRA_DOORWAY']:
                     # print('Making auxillary door at: {}'.format(coords))
                     doorCell = dungeon.getCell(*coords)
-                    self.makeDoor(doorCell, regionCollapse)
+                    self.makeDoor(dungeon, doorCell, regionCollapse)
                     adjacencyChecks.append(doorCell)
 
                     regions = connectorCells[coords]
@@ -274,8 +274,8 @@ class DungeonFactoryAlpha:
                         self.collapseRegion(dungeon, connectorCells, remaining[0], regionCollapse)
                 else:
                     toClose = dungeon.getCell(*coords)
-                    toClose.type = Cell.SOLID
-
+                    dungeon.update_cell(toClose, Tiles.SOLID)
+                   
                 connectorCells.pop(coords)
 
             # dungeon.regionPrint()
@@ -303,11 +303,11 @@ class DungeonFactoryAlpha:
 
             deadends = []
             for cell in dungeon.allCells():
-                if cell.type == Cell.PASSAGE:
+                if cell.type == Tiles.PASSAGE:
                     neighbors = [cell.east(), cell.west(), cell.north(), cell.south()]
                     # paths = [x for x in neighbors if dungeon.getCell(*x).type in [Cell.PASSAGE, Cell.DOORWAY]]
-                    passages = [x for x in neighbors if dungeon.getCell(*x).type == Cell.PASSAGE]
-                    doors = [x for x in neighbors if dungeon.getCell(*x).type == Cell.DOORWAY]
+                    passages = [x for x in neighbors if dungeon.getCell(*x).type == Tiles.PASSAGE]
+                    doors = [x for x in neighbors if dungeon.getCell(*x).type == Tiles.DOORWAY]
 
                     # print('{}, p: {}, d: {}'.format(cell, passages, doors))
                     if len(passages) == 1 and len(doors) == 0:
@@ -322,7 +322,7 @@ class DungeonFactoryAlpha:
                         # print('Skipping whitelisted cell {}'.format(cell))
                         continue
                     else:
-                        cell.type = Cell.SOLID
+                        dungeon.update_cell(cell, Tiles.SOLID)
 
             else:
                 allDone = True
@@ -336,10 +336,10 @@ class DungeonFactoryAlpha:
 
         # this is obviously pretty token, but we're gonna put the entrance into a random hallway cell
 
-        halls = dungeon.allCells(Cell.PASSAGE)
+        halls = dungeon.allCells(Tiles.PASSAGE)
         entrance = random.choice(halls)
-        entrance.type = Cell.ENTRANCE
-
+        dungeon.update_cell(entrance, Tiles.ENTRANCE)
+        
         # print('Now with entrance')
         # dungeon.prettyPrint()
 
@@ -371,9 +371,10 @@ class DungeonFactoryAlpha:
         for i in range(1, dungeon.height() - 1):
             for j in range(1, dungeon.width() - 1):
                 c = dungeon.getCell(i, j)
-                if c.region == regionToCollapse:
-                    c.region = collapseTo
-
+                region = dungeon.region_for(c)
+                if region == regionToCollapse:
+                    dungeon.region_map[c] = collapseTo
+                    
         # The collapsed region no longer exists so we overwrite all instances of it in our mapping
         # don't worry if we end up with two collapseTo regions in the list, those will get removed later [andy: What does this mean?]
         for coords, regionList in connectorCells.items():
@@ -381,10 +382,10 @@ class DungeonFactoryAlpha:
                 connectorCells[coords] = [collapseTo if x == regionToCollapse else x for x in connectorCells[coords]]
 
     @classmethod
-    def makeDoor(self, cell, region):
-        cell.type = Cell.DOORWAY
-        cell.region = region
-
+    def makeDoor(self, dungeon, cell, region):
+        dungeon.update_cell(cell, Tiles.DOORWAY)
+        dungeon.region_map[cell] = region
+        
     @classmethod
     def startGrowingTree(self, start, dungeon):
         '''
@@ -398,9 +399,9 @@ class DungeonFactoryAlpha:
         low "river" factor but a long windy solution.
         '''
 
-        dungeon.carvePassage(start)
-        cursor = start
-        pile = [start]
+        # cells are immutable so we get a fresh boy back
+        cursor = dungeon.carvePassage(start)
+        pile = [cursor]
 
         previous_direction = None
 
@@ -422,7 +423,6 @@ class DungeonFactoryAlpha:
 
 
             options = dungeon.getPossibleCarves(cursor)
-            # print('Options: {}'.format(options))
 
             if len(options) == 0:
                 # this node is exhausted, remove it from the pile
@@ -442,9 +442,9 @@ class DungeonFactoryAlpha:
             next_cell = dungeon.getCell(*cursor.byCode(direction))
 
             # print('Next cell selected: {}'.format(next_cell))
-            pile.append(next_cell)
-            dungeon.carvePassage(next_cell)
-
+            newcell = dungeon.carvePassage(next_cell)
+            pile.append(newcell)
+            
         # print('Pile is empty')
 
     @classmethod
@@ -467,3 +467,9 @@ class DungeonFactoryAlpha:
         s += ' {} '.format(title)
         s = s.ljust(156, '=')
         # print(s)
+
+if __name__ == "__main__":
+
+    dungeon = DungeonFactoryAlpha.generateDungeon()
+
+    dungeon.prettyPrint()
