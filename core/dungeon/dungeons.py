@@ -75,7 +75,7 @@ class Dungeon(Persister):
 
     def entrance(self):
         for cell in self.allCells():
-            if cell.type == Cell.ENTRANCE:
+            if cell.type == Tiles.ENTRANCE:
                 return cell
 
     def allCells(self, typeFilter=None, navigable=None):
@@ -425,7 +425,7 @@ class DungeonCell(NamedTuple):
 
     def isRoom(self):
         # just a convenience function for accessing classes not to have to do the test themselves
-        return self.type == Cell.ROOM
+        return self.type == Tiles.ROOM
 
     def serialize(self, stringify=False):
         # not gonna json dump it since the dungeon side will do that

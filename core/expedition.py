@@ -198,8 +198,6 @@ class Expedition(Persister):
         # can't fix the cell/tuple problem here so just detect it
         dc = self.dungeon_cursor
         if dc:
-            if type(dc) != tuple:
-                dc = dc.coords
             loc['dungeon'] = dc
         rc = self.region_cursor
         if rc:
@@ -279,7 +277,7 @@ class Expedition(Persister):
     def runstate_rdy(self, local):
         self.emit_narrative('The band enters the dungeon, adjusting to the dim light.')
         self.dungeon_cursor = self.dungeon.entrance()
-        self.history.append(self.dungeon_cursor.coords)
+        self.history.append(self.dungeon_cursor)
         self.path = []
         self._set_state(Expedition.EXPLORE)
 
@@ -299,17 +297,17 @@ class Expedition(Persister):
             self.move()
 
             if self.dungeon_cursor.isRoom():
-                if self.dungeon_cursor.coords not in self.history:
+                if self.dungeon_cursor not in self.history:
                     self.emit_narrative('The band has encountered an unexplored room. Get the lanterns ready.')
                     self._set_state(Expedition.ENCOUNTER)
 
                 # TODO: move this to the encounter complete section?
                 for cell in self.dungeon.roomBrethren(self.dungeon_cursor):
                     if cell not in self.history:
-                        self.history.append(cell.coords)
+                        self.history.append(cell)
 
             else:
-                self.history.append(self.dungeon_cursor.coords)
+                self.history.append(self.dungeon_cursor)
         else:
             self.process_message('Moving algorithm did not produce a destination')
             self._set_state(Expedition.ERROR)
@@ -475,7 +473,7 @@ class Expedition(Persister):
 
         if self.location() == 'D':
             self.dungeon_cursor = destination
-            self.process_message('Moving to D {}'.format(self.dungeon_cursor.coords))
+            self.process_message('Moving to D {}'.format(self.dungeon_cursor))
         else:
             self.region_cursor = destination
             self.process_message('Moving to R {}'.format(self.region_cursor))
@@ -493,7 +491,7 @@ class Expedition(Persister):
                         display += 'P'
                     elif self.path and cell in self.path:
                         display += '\033[93m' + cell.positiveSymbol() + '\033[0m'
-                    elif cell.coords in self.history:
+                    elif cell in self.history:
                         display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
                     else:
                         display += cell.symbol()
@@ -510,7 +508,7 @@ class Expedition(Persister):
         # otherwise find the closest unexplored cell and chart a course to there
 
         neighbors = self.dungeon.getNeighbors(self.dungeon_cursor)
-        easyDirections = [n for n in neighbors if n.coords not in self.history]
+        easyDirections = [n for n in neighbors if n not in self.history]
 
         if easyDirections:
             return [random.choice(easyDirections)]
@@ -554,7 +552,7 @@ class Expedition(Persister):
             if target and lowest == target:
                 destination = lowest
                 break
-            elif not target and lowest.coords not in self.history:
+            elif not target and lowest not in self.history:
                 destination = lowest
                 break
 

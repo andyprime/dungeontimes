@@ -654,7 +654,7 @@ def road_grid_check(region):
         if None in cells:
             continue
         types = [c.type for c in cells]
-        if types.count(RCell.ROAD) >= 4:
+        if types.count(Terrain.ROAD) >= 4:
             return cells
 
     return False
