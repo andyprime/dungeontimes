@@ -62,22 +62,22 @@ services:
       retries: 3
       timeout: 30s
 
-  dm:
-    build:
-      context: .
-      dockerfile: containers/dev/dm/Dockerfile
-    volumes: 
-      - ./:/code
-    environment:
-      MONGO_USER: $MONGO_USER
-      MONGO_PASSWORD: $MONGO_PASSWORD
-      MONGO_HOST: $MONGO_HOST
-      MONGO_PORT: $MONGO_PORT
-      API_ORIGINS: $API_ORIGINS
-      RABBIT_USER: $RABBIT_USER
-      RABBIT_PASSWORD: $RABBIT_PASSWORD
-      RABBIT_HOST: $RABBIT_HOST
-    depends_on:
-      rabbit:
-        condition: service_healthy
-        restart: true
+  # dm:
+  #   build:
+  #     context: .
+  #     dockerfile: containers/dev/dm/Dockerfile
+  #   volumes: 
+  #     - ./:/code
+  #   environment:
+  #     MONGO_USER: $MONGO_USER
+  #     MONGO_PASSWORD: $MONGO_PASSWORD
+  #     MONGO_HOST: $MONGO_HOST
+  #     MONGO_PORT: $MONGO_PORT
+  #     API_ORIGINS: $API_ORIGINS
+  #     RABBIT_USER: $RABBIT_USER
+  #     RABBIT_PASSWORD: $RABBIT_PASSWORD
+  #     RABBIT_HOST: $RABBIT_HOST
+  #   depends_on:
+  #     rabbit:
+  #       condition: service_healthy
+  #       restart: true

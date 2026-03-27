@@ -104,7 +104,7 @@ class Region(Persister):
     def emit_dungeon_locales(self):
         msg = {
             'type': 'DUNGEONS',
-            'coords': self.dungeons,
+            'coords': self.raw_dungeons(),
             'context': {
                 'region': self.id
             }
@@ -171,7 +171,7 @@ class Region(Persister):
     def place_dungeon(self, dungeon):
         existing = self.dungeons.values()
         cells = [c for c in self.allCells() if c.type in RegionCell.DUNGEON_TYPES and c not in existing]
-        self.dungeons[dungeon.id] = random.choice(cells)[0:2]
+        self.dungeons[dungeon.id] = random.choice(cells)
         
     def find_dungeon(self, dungeon_id):
         return self.dungeons[dungeon_id]
@@ -181,6 +181,9 @@ class Region(Persister):
 
     def remove_dungeons(self):
         self.dungeons.clear()
+
+    def raw_dungeons(self):
+        return {d: self.dungeons[d][0:2] for d in self.dungeons.keys()}
 
     def prettyPrint(self, highlight=None, path=None):
         if highlight and type(highlight) == tuple:
@@ -211,7 +214,7 @@ class Region(Persister):
             'width': self.width,
             'height': self.height,
             'homebase': self.homebase,
-            'dungeons': self.dungeons,
+            'dungeons': self.raw_dungeons(),
             'cells': json.dumps([c.serialize(False) for c in self.allCells()]),
             'city': self.city.id
         }

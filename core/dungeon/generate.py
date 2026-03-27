@@ -175,11 +175,13 @@ class DungeonFactoryAlpha:
                                 
                 # Try to find a solution first that doesn't involve two adjacent door cells by finding an uncarved cell that could act as a bridge
                 # so we're looking for a solid tile with no adjcaent regions but with neighbors that are adjacent to our main region and any other one
+                
                 remediated = False
                 solids = dungeon.allCells(Tiles.SOLID)
                 for cell in solids:
                     neighbors = cell.all()
-                    x = [dungeon.getCell(*n).type for n in neighbors]
+                    
+                    x = [dungeon.getCell(*n).type for n in neighbors if dungeon.getCell(*n)]
                     # note the length requirement prevents this condition from picking edge cells for which all() returns fewer results
                     if set(x) == {1} and len(x) == 4:
                         homeOptions = []
@@ -189,11 +191,11 @@ class DungeonFactoryAlpha:
                             c1 = dungeon.getCell(*n1)
                             for n2 in c1.all():
                                 c2 = dungeon.getCell(*n2) 
-                                if c2.type in [Tiles.PASSAGE, Tiles.ROOM]:
-                                    if c2.region == regionCollapse:
+                                if c2 and c2.type in [Tiles.PASSAGE, Tiles.ROOM]:
+                                    if dungeon.region_map[c2] == regionCollapse:
                                         homeOptions.append( (c1, c2.type) )
-                                    if c2.region != regionCollapse:
-                                        awayOptions.append( (c1, c2.type, c2.region) )
+                                    if dungeon.region_map[c2] != regionCollapse:
+                                        awayOptions.append( (c1, c2.type, dungeon.region_map[c2]) )
 
                         # now that we have a 
                         if len(homeOptions) > 0 and len(awayOptions) > 0:
@@ -201,20 +203,23 @@ class DungeonFactoryAlpha:
                             away = random.choice(awayOptions)
                             # now that we've found a valid set of three cells, we can carve them manually
                             # before proceeding onto the region collapse sub-step for our "away" region
-                            cell.type = Tiles.PASSAGE
-                            cell.region = regionCollapse
-
+                            cell = dungeon.update_cell(cell, Tiles.PASSAGE)
+                            dungeon.region_map[cell] = regionCollapse
+                            
                             homeCell = home[0]
                             homeType = home[1]
-                            homeCell.type = Tiles.PASSAGE if homeType == Tiles.PASSAGE else Tiles.DOORWAY
-                            homeCell.region = regionCollapse
 
+                            newType = Tiles.PASSAGE if homeType == Tiles.PASSAGE else Tiles.DOORWAY
+                            homeCell = dungeon.update_cell(homeCell, newType)
+                            dungeon.region_map[homeCell] = regionCollapse
+                            
                             awayCell = away[0]
                             awayType = away[1]
                             awayRegion = away[2]
 
-                            awayCell.type = Tiles.PASSAGE if awayType == Tiles.PASSAGE else Tiles.DOORWAY
-                            awayCell.region = regionCollapse
+                            newType = Tiles.PASSAGE if awayType == Tiles.PASSAGE else Tiles.DOORWAY
+                            awayCell = dungeon.update_cell(awayCell, newType)
+                            dungeon.region_map[awayCell] = regionCollapse
                             
                             remediated = True
                             openedRegion = awayRegion
