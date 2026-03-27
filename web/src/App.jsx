@@ -23,15 +23,11 @@ function App() {
   let dungeons = [];
 
   if (bandsQuery.isSuccess) {
-    bandButtons = bandsQuery.data.map(band =>
-      <li key={band.id}><Link to={"/bands/" + band.id}><button>{band.name}</button></Link></li>
-      );
+    bands = bandsQuery.data;
   }
   if (dungeonsQuery.isSuccess) {
-    dungeonButtons = dungeonsQuery.data.map(dungeon =>
-      <li key={dungeon.id}><Link to={"/dungeons/" + dungeon.id}><button eid={dungeon.id}>{dungeon.name}</button></Link></li>
-      );
-  } 
+    dungeons = dungeonsQuery.data;
+  }
 
   if (regionQuery.isSuccess) {
     let region = regionQuery.data;
@@ -39,12 +35,12 @@ function App() {
     let messageIndex = {};
 
     if (expeditionsQuery.isSuccess) {
-      expeditionsQuery.data.forEach(e => regionCursors.push(e['location']['region']));
+      expeditionsQuery.data.forEach(e => regionCursors.push({band: e['band'], location: e['location']['region']}));
     }
     
     return (
       <div className="flex flex-col content-center">
-        <RegionMap region={region} cursors={regionCursors} />
+        <RegionMap region={region} cursors={regionCursors} bands={bands} dungeons={dungeons} />
 
         <EventLog location='region' />
       </div>

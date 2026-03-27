@@ -12,6 +12,7 @@ from core.dice import Dice
 import core.doodads as doodads
 import core.critters as critters
 
+
 class Region(Persister):
 
     def __init__(self, serialized=None):
@@ -103,7 +104,7 @@ class Region(Persister):
     def emit_dungeon_locales(self):
         msg = {
             'type': 'DUNGEONS',
-            'coords': [list(e.just_coords()) for e in self.dungeons.values()],
+            'coords': self.dungeons,
             'context': {
                 'region': self.id
             }
@@ -170,7 +171,7 @@ class Region(Persister):
     def place_dungeon(self, dungeon):
         existing = self.dungeons.values()
         cells = [c for c in self.allCells() if c.type in RegionCell.DUNGEON_TYPES and c not in existing]
-        self.dungeons[dungeon.id] = random.choice(cells)
+        self.dungeons[dungeon.id] = random.choice(cells)[0:2]
         
     def find_dungeon(self, dungeon_id):
         return self.dungeons[dungeon_id]
@@ -210,13 +211,14 @@ class Region(Persister):
             'width': self.width,
             'height': self.height,
             'homebase': self.homebase,
-            'dungeons': [list(e.just_coords()) for e in self.dungeons.values()],
+            'dungeons': self.dungeons,
             'cells': json.dumps([c.serialize(False) for c in self.allCells()]),
             'city': self.city.id
         }
 
     def _children(self):
         return [self.city]
+
 
 class Terrain(IntEnum):
     CITY = 1
@@ -230,6 +232,7 @@ class Terrain(IntEnum):
     DESERT = 9
     PLAIN = 10
     TOWN = 11
+
 
 class RegionCell(NamedTuple):
     h: int
@@ -303,6 +306,7 @@ class RegionCell(NamedTuple):
             return json.dumps(box)
         else:
             return box
+
 
 class City(Persister):
 
@@ -645,6 +649,7 @@ class RegionGenerate:
         s = s.ljust(156, '=')
         print(s)
 
+
 # Utility function that searches a region for a 2x2 grid of road cells
 # Returns False if there are none, a list of the offending cells otherwise
 def road_grid_check(region):
@@ -658,6 +663,7 @@ def road_grid_check(region):
             return cells
 
     return False
+
 
 if __name__ == "__main__":
     
