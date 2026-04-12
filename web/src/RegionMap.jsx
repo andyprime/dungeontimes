@@ -111,7 +111,7 @@ function RegionMap({region, cursors, bands, dungeons}) {
     }
   }
 
-  let inMargins = function(x, y) {
+  let withinMargins = function(x, y) {
     return x > HORIZONTAL_MARGIN && x <= width - HORIZONTAL_MARGIN && y > VERTICAL_MARGIN && y <= height - VERTICAL_MARGIN;
   }
 
@@ -124,7 +124,7 @@ function RegionMap({region, cursors, bands, dungeons}) {
     let x = ev.nativeEvent.offsetX;
     let y = ev.nativeEvent.offsetY;
 
-    if (inMargins(x, y)) {
+    if (withinMargins(x, y)) {
       let [gridX, gridY] = getGrids(x, y);
       
       let terrainType = region.grid[gridX][gridY];
@@ -132,20 +132,30 @@ function RegionMap({region, cursors, bands, dungeons}) {
       
       let dMatch = match([gridY, gridX], region['dungeons']);
       
+      let info = '| ';
       if (gridX == region.homebase[1] && gridY == region.homebase[0]) {
-        setInfo('| The city of ' + region['city']['name']);
+        info += 'The city of ' + region['city']['name'];
       } else if(!!dMatch) {
         let d = dungeons.find((d) => d['id'] == dMatch);
         if (!!d) {
-          setInfo('| The terrible dungeon known as ' + d['name']);
+          info += 'The terrible dungeon known as ' + d['name'];
         } else {
           // This should only happen if the dungeon query hasn't loaded yet
-          setInfo('| A dungeon!');
+          info += 'A dungeon!';
         }
       } else {
-        setInfo('| ' + terrainName);
+        info += terrainName;
       }
 
+      let c = cursors.find((c) => gridX == c['location'][1] && gridY == c['location'][0]);
+      if (!!c) {
+        let b = bands.find((b) => b['id'] == c['band']);
+        if (!!b) {
+          info += ', ' + b['name'] + ' are here';
+        }
+      }
+      
+      setInfo(info)
     }
   }
 
@@ -157,7 +167,7 @@ function RegionMap({region, cursors, bands, dungeons}) {
     let x = ev.nativeEvent.offsetX;
     let y = ev.nativeEvent.offsetY;
 
-    if (inMargins(x, y)) {
+    if (withinMargins(x, y)) {
       let [gridX, gridY] = getGrids(x, y);
       let dMatch = match([gridY, gridX], region['dungeons']);
 
