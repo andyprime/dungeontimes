@@ -3,8 +3,9 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query'
 
 import App from './App.jsx';
+import { About } from './About.jsx';
 import { Bands, Band, Delver } from './Bands.jsx';
-import { City } from './City.jsx'
+import { City } from './City.jsx';
 import { Dungeon, Dungeons } from './Dungeon.jsx';
 import { rootUrl } from './fetching.js';
 import { LogContext } from './context.js';
@@ -138,6 +139,7 @@ function Port() {
           <Link to="/city/"><button className="py-2 px-4">City</button></Link>
           <Link to="/bands/"><button className="py-2 px-4">Bands</button></Link>
           <Link to="/dungeons/"><button className="py-2 px-4">Dungeons</button></Link>
+          <Link to="/about/"><button className="py-2 px-4">About</button></Link>
         </header>
         <main className="flex flex-grow p-4 justify-center">
           <div className="flex flex-col min-w-xl">
@@ -153,6 +155,7 @@ function Port() {
                   <Route path=":did" element={<Dungeon />} />
                 </Route>
                 <Route path="city" element={<City />} />
+                <Route path="about" element={<About />} />
               </Routes>
               
             </LogContext>

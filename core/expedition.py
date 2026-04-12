@@ -198,10 +198,10 @@ class Expedition(Persister):
         # can't fix the cell/tuple problem here so just detect it
         dc = self.dungeon_cursor
         if dc:
-            loc['dungeon'] = dc
+            loc['dungeon'] = dc[0:2]
         rc = self.region_cursor
         if rc:
-            loc['region'] = rc
+            loc['region'] = rc[0:2]
 
         return loc
 
