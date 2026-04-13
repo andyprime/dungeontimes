@@ -109,6 +109,7 @@ class Creature(Persister):
 
 class Delver(Creature):
 
+    MAX_TOOLS = 2
     ATTRIBUTES = ['muscularity', 'prowess', 'pendantry', 'diligence', 'cool', 'guile', 'obduracy', 'pizazz']
 
     @classmethod
@@ -141,6 +142,7 @@ class Delver(Creature):
         self.lifetime_wealth = 0
         self.attr = Delver._build_attr()
         self.gear = {}
+        self.tools = []
         self.minutia = {
             'hobbies': Delver.random_hobbies(),
             'sign': strings.StringTool.random('astrology')
@@ -179,7 +181,7 @@ class Delver(Creature):
         return spells
 
     def has_loot(self):
-        return any([ True for item in self.inventory if not item.consumable() ])
+        return any([ True for item in self.inventory if item.useless() ])
 
     def will_carouse(self):
         return self.wealth > 0
@@ -200,7 +202,7 @@ class Delver(Creature):
     def can_hold(self, item):
         return sum([i.weight for i in self.inventory]) + item.weight <= self.encumberence
 
-    def will_wear(self, item):
+    def will_use(self, item):
         if item.wearable():
             slot = item.slot
             # for now, if we don't have any gear in that slot, go for it
@@ -208,10 +210,19 @@ class Delver(Creature):
                 return True
             x = self.evaluate_gear(item)
             y = self.evaluate_gear(self.gear[slot])
-            print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-            print('Gear eval: {} {} vs {} {}'.format(item.name, x, self.gear[slot].name, y))
             if x > y:
                 return True
+
+        if item.tool():
+            if len(self.tools) < Delver.MAX_TOOLS:
+                return True
+            x = self.evaluate_gear(item)
+
+            # for the moment we're going to return the tool itself so that later steps can know which tool to replace
+            for t in self.tools:
+                y = self.evaluate_gear(t)
+                if x > y:
+                    return t
 
         return False
 
@@ -222,29 +233,33 @@ class Delver(Creature):
         if item.consumable():
             # consumables
             return self.can_hold(item) and sum([i.weight for i in self.inventory if i.consumable()]) < self.encumberence / 2
-        elif item.wearable():
-            return self.will_wear(item)
+        elif item.wearable() or item.tool():
+            return self.will_use(item)
         else:
             # this shouldn't happen but just in case
             return False
 
-    def purchase(self, item):
+    def purchase(self, item, replace=None):
         if item.value > self.wealth:
             raise ValueError('Delver {} spent more money then they had.'.format(self.name))
 
         self.wealth = int(self.wealth - item.value)
         if item.consumable():
             self.give(item)
-        elif item.wearable():
-            self.wear(item)
+        elif item.wearable() or item.tool():
+            self.wear(item, replace)
 
     # this returns a numeric value that indicates how good this delver considers this item
     # note that this function is not intended to be consistent, as in there is no garuantee
     # that the same item will always return the same number
     def evaluate_gear(self, item):
         value = 0
+        if item.wearable():
+            props = ['armor', 'style']
+        else:
+            props = ['power', 'style']
         # currently we're only deciding between armor and style
-        for prop in ['armor', 'style']:
+        for prop in props:
             if prop == self.gear_priority:
                 value += item.effect[prop] * random.uniform(1.5, 1.8)
             else:
@@ -252,8 +267,14 @@ class Delver(Creature):
 
         return value
 
-    def wear(self, item):
-        self.gear[item.slot] = item
+    def wear(self, item, replace=None):
+        if item.wearable():
+            self.gear[item.slot] = item
+        elif item.tool():
+            print('Tool equip, replace: ', replace)
+            if replace:
+                self.tools.remove(replace)
+            self.tools.append(item)
 
     def give(self, item):
         self.inventory.append(item)
@@ -267,6 +288,7 @@ class Delver(Creature):
             'maxhp': self.maxhp,
             'currenthp': self.currenthp,
             'attributes': self.attributes(),
+            'tools': [t.data_format() for t in self.tools],
             'gear': [i.data_format() for i in self.gear.values()],
             'inventory': [i.data_format() for i in self.inventory],
             'minutia': self.minutia

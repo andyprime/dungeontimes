@@ -437,7 +437,7 @@ class Expedition(Persister):
                     else:
                         item = doodads.Equipable.generate()
 
-                    if delver.will_wear(item):
+                    if delver.will_use(item):
                         delver.wear(item)
                         delver.persist()
                         self.emit_narrative('{} found {} and put it on.'.format(delver.name, item.name), [delver.id])

@@ -2,10 +2,10 @@ import pytest
 
 import definitions
 
-# Currently none of the models have any special features unique to them, so this should be enough
 
 @pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Consumable'])
 def test_coreModelFeatures(className):
+    # Just testing to make sure all models load and parse according to their schemas
     c = getattr(definitions.model, className)
 
     a = c.all()
@@ -15,6 +15,16 @@ def test_coreModelFeatures(className):
     assert len(a) > 0
     assert type(a[0]) == c
 
-    # this one is commented out for the moment since not all definitions have been given the code property
-    #assert type(c.find(a[0].code)) == c
     assert type(c.random()) == c
+
+def test_tool_granting():
+    # verifying that all moves described in a Tool's grants field actually exist
+
+    for tool in definitions.model.Tool.all():
+
+        try:
+            move = definitions.model.Moves.find(tool.grants)
+        except ValueError:
+            pytest.fail(f'Unable to find move "{tool.grants}" specified in tool "{tool.code}"')
+        assert tool.grants == move.code, "Nope"
+        

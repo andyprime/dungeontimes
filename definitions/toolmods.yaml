@@ -1,0 +1,32 @@
+---
+code: heavy
+rarity: 1
+name:
+  prefix: heavy
+effect:
+  power: 1
+  style: -1
+  value_mod: 10
+---
+code: sharp
+rarity: 1
+name:
+  prefix: sharp
+effect:
+  power: 1
+  value_mod: 20
+---
+code: rusty
+rarity: 1
+name:
+  prefix: rusty
+effect:
+  power: -1
+  value_mod: -50
+---
+code: fancy
+rarity: 2
+name:
+  prefix: fancy
+effect:
+  style: 2

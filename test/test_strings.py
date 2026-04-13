@@ -28,7 +28,7 @@ class TestStrings:
         for file in glob.glob('*.yaml'.format(locations[0]), root_dir=locations[0]):
             # nip the .yaml off
             shortname = file[0:-5]
-            print(shortname)
+            # print(shortname)
             for i in range(100):
                 s = StringTool.random(shortname)
                 assert(type(s) == str)

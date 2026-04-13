@@ -1,0 +1,40 @@
+---
+name: Dagger
+code: dagger
+type: melee
+size: small
+rarity: 1
+value: 10
+grants: STAB
+effect:
+    power: 1
+---
+name: Axe
+code: axe
+type: melee
+size: medium
+rarity: 1
+value: 20
+grants: HEW
+effect:
+    power: 2
+---
+name: Staff
+code: staff
+type: melee
+size: large
+rarity: 1
+value: 10
+grants: BONK
+effect:
+    power: 1
+---
+name: Sling
+code: sling
+type: ranged
+size: small
+rarity: 1
+value: 5
+grants: SLING
+effect:
+    power: 1

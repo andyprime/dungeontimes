@@ -20,8 +20,8 @@ function City() {
     let guilds = city.venues.filter((v) => v.type =='guild');
 
     return (
-      <>
-        <h1>{city['name']}</h1>
+      <div>
+        <h1>The City of {city['name']}</h1>
         
         <h3>Shops</h3>
         { shops.length > 0 && <div>{shops.map((shop) => (<Shop key={shop['id']} shop={shop} />))} </div> }
@@ -29,7 +29,7 @@ function City() {
         
         <h3>Guilds</h3>
         { guilds.length > 0 && <div>{guilds.map((guild) => (<Guild key={guild['id']} guild={guild} />))} </div> }
-      </>
+      </div>
         )
   }
 }
@@ -42,7 +42,8 @@ function Shop({shop}) {
 
       <div>
         Goods:
-        { shop['stock'].map((item) => (<p key={item.id}>{item['name']} ({item['value']})</p>)) }
+        { shop['stock'].length > 0 && shop['stock'].map((item) => (<p key={item.id}>{item['name']} ({item['value']})</p>)) }
+        { shop['stock'].length == 0 && (<p>Out of stock</p>)}
       </div>
 
     </div>
