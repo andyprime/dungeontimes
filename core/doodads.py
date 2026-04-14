@@ -16,9 +16,9 @@ class Item:
             'effect': {}
         }
         if pre := mod.name.get('prefix', None):
-            base['name'] = f'{pre} {base['name']}'
+            base['name'] = f"{pre} {base['name']}"
         if post := mod.name.get('postfix', None):
-            base['name'] = f'{base['name']} {post}'
+            base['name'] = f"{base['name']} {post}"
         for prop in self.props:
             base[prop] = getattr(gear, prop)
 

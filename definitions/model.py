@@ -274,7 +274,7 @@ if __name__ == "__main__":
     Consumable.load()
 
     print('Tools')
-    Tools.load()
+    Tool.load()
 
     for monster in Monsters.all():
         for move in monster.moves:
