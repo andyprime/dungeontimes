@@ -155,19 +155,6 @@ class Stocks(Model):
             'name': And(str, len)
         })
 
-class Spells(Model):
-    _source = 'spells.yaml'
-
-    _schema = Schema({
-            'code': And(str, len),
-            'name': And(str, len),
-            'target': [Or('team', 'self', 'opponent')],
-            'effect': {
-                Optional('status'): Or(str, [str]),
-                Optional('duration'): And(int, lambda n: n > 0)
-            }
-        })
-
 class Gear(Model):
     _source = 'gear.yaml'
 
@@ -236,7 +223,7 @@ class Tool(Model):
             'size': And(str, len), 
             'grants': Or([str], str),
             'effect': {
-                'power': And(int, lambda n: n > 0),
+                'power': And(int, lambda n: n >= 0),
                 Optional('style'): And(int, lambda n: n > 0),
             }
         })

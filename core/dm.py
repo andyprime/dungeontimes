@@ -332,12 +332,9 @@ class DungeonMaster:
 
         # will_buy is (intentionally) not deterministic so we must preserve the answer
         thoughts = {i: delver.will_buy(i) for i in shop.stock}
-        print(thoughts)
         options = {i: j for i, j in thoughts.items() if j}
-        print(options)
-
-        if len(options):
-            
+        
+        if len(options):    
             item = random.choice(list(options.keys()))
 
             if type(options[item]) != bool:

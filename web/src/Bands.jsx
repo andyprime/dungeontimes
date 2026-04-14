@@ -113,14 +113,14 @@ const Delver = function({ d }) {
           <h2>Inventory</h2>
           <ul>
             <li><b>Tools</b>
-              { delver.tools.length > 0 && <div>{delver.tools.map((item) => (<p>{item.name}</p>))}</div>}
+              { delver.tools.length > 0 && <div>{delver.tools.map((item) => (<p key={item.id}>{item.name}</p>))}</div>}
             </li>
             <li><b>Gear</b>
-              { delver.gear.length > 0 && <div>{delver.gear.map((item) => (<p>{item.name}</p>))}</div> }
+              { delver.gear.length > 0 && <div>{delver.gear.map((item) => (<p key={item.id}>{item.name}</p>))}</div> }
             </li>
             <li>
               <b>Loot</b>
-              { delver.inventory.length > 0 && <div>{delver.inventory.map((item) => (<p>{item.name}</p>))}</div> }
+              { delver.inventory.length > 0 && <div>{delver.inventory.map((item) => (<p key={item.id}>{item.name}</p>))}</div> }
             </li>
           </ul>
         </div>

@@ -30,3 +30,37 @@ name:
   prefix: fancy
 effect:
   style: 2
+  value_mod: 25
+---
+code: wobbly
+rarity: 1
+name:
+  prefix: wobbly
+effect:
+  power: -1
+  value_mod: -25
+---
+code: potent
+rarity: 2
+name: 
+  prefix: potent
+effect:
+  power: 2
+  value_mod: 50
+---
+code: arcane
+rarity: 3
+name:
+  prefix: arcane
+effect:
+  power: 2
+  value_mod: 70
+---
+code: sinister
+rarity: 2
+name:
+  prefix: sinister
+effect:
+  power: 1
+  style: 1
+  value_mod: 30

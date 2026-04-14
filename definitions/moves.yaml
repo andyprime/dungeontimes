@@ -238,3 +238,57 @@ test: prowess
 effect:
   max targets: 1
   damage: 1
+---
+code: HACK
+name: Hack
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: CLUB
+name: Club
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: POKE
+name: Poke
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: ALIGHT
+name: Alight
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 2
+  damage: 1
+---
+code: PONDER
+name: Ponder
+type: instant
+target: self
+test: prowess
+effect:
+  max targets: 1
+  status: SOMETHING
+---
+code: BRIGHT
+name: BRIGHT
+type: instant
+target: self
+test: prowess
+effect:
+  max targets: 1
+  status: BRIGHT
