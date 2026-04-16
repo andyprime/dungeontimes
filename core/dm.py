@@ -264,8 +264,12 @@ class DungeonMaster:
 
         for i in order:
             delver = band.members[i]
-            if len(delver.inventory) > 0:
-                item = delver.inventory.pop()
+
+            loot = [i for i in delver.inventory if i.useless()]
+
+            if len(loot) > 0:
+                item = random.choice(loot)
+                delver.inventory.remove(item)
                 print('Selling item: {} at {}'.format(item.name, item.value))
                 delver.add_wealth(item.value)
                 delver.persist()
@@ -325,12 +329,18 @@ class DungeonMaster:
 
         shop = random.choice([v for v in self.region.city.venues if v.type == core.region.Venue.SHOP])
 
-        options = [i for i in shop.stock if delver.will_buy(i)]
-        
-        if len(options):
-            item = random.choice(options)
 
-            delver.purchase(item)
+        # will_buy is (intentionally) not deterministic so we must preserve the answer
+        thoughts = {i: delver.will_buy(i) for i in shop.stock}
+        options = {i: j for i, j in thoughts.items() if j}
+        
+        if len(options):    
+            item = random.choice(list(options.keys()))
+
+            if type(options[item]) != bool:
+                delver.purchase(item, options[item])
+            else:
+                delver.purchase(item)
             shop.remove_item(item)
 
             delver.persist()

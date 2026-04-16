@@ -1,0 +1,110 @@
+---
+name: dagger
+code: dagger
+type: melee
+size: small
+rarity: 1
+value: 10
+grants: STAB
+effect:
+    power: 1
+---
+name: axe
+code: axe
+type: melee
+size: medium
+rarity: 1
+value: 20
+grants: HEW
+effect:
+    power: 2
+---
+name: staff
+code: staff
+type: melee
+size: large
+rarity: 1
+value: 10
+grants: BONK
+effect:
+    power: 1
+---
+name: sling
+code: sling
+type: ranged
+size: small
+rarity: 1
+value: 5
+grants: SLING
+effect:
+    power: 1
+---
+name: arming sword
+code: armsword
+type: melee
+size: medium
+rarity: 2
+value: 50
+grants: HACK
+effect:
+    power: 2
+---
+name: mace
+code: mace
+type: melee
+size: medium
+rarity: 2
+value: 35
+grants: CLUB
+effect:
+    power: 2
+---
+name: spear
+code: spear
+type: melee
+size: medium
+rarity: 1
+value: 25
+grants: POKE
+effect:
+    power: 1
+---
+name: claymore
+code: claymore
+type: melee
+size: large
+rarity: 2
+value: 75
+grants: HACK
+effect:
+    power: 3
+---
+name: torch
+code: torch
+type: light
+size: small
+rarity: 1
+value: 10
+grants: ALIGHT
+effect:
+    power: 1
+---
+name: lamp
+code: lamp
+type: light
+size: small
+rarity: 2
+value: 25
+grants: BRIGHT
+effect:
+    power: 0
+---
+name: orb
+code: orb
+type: magic
+size: small
+rarity: 3
+value: 60
+grants: PONDER
+effect:
+    power: 2

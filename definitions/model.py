@@ -155,19 +155,6 @@ class Stocks(Model):
             'name': And(str, len)
         })
 
-class Spells(Model):
-    _source = 'spells.yaml'
-
-    _schema = Schema({
-            'code': And(str, len),
-            'name': And(str, len),
-            'target': [Or('team', 'self', 'opponent')],
-            'effect': {
-                Optional('status'): Or(str, [str]),
-                Optional('duration'): And(int, lambda n: n > 0)
-            }
-        })
-
 class Gear(Model):
     _source = 'gear.yaml'
 
@@ -192,7 +179,10 @@ class GearMod(Model):
     _schema = Schema({
             'code': And(str, len),
             'rarity': And(int, lambda n: n >= 0),
-            'prefix': And(str, len),
+            'name': {
+                Optional('prefix'): And(str, len),
+                Optional('postfix'): And(str, len)
+            },
             'effect': {
                 Optional('pass'): 'pass', # placeholder value
                 Optional('value'): int,
@@ -221,6 +211,45 @@ class Consumable(Model):
             }
         })
 
+class Tool(Model):
+    _source = 'tools.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len), 
+            'rarity': And(int, lambda n: n >= 0),
+            'value': And(int, lambda n: n >= 0),
+            'type': And(str, len),
+            'size': And(str, len), 
+            'grants': Or([str], str),
+            'effect': {
+                'power': And(int, lambda n: n >= 0),
+                Optional('style'): And(int, lambda n: n > 0),
+            }
+        })
+
+class ToolMod(Model):
+    _source = 'toolmods.yaml'
+
+    _schema = Schema({
+            'code': And(str, len),
+            'rarity': And(int, lambda n: n >= 0),
+            'name': {
+                Optional('prefix'): And(str, len),
+                Optional('postfix'): And(str, len)
+            },
+            'effect': {
+                Optional('pass'): 'pass', # placeholder value
+                Optional('value'): int,
+                Optional('value_mod'): int,
+                Optional('power'): int,
+                Optional('power_mod'): int,
+                Optional('style'): int,
+                Optional('style_mod'): int,
+                Optional('rarity'): int,
+            }
+        })
+
 if __name__ == "__main__":
 
     print('Moves')
@@ -243,6 +272,9 @@ if __name__ == "__main__":
 
     print('Consumable')
     Consumable.load()
+
+    print('Tools')
+    Tool.load()
 
     for monster in Monsters.all():
         for move in monster.moves:

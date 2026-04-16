@@ -349,7 +349,15 @@ class Venue:
     SHOP = 'shop'
     GUILD = 'guild'
 
-    GEAR_RATIO = 75
+    # breakdowns of item type ratios for shops; tuple is tool, gear, consumable, should add to 100
+    RATIO_OPTIONS = [
+        (10, 10, 80), # General store, 10% weapons, 10% gear, 80% consumable
+        (90, 5, 5), # weapon shop
+        (5, 80, 15)
+    ]
+
+    TOOL_RATIO = 25
+    GEAR_RATIO = 50
 
     @classmethod
     def generate(self, type):
@@ -363,6 +371,7 @@ class Venue:
         self.type = type
         self.quality = quality
         self.stock = []
+        self.ratio = random.choice(Venue.RATIO_OPTIONS)
 
     def restock(self):
         self.stock = []
@@ -375,7 +384,11 @@ class Venue:
 
     def random_item(self):
         if self.type == Venue.SHOP:
-            if Dice.roll('1d100') < Venue.GEAR_RATIO:
+            d = Dice.roll('1d100')
+
+            if d <= self.ratio[0]:
+                return doodads.Tool.generate(self.quality)
+            elif d <= sum(self.ratio[0:2]):
                 return doodads.Equipable.generate(self.quality)
             else:
                 return doodads.Consumable.generate(self.quality)

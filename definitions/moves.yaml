@@ -199,3 +199,96 @@ test: thicc
 effect:
   max targets: 1
   damage: 3
+# =======================================================================================
+#  Tool moves
+# =======================================================================================
+---
+code: STAB
+name: Stab
+type: instant
+target: melee
+test: crafty
+effect:
+  max targets: 1
+  damage: 1
+---
+code: HEW
+name: Hew
+type: instant
+target: melee
+test: thicc
+effect:
+  max targets: 1
+  damage: 2
+---
+code: BONK
+name: Bonk
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 1
+---
+code: SLING
+name: Sling
+type: instant
+target: ranged
+test: prowess
+effect:
+  max targets: 1
+  damage: 1
+---
+code: HACK
+name: Hack
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: CLUB
+name: Club
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: POKE
+name: Poke
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: ALIGHT
+name: Alight
+type: instant
+target: melee
+test: prowess
+effect:
+  max targets: 2
+  damage: 1
+---
+code: PONDER
+name: Ponder
+type: instant
+target: self
+test: prowess
+effect:
+  max targets: 1
+  status: SOMETHING
+---
+code: BRIGHT
+name: BRIGHT
+type: instant
+target: self
+test: prowess
+effect:
+  max targets: 1
+  status: BRIGHT

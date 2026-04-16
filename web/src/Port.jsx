@@ -142,7 +142,7 @@ function Port() {
           <Link to="/about/"><button className="py-2 px-4">About</button></Link>
         </header>
         <main className="flex flex-grow p-4 justify-center">
-          <div className="flex flex-col min-w-xl">
+          <div className="flex flex-col min-w-4xl">
             <LogContext value={logs}>
               
               <Routes>

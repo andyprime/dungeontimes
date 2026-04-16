@@ -7,10 +7,40 @@ import core.strings as strings
 
 class Item:
 
+    @classmethod
+    def smush(self, gear, mod):
+
+        base = {
+            'code': gear.code,
+            'name': gear.name,
+            'effect': {}
+        }
+        if pre := mod.name.get('prefix', None):
+            base['name'] = f"{pre} {base['name']}"
+        if post := mod.name.get('postfix', None):
+            base['name'] = f"{base['name']} {post}"
+        for prop in self.props:
+            base[prop] = getattr(gear, prop)
+
+        # these should always be present and on the main object
+        for prop in ['rarity', 'value']:
+            base[prop] = self._mod(getattr(gear, prop), mod.effect.get(prop, 0), mod.effect.get(f'{prop}_mod', 0))
+
+        for effect in self.smushables:
+            base['effect'][effect] = self._mod(gear.effect.get(effect, 0), mod.effect.get(effect, 0), mod.effect.get(f'{effect}_mod', 0))
+
+        return base
+
+    @classmethod
+    def _mod(self, base, additive, percent):
+        start = base + additive
+        modded = start + int( (start * percent) / 100)
+        return modded
+
     def __init__(self, props):
         self.id = str(uuid.uuid1())
         self.weight = 1
-        self.name = props['name']
+        self.name = props['name'].capitalize()
         self.value = props['value']
 
     def wearable(self):
@@ -18,6 +48,12 @@ class Item:
 
     def consumable(self):
         return False
+
+    def tool(self):
+        return False
+
+    def useless(self):
+        return not self.wearable() and not self.consumable() and not self.tool()
 
     def data_format(self):
         return {
@@ -35,29 +71,14 @@ class Item:
 
 class Equipable(Item):
     
+    props = ['slot']
+    smushables = ['encumberance', 'armor', 'style']
+
     @classmethod
     def generate(self, max_rarity=2):
         f = lambda r: r.rarity <= max_rarity
-        gear = model.Gear.random(f)
-        gear_mod = model.GearMod.random(f)
-
-        props = {
-            'code': gear.code,
-            'name': '{} {}'.format(gear_mod.prefix, gear.name),
-            'slot': gear.slot,
-            'effect': {}
-        }
-
-        props['rarity'] = max(gear.rarity + gear_mod.effect.get('rarity', 0), 0)
-        value = max(gear.value + gear_mod.effect.get('value', 0), 0)
-        props['value'] = value + int( value * (gear_mod.effect.get('value_mod', 0) / 100) )
-        
-        for eff in ['encumberance', 'armor', 'style']:
-            base = gear.effect.get(eff, 0) + gear_mod.effect.get(eff, 0)
-            modded = base + int(base * (gear_mod.effect.get('{}_mod', 0) / 100) )
-            props['effect'][eff] = modded
-
-        return Equipable(props)
+        combined = self.smush(model.Gear.random(f), model.GearMod.random(f))
+        return Equipable(combined)
 
     def __init__(self, props):
         super().__init__(props)
@@ -78,6 +99,39 @@ class Equipable(Item):
             'rarity': self.rarity,
             'name': self.name,
             'weight': self.weight
+        }
+        return base | super().data_format()
+
+class Tool(Item):
+
+    props = ['type', 'size', 'grants']
+    smushables = ['power', 'style']
+
+    @classmethod
+    def generate(self, max_rarity=2):
+        f = lambda r: r.rarity <= max_rarity
+        combined = self.smush(model.Tool.random(f), model.ToolMod.random(f))
+        return Tool(combined)
+
+    def tool(self):
+        return True
+
+    def __init__(self, props):
+        super().__init__(props)
+
+        self.code = props['code']
+        self.rarity = props['rarity']
+        self.type = props['type']
+        self.size = props['size']
+        self.grants = props['grants']
+        self.effect = props['effect']
+
+    def data_format(self):
+        base = {
+            'id': self.id,
+            'code': self.code,
+            'rarity': self.rarity,
+            'name': self.name,
         }
         return base | super().data_format()
 

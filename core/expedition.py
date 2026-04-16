@@ -428,21 +428,27 @@ class Expedition(Persister):
 
                 if success:
 
-                    type = random.uniform(1, 100)
+                    roll = random.uniform(1, 100)
 
-                    if type < 70:
+                    if roll < 60:
                         item = doodads.Valuable.generate()
-                    elif type < 90:
+                    elif roll < 80:
                         item = doodads.Consumable.generate()
+                    elif roll < 90:
+                        item = doodads.Tool.generate()
                     else:
                         item = doodads.Equipable.generate()
 
-                    if delver.will_wear(item):
-                        delver.wear(item)
+                    if replace := delver.will_use(item):
+                        if type(replace) == bool:
+                            delver.wear(item)
+                        else:
+                            delver.wear(item, replace)
                         delver.persist()
                         self.emit_narrative('{} found {} and put it on.'.format(delver.name, item.name), [delver.id])
                         self.emit_band()
-                    elif delver.can_hold(item):
+                    elif item.useless() and delver.can_hold(item):
+                        # for now only keep treasure items
                         delver.give(item)
                         delver.persist()
                         self.emit_narrative('{} found {}'.format(delver.name, item.name), [delver.id])

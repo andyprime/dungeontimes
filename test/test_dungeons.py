@@ -41,7 +41,7 @@ class TestDungeon:
 
         dungeon = dungeons.Dungeon()
         dungeon.grid = self.convert_grid(TestDungeon.basic_grid)
-        dungeon.prettyPrint()
+        # dungeon.prettyPrint()
 
         c = dungeon.carvePassage(dungeon.getCell(2, 5))
         assert c.type == dungeons.Tiles.PASSAGE
