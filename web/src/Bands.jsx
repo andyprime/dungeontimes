@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, Outlet, useParams } from 'react-router';
 
 import { getBands, getBand, getDelvers, getDelver, getDelverEvents, getBandEvents } from './fetching.js'
+import { JOB_NAMES } from './constants.js'
 
 const rootUrl = window.location.hostname + ':8081';
 
@@ -72,7 +73,7 @@ const DelverCard = function({ d }) {
       {d.name}
       <br />
 
-      { d.stock } { d.job}
+      { d.stock } { JOB_NAMES[d.job] }
     </div>
     )
 }
@@ -94,7 +95,7 @@ const Delver = function({ d }) {
     return (
       <>
         <h1>{delver.name}</h1>
-        <div>{delver.stock} {delver.job}</div>
+        <div>{delver.stock} {JOB_NAMES[delver.job]}</div>
         <div>
           <table>
             <tbody>

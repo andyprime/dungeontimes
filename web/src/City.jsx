@@ -43,7 +43,7 @@ function Shop({shop}) {
       <div>
         Goods:
         { shop['stock'].length > 0 && shop['stock'].map((item) => (<p key={item.id}>{item['name']} ({item['value']})</p>)) }
-        { shop['stock'].length == 0 && (<p>Out of stock</p>)}
+        { shop['stock'].length == 0 && (<p key="oos">Out of stock</p>)}
       </div>
 
     </div>

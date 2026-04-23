@@ -187,6 +187,13 @@ class DungeonMaster:
 
         if exp.over():
 
+            print('%'*50)
+            print(exp.status)
+            print('%'*50)
+
+            # process the turn so we don't skip tasks in the final step
+            exp.process_turn()
+
             self.region.remove_dungeon(exp.dungeon)
             self.region.emit_del_dungeon(exp.dungeon.id)
             self.region.persist()
