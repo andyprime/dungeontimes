@@ -479,11 +479,6 @@ class Expedition(Persister):
             self.score += sum([item.value for item in mem.inventory])
         # we don't need to persist this change because it will get batched with later steps in the DM
 
-        print('#'*50)
-        print('#'*50)
-        print(f'score: {self.score}')
-        print('#'*50)
-
         self.process_message('Expedition finished with a score of: {}'.format(self.score))
 
     def move(self):

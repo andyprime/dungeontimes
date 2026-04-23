@@ -269,7 +269,7 @@ class Battle:
 
         if effect.get('damage', None):
             if partial:
-                applied_dmage = max(1, int(effect['damage'] / 2))
+                applied_damage = max(1, int(effect['damage'] / 2))
             else:
                 applied_damage = effect['damage']
             target.apply_damage(applied_damage)

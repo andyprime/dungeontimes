@@ -186,11 +186,6 @@ class DungeonMaster:
         exp = self.expeditions[do['id']]
 
         if exp.over():
-
-            print('%'*50)
-            print(exp.status)
-            print('%'*50)
-
             # process the turn so we don't skip tasks in the final step
             exp.process_turn()
 
