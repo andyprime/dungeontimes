@@ -8,7 +8,7 @@ class Dice:
     }
 
     @classmethod
-    def roll(self, s):
+    def roll(self, s: str) -> int:
         # right now this just handles single die pools with one optional modifier
         # aka 3d6, or 3d6+1 are handled
         # this is really basic for expedience and does not handle bad input at all
@@ -28,6 +28,17 @@ class Dice:
         fin = roll + int(plus) - int(minus)
 
         return fin
+
+    @classmethod
+    def xroll(self, i: int | str) -> int:
+        # a convenience function for parsing values that might either be a static number
+        # or a die roll syntax string
+        if type(i) == int:
+            return i
+        elif type(i) == str:
+            return Dice.roll(i)
+        else:
+            return None
 
     @classmethod
     def boundedgamma(self, low, high, ease='low'):

@@ -18,6 +18,19 @@ def test_coreModelFeatures(className):
 
     assert type(c.random()) == c
 
+def test_class_moves():
+
+    for cl in definitions.model.Classes.all():
+
+        for code in cl.moves:
+
+            try:
+                move = definitions.model.Moves.find(code)
+            except ValueError:
+                pytest.fail(f'Unable to find move "{code}" specified in class "{cl.code}"')
+            assert code == move.code
+
+
 def test_tool_granting():
     # verifying that all moves described in a Tool's grants field actually exist
 

@@ -43,11 +43,14 @@ class Creature(Persister):
     def clearStatus(self):
         self.status = []
 
-    def applyDamage(self, damage_count):
+    def apply_damage(self, damage_count: int):
         old = self.currenthp
         self.currenthp = self.currenthp - damage_count
         if self.currenthp < 0:
             self.currenthp = 0
+
+    def apply_healing(self, healing: int):
+        self.currenthp = min(self.maxhp, self.currenthp + healing)
 
     def applyStatus(self, status, half=False):
         duration = Dice.roll('1d4+2')
@@ -160,6 +163,10 @@ class Delver(Creature):
         moves = []
         for move in self.job.moves:
             moves.append(model.Moves.find(move))
+
+        for tool in self.tools:
+            moves.append(model.Moves.find(tool.grants))
+            
         return moves
 
     def testThresholds(self, test):

@@ -74,22 +74,26 @@ class Moves(Model):
     _schema = Schema({
             'name': And(str, len),
             'code': And(str, len),
-            'type': Or('consequence', 'instant', 'spellcasting'),
-            'target': Or('any', 'melee', 'ranged', 'self', 'magic'),
+            'type': Or('consequence', 'instant', 'spellcasting', 'rest'),
+            'target': Or('any', 'melee', 'ranged', 'self', 'magic', 'friendly'),
             'test': And(str, len),
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
-                Optional('damage'): And(int, lambda n: n > 0),
+                Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
                 Optional('duration'): And(int, lambda n: n > 0),
+                Optional('healing'): And(str, len),
                 Optional('special'): str
             },
             Optional('consequence'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
                 Optional('duration'): And(int, lambda n: n > 0),
-                Optional('damage'): And(int, lambda n: n > 0),
+                Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
                 Optional('special'): str
+            },
+            Optional('failure'): {
+                Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
             }
         })
 
