@@ -56,7 +56,6 @@ class Expedition(Persister):
         self.region = region
         self.dungeon = dungeon
         self.band = band
-        self.party = band.members
         self.battle = None
         self.id = str(uuid.uuid1())
         
@@ -68,6 +67,7 @@ class Expedition(Persister):
         self.outgoing = True
 
         self.steps = 0
+        self.score = 0
 
         # if set it is the cells we are currently trying to navigate through
         self.path = []
@@ -213,7 +213,8 @@ class Expedition(Persister):
             'complete': self.over(),
             'dungeon': self.dungeon.id,
             'band': self.band.id,
-            'location': self._get_location()
+            'location': self._get_location(),
+            'score': self.score
         }
 
     def _set_state(self, new_state):
@@ -345,7 +346,7 @@ class Expedition(Persister):
         room = self.dungeon.roomAt(self.dungeon_cursor)
         if self.battle:
             if self.battle.complete():
-                if any([d.canAct() for d in self.party]) :
+                if any([d.canAct() for d in self.band.members]) :
                     self.emit_narrative('The band is victorious. Good job team.')
 
                     # clear out the dead monsters
@@ -370,7 +371,7 @@ class Expedition(Persister):
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
 
-            for d in self.party:
+            for d in self.band.members:
                 self.battle.addParticipant('delver', d)
 
             self.emit_battle(True, room.num)
@@ -389,7 +390,7 @@ class Expedition(Persister):
     def runstate_rec(self, local):
         self.emit_narrative('The band takes a little breather after a fight.')
         # for now we're just gonna heal the entire party so we don't die every other fight
-        for p in self.party:
+        for p in self.band.members:
             p.recuperate()
 
             # this is piggy backing off the battle update emit for now which is why it doesn't get a dedicated function
@@ -470,9 +471,15 @@ class Expedition(Persister):
             
 
     # Complete
-    def runstate_cmp(self):
+    def runstate_cmp(self, local):
         self.process_message('All done. Good hustle')
         self.process_message('Total Moves: {}'.format(self.steps))
+
+        for mem in self.band.members:
+            self.score += sum([item.value for item in mem.inventory])
+        # we don't need to persist this change because it will get batched with later steps in the DM
+
+        self.process_message('Expedition finished with a score of: {}'.format(self.score))
 
     def move(self):
         destination = self.path.pop()

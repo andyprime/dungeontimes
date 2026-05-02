@@ -157,8 +157,8 @@ def read_dungeon(dungeon_id: UUID, db: Database = Depends(db_session)):
     return d
 
 @app.get("/expeditions/")
-def read_active_expedition(db: Database = Depends(db_session)):
-    return list(db.expeditions.find({"complete": False}, {"_id": 0}))
+def read_active_expedition(db: Database = Depends(db_session), complete: bool = False):
+    return list(db.expeditions.find({"complete": complete}, {"_id": 0}))
 
 @app.get("/expedition/{exp_id}")
 def read_expedition(exp_id: UUID, db: Database = Depends(db_session)):

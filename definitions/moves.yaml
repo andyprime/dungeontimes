@@ -199,6 +199,73 @@ test: thicc
 effect:
   max targets: 1
   damage: 3
+---
+code: TRIP
+name: Trip
+type: instant
+target: melee
+test: pass
+effect:
+  max targets: 2
+  damage: 1
+  status: PRONE
+---
+code: OUTRANGE
+name: Outrange
+type: instant
+target: melee
+test: pass
+effect:
+  max targets: 1
+  damage: 3
+  special: noconsequence
+---
+code: TRICKSHOT
+name: Trick Shot
+type: instant
+target: ranged
+test: pass
+effect:
+  max targets: 3
+  damage: 2
+---
+code: FACTOID
+name: Archery Factoid
+type: instant
+target: ranged
+test: pass
+effect:
+  special: pass
+  # not sure how to do this yet
+---
+code: SAW
+name: Saw
+type: instant
+target: melee
+test: pass
+effect:
+  max targets: 1
+  damage: 2
+---
+code: PATCHUP
+name: Patch Up
+type: rest
+target: friendly
+test: pass
+effect:
+  healing: 2d6
+failure:
+  damage: 2
+---
+code: THEWS
+name: Mighty Thews
+type: instant
+target: self
+test: pass
+effect:
+  healing: 1d4
+  status: PUMPED
+  duration: 2
 # =======================================================================================
 #  Tool moves
 # =======================================================================================

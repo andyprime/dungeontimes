@@ -2,9 +2,9 @@ import json
 import random
 import uuid
 
-import core.dice
 import core.critters
 
+from core.dice import Dice
 # this is bad, but the emitter system needs an overhaul so we can live with this for now
 from core.mdb import MongoService 
 
@@ -137,13 +137,11 @@ class Battle:
     def selectCombatAction(self, fellah, team):
         # note that this lives in battle.py because it requires too much shared info to live on the creature itself
 
-        # # pick an enemy team
-        # targetTeam = self.randomTeam(exclude=team)
-
         # filter out moves that can not be performed
-        validMoves = []
+        combat_moves = [m for m in fellah.moves() if m.type in ['instant', 'consequence', 'spellcasting']]
+        move_options = []
 
-        for move in fellah.moves():
+        for move in combat_moves:
             # this is where the filtering should go but I think atm there's none of that
 
             if move.target == 'self':
@@ -151,7 +149,7 @@ class Battle:
             else:
                 t = self.randomTarget(fellah, 'opponent')
 
-            validMoves.append({
+            move_options.append({
                     'actor': fellah,
                     'move': move,
                     'target': t
@@ -159,7 +157,7 @@ class Battle:
 
         # add any special moves
         if fellah.hasStatus('CONFUSED'):
-            validMoves.append({
+            move_options.append({
                     'actor': fellah,
                     'move': Moves.find('CONFUSED'),
                     'target': fellah
@@ -167,9 +165,7 @@ class Battle:
 
         # select a move
         # eventually this will be by weight, not round robin
-        selectedMove = random.choice(validMoves)
-
-        return selectedMove
+        return random.choice(move_options)
 
     def processAction(self, action):
         fellah = action['actor']
@@ -263,20 +259,22 @@ class Battle:
             })
 
     def applyEffect(self, target, effect, partial=False):
-
-        appliedDamage = 0
+        applied_damage = 0
 
         if effect.get('status', None):
             target.applyStatus(effect['status'])
 
+        if effect.get('healing', None):
+            target.apply_healing(Dice.xroll(effect['healing']))
+
         if effect.get('damage', None):
             if partial:
-                appliedDamage = max(1, int(effect['damage'] / 2))
+                applied_damage = max(1, int(effect['damage'] / 2))
             else:
-                appliedDamage = effect['damage']
-            target.applyDamage(appliedDamage)
+                applied_damage = effect['damage']
+            target.apply_damage(applied_damage)
 
-        return appliedDamage
+        return applied_damage
 
     def randomTarget(self, fellah, types):
 
@@ -303,7 +301,6 @@ class Battle:
                     self.initiative.append( (x, fellah, name) )
 
         self.initiative.sort(key=lambda x: x[0])
-
 
     def addParticipant(self, side, creature):
         # TODO: handle state conditions

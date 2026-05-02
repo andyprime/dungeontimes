@@ -1,10 +1,4 @@
-const JOB_NAMES = {
-    'MUSCLE': 'Muscle Man',
-    'ETHICIST': 'Ethicist',
-    'SWORDLORD': 'Swordlord',
-    'NEERDOWELL': 'Neerdowell',
-    'MAGICIAN': 'Magician'
-}
+import { JOB_NAMES } from './constants.js'
 
 function Portrait({type, person}) {
   

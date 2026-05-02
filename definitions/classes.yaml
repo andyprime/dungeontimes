@@ -36,3 +36,31 @@ moves:
 startingSpells:
   - VANISH
   - LEVITATION
+---
+name: Polearm Dancer
+code: PDANCER
+hp: 15
+moves:
+  - TRIP
+  - OUTRANGE
+---
+name: Bowvangelist
+code: BOWV
+hp: 10
+moves:
+  - TRICKSHOT
+  - FACTOID
+---
+name: Chirurgeon
+code: CHIR
+hp: 12
+moves:
+  - SAW
+  - PATCHUP
+---
+name: Barbarian
+code: BARB
+hp: 20
+moves:
+  - THEWS
+  - HEW # this is a weapon move but we wanna garuantee there's an active one
