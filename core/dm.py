@@ -5,6 +5,7 @@ from core.dice import Dice
 import core.dungeon.generate
 import core.expedition
 import core.region
+import core.critters
 
 
 class DungeonMaster:
@@ -21,6 +22,7 @@ class DungeonMaster:
         'restock': (5000, 8000),
         'downtime': 50,
         'downtime_end': 100,
+        'downtime_move': (20, 30),
         'exp_delay': 500 # time after an expedition before a band can start another to allow downtime
     }
 
@@ -140,19 +142,13 @@ class DungeonMaster:
                     # possible actions
                     #   - offload loot, takes precedence
                     #   - plan expedition
-                    #   - carouse
-                    #   - shop
+                    #   - downtime
                     #   - research dungeons
 
                     if band.has_loot():
                         selected = 'offload'
                     else:
                         options = ['downtime']
-
-                        # if band.can_carouse():
-                        #     options.append('carouse')
-                        # if band.can_shop():
-                        #     options.append('shop')
 
                         occupied_dungeons = [e.dungeon.id for e in self.expeditions.values()]
                         available_dungeons = [d for d in self.dungeons.values() if d.id not in occupied_dungeons]
@@ -294,11 +290,17 @@ class DungeonMaster:
             if delver.will_shop():
                 options.append('shop')
 
-            selection = random.choice(options)
+            moves = delver.valid_moves('downtime')
+
+            selection = random.choice(options + moves)
             if selection == 'carouse':
                 partiers.append(delver)
             else:
-                self.new_task(selection, band.id, extras=delver.id)
+
+                if type(selection) == str:
+                    self.new_task(selection, band.id, extras=delver.id)
+                else:
+                    self.new_task('downtime_move', band.id, extras = {'delver': delver.id, 'move': selection})
 
         if len(partiers):
             self.new_task('carouse', band.id, extras=[d.id for d in partiers])
@@ -309,6 +311,22 @@ class DungeonMaster:
         # we don't really do anything here, this just gets put into the to dos so the band has an active task
         band = self.bands[do['id']]
         self.region.emit_narrative('{} are done with their downtime.'.format(band.name))
+
+    def action_downtime_move(self, do):
+        band = self.bands[do['id']]
+        delver = band.get(do['extras']['delver'])
+        move = do['extras']['move']
+
+        if hasattr(move, 'summon'):
+            follower = core.critters.Follower.generate(move.summon['type'], move.summon['rank'])
+            delver.acquire_follower(follower)
+
+            delver.persist()
+            self.region.emit_band(band)
+
+            self.region.emit_narrative('{} did a downtime move {}.'.format(delver.name, move.name), band.id)
+        else:
+            raise ValueError('Tried to process a downtime move with no known handling: {}'.format(move))
 
     def action_carouse(self, do):
         band = self.bands[do['id']]
@@ -329,29 +347,52 @@ class DungeonMaster:
         band = self.bands[do['id']]
         delver = band.get(do['extras'])
 
-        shop = random.choice([v for v in self.region.city.venues if v.type == core.region.Venue.SHOP])
+        shops = [v for v in self.region.city.venues if v.type == core.region.Venue.SHOP]
+        guilds = [v for v in self.region.city.venues if v.type == core.region.Venue.GUILD]
 
-
-        # will_buy is (intentionally) not deterministic so we must preserve the answer
-        thoughts = {i: delver.will_buy(i) for i in shop.stock}
-        options = {i: j for i, j in thoughts.items() if j}
-        
-        if len(options):    
-            item = random.choice(list(options.keys()))
-
-            if type(options[item]) != bool:
-                delver.purchase(item, options[item])
-            else:
-                delver.purchase(item)
-            shop.remove_item(item)
-
-            delver.persist()
-            self.region.city.persist()
-            self.region.emit_band(band)
-            self.region.emit_self()
-            self.region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+        if delver.follower_cap() > 0:
+            options = shops + guilds
+            weights = [2]*len(shops) + [1]*len(guilds)
+            shop = random.choices(options, weights)[0]
         else:
-            self.region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
+            shop = random.choice(shops)
+
+        if shop.type == core.region.Venue.SHOP:
+            # will_buy is (intentionally) not deterministic so we must preserve the answer
+            thoughts = {i: delver.will_buy(i) for i in shop.stock}
+            options = {i: j for i, j in thoughts.items() if j}
+            
+            if len(options):    
+                item = random.choice(list(options.keys()))
+
+                if type(options[item]) != bool:
+                    delver.purchase(item, options[item])
+                else:
+                    delver.purchase(item)
+                shop.remove_item(item)
+
+                delver.persist()
+                self.region.city.persist()
+                self.region.emit_band(band)
+                self.region.emit_self()
+                self.region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+            else:
+                self.region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
+        else:
+            for fol in shop.stock:
+                if delver.will_hire(fol):
+
+                    delver.acquire_follower(fol)
+                    delver.persist()
+                    shop.remove_item(fol)
+
+                    self.region.city.persist()
+                    self.region.emit_band(band)
+                    self.region.emit_self()
+                    self.region.emit_narrative('{} hired {} the {} at {}.'.format(delver.name, fol.name, fol.model.name, shop.name), band.id)
+                    break
+
+            self.region.emit_narrative('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), band.id)
     
     def action_idle(self, do):
         band = self.bands[do['id']]

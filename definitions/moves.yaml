@@ -2,10 +2,16 @@
 code: CONFUSED
 name: Act Confused
 target: self
-type: instant
+type: combat
 test: none
 effect:
   status: DISTRACTED
+---
+code: PLACEHOLDER
+name: Placeholder
+type: passive
+target: none
+test: none
 ---
 code: GLOBBOMB
 name: Glob Bomb
@@ -28,7 +34,7 @@ consequence:
 ---
 code: STABBITY
 name: Stabbity
-type: instant
+type: combat
 target: any
 test: prowess
 effect:
@@ -37,7 +43,7 @@ effect:
 ---
 code: SPINTOWIN
 name: Spin To Win
-type: instant
+type: combat
 target: any
 test: prowess
 effect:
@@ -46,7 +52,7 @@ effect:
 ---
 code: DISCOURSE
 name: Discourse
-type: instant
+type: combat
 target: ranged
 test: ego
 effect:
@@ -55,7 +61,7 @@ effect:
 ---
 code: BODYSLAM
 name: Body Slam
-type: instant
+type: combat
 target: melee
 test: swole
 effect:
@@ -64,7 +70,7 @@ effect:
 ---
 code: FLEX
 name: Flex
-type: instant
+type: combat
 target: self
 test: swole
 effect:
@@ -74,7 +80,7 @@ effect:
 ---
 code: HIDE
 name: Hide
-type: instant
+type: combat
 target: self
 test: crafty
 effect:
@@ -94,7 +100,7 @@ consequence:
 ---
 code: PUMMEL
 name: Pummel
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -103,7 +109,7 @@ effect:
 ---
 code: ABSORBTRAIT
 name: Absorb Quality
-type: instant
+type: combat
 target: ranged
 test: magic
 effect:
@@ -133,7 +139,7 @@ consequence:
 ---
 code: SQUARK
 name: Mighty Squark
-type: instant
+type: combat
 target: self
 test: bravado
 effect:
@@ -142,7 +148,7 @@ effect:
 ---
 code: TRUNDLE
 name: Trundle
-type: instant
+type: combat
 target: self
 test: none
 effect:
@@ -159,7 +165,7 @@ consequence:
 ---
 code: INVECTIVE
 name: Invective
-type: instant
+type: combat
 target: ranged
 test: personality
 effect:
@@ -168,7 +174,7 @@ effect:
 ---
 code: SHOWOFF
 name: Show Off
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -178,7 +184,7 @@ effect:
 ---
 code: PRESTIDIGITATION
 name: Prestidigitation
-type: instant
+type: combat
 target: ranged
 test: crafty
 effect:
@@ -193,7 +199,7 @@ test: spellcasting
 ---
 code: THWOMP
 name: Thwomp
-type: instant
+type: combat
 target: melee
 test: thicc
 effect:
@@ -202,7 +208,7 @@ effect:
 ---
 code: TRIP
 name: Trip
-type: instant
+type: combat
 target: melee
 test: pass
 effect:
@@ -212,7 +218,7 @@ effect:
 ---
 code: OUTRANGE
 name: Outrange
-type: instant
+type: combat
 target: melee
 test: pass
 effect:
@@ -222,7 +228,7 @@ effect:
 ---
 code: TRICKSHOT
 name: Trick Shot
-type: instant
+type: combat
 target: ranged
 test: pass
 effect:
@@ -231,7 +237,7 @@ effect:
 ---
 code: FACTOID
 name: Archery Factoid
-type: instant
+type: combat
 target: ranged
 test: pass
 effect:
@@ -240,7 +246,7 @@ effect:
 ---
 code: SAW
 name: Saw
-type: instant
+type: combat
 target: melee
 test: pass
 effect:
@@ -259,20 +265,30 @@ failure:
 ---
 code: THEWS
 name: Mighty Thews
-type: instant
+type: combat
 target: self
 test: pass
 effect:
   healing: 1d4
   status: PUMPED
   duration: 2
+---
+code: BEFRIEND
+name: Befriend Beast
+type: downtime
+target: self
+test: pass
+when: follower_cap
+summon: 
+  type: beast
+  rank: [1, 2]
 # =======================================================================================
 #  Tool moves
 # =======================================================================================
 ---
 code: STAB
 name: Stab
-type: instant
+type: combat
 target: melee
 test: crafty
 effect:
@@ -281,7 +297,7 @@ effect:
 ---
 code: HEW
 name: Hew
-type: instant
+type: combat
 target: melee
 test: thicc
 effect:
@@ -290,7 +306,7 @@ effect:
 ---
 code: BONK
 name: Bonk
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -299,7 +315,7 @@ effect:
 ---
 code: SLING
 name: Sling
-type: instant
+type: combat
 target: ranged
 test: prowess
 effect:
@@ -308,7 +324,7 @@ effect:
 ---
 code: HACK
 name: Hack
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -317,7 +333,7 @@ effect:
 ---
 code: CLUB
 name: Club
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -326,7 +342,7 @@ effect:
 ---
 code: POKE
 name: Poke
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -335,7 +351,7 @@ effect:
 ---
 code: ALIGHT
 name: Alight
-type: instant
+type: combat
 target: melee
 test: prowess
 effect:
@@ -344,7 +360,7 @@ effect:
 ---
 code: PONDER
 name: Ponder
-type: instant
+type: combat
 target: self
 test: prowess
 effect:
@@ -352,10 +368,30 @@ effect:
   status: SOMETHING
 ---
 code: BRIGHT
-name: BRIGHT
-type: instant
+name: Bright
+type: combat
 target: self
 test: prowess
 effect:
   max targets: 1
   status: BRIGHT
+# =======================================================================================
+#  Follower moves
+# =======================================================================================
+---
+code: BITE
+name: Bite
+type: combat
+target: melee
+test: prowess
+effect:
+  max targets: 1
+  damage: 2
+---
+code: TRICKSY
+name: Tricksy
+type: passive
+target: self
+test: none
+bonus:
+  - [guile, 5]

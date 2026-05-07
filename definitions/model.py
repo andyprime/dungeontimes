@@ -1,7 +1,7 @@
 import yaml
 import random
 
-from schema import Schema, And, Or, Optional
+from schema import Schema, SchemaError, And, Or, Optional
 
 '''
   Just a reminder that these are just definitions not the entities themselves
@@ -26,7 +26,11 @@ class Model:
         if self._source != '':
             handle = open('definitions/' + self._source, 'r')
             for r in yaml.safe_load_all(handle):
-                self._records.append(self(self._schema.validate(r)))
+                try:
+                    self._records.append(self(self._schema.validate(r)))
+                except SchemaError as e:
+                    e.add_note('Troublesome record: {}'.format(r))
+                    raise
         else:
             raise ValueError('Model missing _source value - {}'.format(self.__name__))
 
@@ -74,16 +78,17 @@ class Moves(Model):
     _schema = Schema({
             'name': And(str, len),
             'code': And(str, len),
-            'type': Or('consequence', 'instant', 'spellcasting', 'rest'),
-            'target': Or('any', 'melee', 'ranged', 'self', 'magic', 'friendly'),
+            'type': Or('combat', 'consequence', 'rest', 'downtime', 'passive', 'spellcasting'),
+            'target': Or('any', 'melee', 'ranged', 'self', 'magic', 'friendly', 'none'),
             'test': And(str, len),
+            Optional('when'): And(str, len),
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
                 Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
                 Optional('duration'): And(int, lambda n: n > 0),
                 Optional('healing'): And(str, len),
-                Optional('special'): str
+                Optional('special'): str                
             },
             Optional('consequence'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
@@ -94,8 +99,21 @@ class Moves(Model):
             },
             Optional('failure'): {
                 Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
-            }
+            },
+            Optional('summon'): {
+                'type': And(str, len),
+                'rank': Or(int, And([int], lambda l: len(l) == 2)) 
+            },
+            Optional('bonus'): [ [str, int] ] # this isn't right
         })
+
+    def valid(self, fellah):
+        # fellah is the local standard term for a monster or delver
+        fun = getattr(self, '_' + self.when)
+        return fun(fellah)
+
+    def _follower_cap(self, fellah):
+        return fellah.follower_cap() > 0
 
     def __str__(self):
         return 'Move ({})'.format(self.code)
@@ -149,7 +167,9 @@ class Classes(Model):
             'code': And(str, len),
             'hp': And(int, lambda h: h > 0),
             'moves': [str],
-            Optional('startingSpells'): [str]
+            Optional('startingSpells'): [str],
+            Optional('tools', default=2): And(int, lambda h: h > 0),
+            Optional('followers', default=1): And(int, lambda h: h > 0),
         })
 
 class Stocks(Model):
@@ -254,6 +274,20 @@ class ToolMod(Model):
             }
         })
 
+class Follower(Model):
+    _source = 'follower.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'type': Or('undead', 'beast', 'doll', 'hireling', 'arcane', 'devil'),
+            'rank': And(int, lambda n: n >= 0),
+            'health': And(int, lambda n: n >= 0),
+            'power': And(int, lambda n: n >= 0),
+            'grants': Or([str], str),
+            Optional('salary'): And(str, len)
+        })
+
 if __name__ == "__main__":
 
     print('Moves')
@@ -279,63 +313,3 @@ if __name__ == "__main__":
 
     print('Tools')
     Tool.load()
-
-    for monster in Monsters.all():
-        for move in monster.moves:
-            Moves.find(move)
-
-    allStatus = []
-    for move in Moves.all():
-        examine = {}
-        if move.type == 'consequence':
-            examine = move.consequence
-        elif move.type == 'instant':
-            examine = move.effect
-        else:
-            continue
-
-        x = examine.get('status', False)
-        if type(x) == str:
-            allStatus.append(x)
-        elif type(x) == list:
-            allStatus = allStatus + x
-        else:
-            pass
-
-    for spell in Spells.all():
-        x = spell.effect.get('status', False)
-        if type(x) == str:
-            allStatus.append(x)
-        elif type(x) == list:
-            allStatus = allStatus + x
-        else:
-            pass
-
-    print('All recorded statuses: {}'.format(set(allStatus)))
-    
-    print(' --- ')
-    orphanMoves = []
-    for move in Moves.all():
-        foundIt = False
-
-        for monster in Monsters.all():
-
-            if move.code in monster.moves:
-                print('Found {} in {}'.format(move.name, monster.name))
-                foundIt = True
-
-        for advClass in Classes.all():
-
-            if move.code in advClass.moves:
-                print('Found {} in {}'.format(move.name, advClass.name))
-                foundIt = True
-
-        if foundIt:
-            continue
-
-        orphanMoves.append(move.name)
-
-    print('Moves with no users: {}'.format(set(orphanMoves)))
-
-    print(Monsters.all())
-    print(Moves.all())

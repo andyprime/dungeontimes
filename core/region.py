@@ -393,7 +393,7 @@ class Venue:
             else:
                 return doodads.Consumable.generate(self.quality)
         elif self.type == Venue.GUILD:
-            return critters.Hireling.generate(self.quality)
+            return critters.Follower.generate('hireling', [1, 2])
 
     def data_format(self):
         return {

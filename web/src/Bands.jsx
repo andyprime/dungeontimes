@@ -120,6 +120,10 @@ const Delver = function({ d }) {
               { delver.gear.length > 0 && <div>{delver.gear.map((item) => (<p key={item.id}>{item.name}</p>))}</div> }
             </li>
             <li>
+              <b>Followers</b>
+              { delver.followers.length > 0 && <div>{delver.followers.map((item) => (<p key={item.id}>{item.name}, {item.desc}</p>))}</div> }
+            </li>
+            <li>
               <b>Loot</b>
               { delver.inventory.length > 0 && <div>{delver.inventory.map((item) => (<p key={item.id}>{item.name}</p>))}</div> }
             </li>

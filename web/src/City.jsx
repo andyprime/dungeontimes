@@ -58,7 +58,7 @@ function Guild({guild}) {
 
       <div>
         Available Contractors:
-        { guild['stock'].map((hireling) => (<p key={hireling.id}>{hireling['name']}</p>)) }
+        { guild['stock'].map((hireling) => (<p key={hireling.id}>{hireling['name']}, {hireling['desc']}, {hireling['salary']}</p>)) }
       </div>
 
     </div>
