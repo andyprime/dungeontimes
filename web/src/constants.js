@@ -7,7 +7,7 @@ const JOB_NAMES = {
     'PDANCER': 'Polearm Dancer',
     'BOWV': 'Bowvangelist',
     'CHIR': 'Chirurgeon',
-    'BARB': 'Barbarian'
+    'BMASTER': 'Beast Master'
 }
 
 export { JOB_NAMES }

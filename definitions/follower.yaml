@@ -1,0 +1,109 @@
+# -----------
+#  UNDEAD
+# -----------
+---
+name: skeleton
+code: SKELETON
+type: undead
+rank: 1
+health: 10
+power: 1
+grants: PLACEHOLDER
+---
+name: cadaver
+code: CADAVER
+type: undead
+rank: 1
+health: 12
+power: 1
+grants: PLACEHOLDER
+---
+name: spirit
+code: SPIRIT
+type: undead
+rank: 1
+health: 8
+power: 1
+grants: PLACEHOLDER
+---
+name: skeleton warrior
+code: SKELWAR
+type: undead
+rank: 2
+health: 20
+power: 2
+grants: PLACEHOLDER
+# -----------
+#  BEAST
+# -----------
+---
+name: weasel
+code: WEASEL
+type: beast
+rank: 1
+health: 10
+power: 1
+grants: TRICKSY
+---
+name: fox
+code: FOX
+type: beast
+rank: 2
+health: 10
+power: 2
+grants: TRICKSY
+---
+name: wolf
+code: WOLF
+type: beast
+rank: 1
+health: 20
+power: 2
+grants: BITE
+---
+name: black bear
+code: BLBEAR
+type: beast
+rank: 3
+health: 50
+power: 3
+grants: BITE
+# -----------
+#  HIRELING
+# -----------
+---
+name: torch bearer
+code: TBEARER
+type: hireling
+rank: 1
+health: 20
+power: 1
+grants: BRIGHT
+salary: '1d20+20'
+---
+name: pack bearer
+code: PBEARER
+type: hireling
+rank: 1
+health: 20
+power: 1
+grants: PLACEHOLDER
+salary: '1d20+20'
+---
+name: guide
+code: GUIDE
+type: hireling
+rank: 1
+health: 20
+power: 1
+grants: PLACEHOLDER
+salary: '1d20+25'
+---
+name: spear bearer
+code: SBEARER
+type: hireling
+rank: 2
+health: 30
+power: 1
+grants: PLACEHOLDER
+salary: '2d20+15'

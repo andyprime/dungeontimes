@@ -23,6 +23,7 @@ moves:
 name: Neerdowell
 code: NEERDOWELL
 hp: 12
+tools: 3
 moves:
   - HIDE
   - STABBITY
@@ -58,9 +59,10 @@ moves:
   - SAW
   - PATCHUP
 ---
-name: Barbarian
-code: BARB
-hp: 20
+name: Beastmaster
+code: BMASTER
+hp: 18
+followers: 2
 moves:
   - THEWS
-  - HEW # this is a weapon move but we wanna garuantee there's an active one
+  - BEFRIEND

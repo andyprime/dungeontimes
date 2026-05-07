@@ -3,7 +3,7 @@ import pytest
 import definitions
 
 
-@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable'])
+@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower'])
 def test_coreModelFeatures(className):
     # Just testing to make sure all models load and parse according to their schemas
     c = getattr(definitions.model, className)

@@ -93,6 +93,11 @@ class Creature(Persister):
     def moves(self):
         pass
 
+    def valid_moves(self, types):
+        if type(types) == str:
+            types = [types]
+        return [move for move in self.moves() if move.type in types]
+
     # To be implemented by children. Return a 2-tuple of ints 0-100 that indicate the partial and full success thresholds for the given test.
     # The roll is d100 (1-100) trying to roll above or equal to the threshold numbers.
     # The first number is the partial threshold, it will always be lower than the full threshold
@@ -116,8 +121,13 @@ class Delver(Creature):
     ATTRIBUTES = ['muscularity', 'prowess', 'pendantry', 'diligence', 'cool', 'guile', 'obduracy', 'pizazz']
 
     @classmethod
-    def random(self):
-        return Delver(strings.StringTool.random('regular_names'), model.Stocks.random(), model.Classes.random())
+    def random(self, c=None):
+        if c:
+            c = model.Classes.find(c)
+        else:
+            c = model.Classes.random()
+
+        return Delver(strings.StringTool.random('regular_names'), model.Stocks.random(), c)
 
     @classmethod
     def random_hobbies(self):
@@ -141,6 +151,7 @@ class Delver(Creature):
         self.id = str(uuid.uuid1())
         self.encumberence = 10
         self.inventory = []
+        self.followers = []
         self.wealth = 0
         self.lifetime_wealth = 0
         self.attr = Delver._build_attr()
@@ -166,7 +177,22 @@ class Delver(Creature):
 
         for tool in self.tools:
             moves.append(model.Moves.find(tool.grants))
-            
+        
+        for fol in self.followers:
+            moves.append(model.Moves.find(fol.grants))
+
+        return moves
+
+    def valid_moves(self, types):
+        moves = super().valid_moves(types)
+
+        # combat moves might eventually have cooldowns or something 
+        # downtime moves have conditions
+
+        for move in moves:
+            if hasattr(move, 'when') and not move.valid(self):
+                moves.remove(move)
+
         return moves
 
     def testThresholds(self, test):
@@ -246,15 +272,28 @@ class Delver(Creature):
             # this shouldn't happen but just in case
             return False
 
+    def spend(self, value):
+        self.wealth = int(self.wealth - value)
+
     def purchase(self, item, replace=None):
         if item.value > self.wealth:
             raise ValueError('Delver {} spent more money then they had.'.format(self.name))
 
-        self.wealth = int(self.wealth - item.value)
+        self.spend(item.value)
         if item.consumable():
             self.give(item)
         elif item.wearable() or item.tool():
             self.wear(item, replace)
+
+    def will_hire(self, fol):
+        return fol.salary < self.wealth and Dice.roll('1d100') < 5
+
+    def follower_cap(self):
+        return self.job.followers - len(self.followers)
+
+    def acquire_follower(self, follower):
+        self.spend(follower.salary)
+        self.followers.append(follower)
 
     # this returns a numeric value that indicates how good this delver considers this item
     # note that this function is not intended to be consistent, as in there is no garuantee
@@ -298,6 +337,7 @@ class Delver(Creature):
             'tools': [t.data_format() for t in self.tools],
             'gear': [i.data_format() for i in self.gear.values()],
             'inventory': [i.data_format() for i in self.inventory],
+            'followers': [f.data_format() for f in self.followers],
             'minutia': self.minutia
         }
 
@@ -316,28 +356,51 @@ class Delver(Creature):
         else:
             return c
 
-class Hireling(Creature):
+class Follower(Creature):
+
+    NAME_SOURCES = {
+        'undead': '', 
+        'beast': 'friendly_animal_names', 
+        'doll': '', 
+        'hireling': 'regular_names', 
+        'arcane': '', 
+        'devil': ''
+    }
 
     @classmethod
-    def generate(self, maxquality):
-        return Hireling()
+    def generate(self, ftype, ranks):
+        if type(ranks) == int:
+            ranks = [ranks]
+        fol = model.Follower.random(lambda f: f.type == ftype and f.rank in ranks)
+        return Follower(fol)
 
-    def __init__(self):
+    def __init__(self, model):
         super().__init__()
 
         self.id = str(uuid.uuid1())
-        self.name = strings.StringTool.random('regular_names')
-        self.stock = model.Stocks.random().name
-        self.maxhp = 10
-        self.currenthp = 10
-        self.encumberence = 10
-        self.inventory = []
+        
+        self.model = model
+        self.type = model.type
+        self.rank = model.rank
+        self.currenthp = model.health
+        self.maxhp = model.health
+        self.power = model.power
+        self.grants = model.grants
+
+        self.name = strings.StringTool.random(Follower.NAME_SOURCES[self.type])
+
+        if self.type == 'hireling':
+            self.salary = Dice.roll(model.salary)
+        else:
+            self.salary = 0
 
     def data_format(self):
         return {
             'id': self.id,
+            'type': self.type,
             'name': self.name,
-            'profession': 'hireling'
+            'desc': self.model.name,
+            'salary': self.salary
         }
 
 class Monster(Creature):

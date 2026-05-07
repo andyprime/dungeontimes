@@ -138,7 +138,7 @@ class Battle:
         # note that this lives in battle.py because it requires too much shared info to live on the creature itself
 
         # filter out moves that can not be performed
-        combat_moves = [m for m in fellah.moves() if m.type in ['instant', 'consequence', 'spellcasting']]
+        combat_moves = fellah.valid_moves(['combat', 'consequence', 'spellcasting'])
         move_options = []
 
         for move in combat_moves:
@@ -177,7 +177,7 @@ class Battle:
 
         if move.type == 'consequence':
             descriptor = '{act} performed a consequence move, right now those do nothing.'
-        elif move.type == 'instant':
+        elif move.type == 'combat':
 
             # we're gonna generate a float between 1 and 100
             # if the result is above fullThreshold its a full success
