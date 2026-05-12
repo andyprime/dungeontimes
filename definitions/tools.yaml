@@ -3,6 +3,7 @@ name: dagger
 code: dagger
 type: melee
 size: small
+tags: [edge, knife]
 rarity: 1
 value: 10
 grants: STAB
@@ -13,6 +14,7 @@ name: axe
 code: axe
 type: melee
 size: medium
+tags: [edge]
 rarity: 1
 value: 20
 grants: HEW
@@ -23,6 +25,7 @@ name: staff
 code: staff
 type: melee
 size: large
+tags: [blunt]
 rarity: 1
 value: 10
 grants: BONK
@@ -39,10 +42,33 @@ grants: SLING
 effect:
     power: 1
 ---
+name: short bow
+code: sbow
+type: ranged
+size: medium
+tags: [bow]
+rarity: 1
+value: 50
+grants: PLACEHOLDER
+effect:
+    power: 2
+---
+name: short sword
+code: shsword
+type: melee
+size: small
+tags: [edge, sword]
+rarity: 1
+value: 35
+grants: STAB
+effect:
+  power: 1
+---
 name: arming sword
 code: armsword
 type: melee
 size: medium
+tags: [edge, sword]
 rarity: 2
 value: 50
 grants: HACK
@@ -53,6 +79,7 @@ name: mace
 code: mace
 type: melee
 size: medium
+tags: [blunt]
 rarity: 2
 value: 35
 grants: CLUB
@@ -63,6 +90,7 @@ name: spear
 code: spear
 type: melee
 size: medium
+tags: [edge, pole]
 rarity: 1
 value: 25
 grants: POKE
@@ -73,6 +101,7 @@ name: claymore
 code: claymore
 type: melee
 size: large
+tags: [edge, sword]
 rarity: 2
 value: 75
 grants: HACK
@@ -99,10 +128,33 @@ grants: BRIGHT
 effect:
     power: 0
 ---
+name: chalk
+code: chalk
+type: general
+size: small
+tags: [academic]
+rarity: 1
+value: 5
+grants: PLACEHOLDER
+effect:
+  power: 1
+---
+name: wand
+code: wand
+type: arcane
+size: small
+tags: [wood, arcane]
+rarity: 1
+value: 15
+grants: PLACEHOLDER
+effect:
+    power: 1
+---
 name: orb
 code: orb
-type: magic
+type: arcane
 size: small
+tags: [round, arcane]
 rarity: 3
 value: 60
 grants: PONDER

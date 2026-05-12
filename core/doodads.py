@@ -108,9 +108,17 @@ class Tool(Item):
     smushables = ['power', 'style']
 
     @classmethod
-    def generate(self, max_rarity=2):
-        f = lambda r: r.rarity <= max_rarity
-        combined = self.smush(model.Tool.random(f), model.ToolMod.random(f))
+    def generate(self, max_rarity=2, mod_rarity=None, tag=None):
+        if mod_rarity == None:
+            mod_rarity = max_rarity
+        if tag:
+            tf = lambda r: r.rarity <= max_rarity and tag in r.tags
+        else:
+            tf = lambda r: r.rarity <= max_rarity
+
+        t = model.Tool.random(tf)
+        m = model.ToolMod.random_for(t, mod_rarity)
+        combined = self.smush(t, m)
         return Tool(combined)
 
     def tool(self):

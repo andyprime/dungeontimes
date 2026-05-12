@@ -4,6 +4,7 @@ import uuid
 
 import core.strings as strings
 from core.dice import Dice
+from core.doodads import Tool
 from core.mdb import Persister
 import definitions.model as model
 
@@ -117,7 +118,6 @@ class Creature(Persister):
 
 class Delver(Creature):
 
-    MAX_TOOLS = 2
     ATTRIBUTES = ['muscularity', 'prowess', 'pendantry', 'diligence', 'cool', 'guile', 'obduracy', 'pizazz']
 
     @classmethod
@@ -161,6 +161,12 @@ class Delver(Creature):
             'hobbies': Delver.random_hobbies(),
             'sign': strings.StringTool.random('astrology')
         }
+
+        if hasattr(self.job, 'tool'):
+            try:
+                self.tools.append(Tool.generate(1, 0, self.job.tool))
+            except IndexError:
+                raise ValueError(f'No valid starting gear for tool type: {self.job.tool}')
 
         self.team = None # temp code for battles
 
@@ -247,12 +253,21 @@ class Delver(Creature):
                 return True
 
         if item.tool():
-            if len(self.tools) < Delver.MAX_TOOLS:
-                return True
-            x = self.evaluate_gear(item)
+            same_type = [t for t in self.tools if t.type == item.type]
+            consider = []
+            has_room = len(self.tools) < self.job.tools
+            has_type = bool(same_type)
 
+            if has_room and not has_type:
+                return True
+            elif has_type:
+                consider = same_type
+            else:
+                consider = self.tools
+
+            x = self.evaluate_gear(item)
             # for the moment we're going to return the tool itself so that later steps can know which tool to replace
-            for t in self.tools:
+            for t in consider:
                 y = self.evaluate_gear(t)
                 if x > y:
                     return t

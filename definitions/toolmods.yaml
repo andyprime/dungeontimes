@@ -1,3 +1,33 @@
+# ================================
+# rarity zero, completely negative
+# ================================
+---
+code: wobbly
+rarity: 0
+name:
+  prefix: wobbly
+effect:
+  power: -1
+  value_mod: -25
+---
+code: rusty
+rarity: 0
+name:
+  prefix: rusty
+effect:
+  power: -1
+  value_mod: -50
+---
+code: unbalanaced
+rarity: 0
+name:
+  prefix: unbalanced
+effect:
+  power: -1
+  value_mod: -30
+# ================================
+# rarity one, minor bonus or mixed
+# ================================
 ---
 code: heavy
 rarity: 1
@@ -10,19 +40,15 @@ effect:
 ---
 code: sharp
 rarity: 1
+requires: edge
 name:
   prefix: sharp
 effect:
   power: 1
   value_mod: 20
----
-code: rusty
-rarity: 1
-name:
-  prefix: rusty
-effect:
-  power: -1
-  value_mod: -50
+# ================================
+# rarity two, good or very good with a downside
+# ================================
 ---
 code: fancy
 rarity: 2
@@ -32,14 +58,6 @@ effect:
   style: 2
   value_mod: 25
 ---
-code: wobbly
-rarity: 1
-name:
-  prefix: wobbly
-effect:
-  power: -1
-  value_mod: -25
----
 code: potent
 rarity: 2
 name: 
@@ -47,14 +65,6 @@ name:
 effect:
   power: 2
   value_mod: 50
----
-code: arcane
-rarity: 3
-name:
-  prefix: arcane
-effect:
-  power: 2
-  value_mod: 70
 ---
 code: sinister
 rarity: 2
@@ -64,3 +74,14 @@ effect:
   power: 1
   style: 1
   value_mod: 30
+# ================================
+# rarity three, specialty stuff
+# ================================
+---
+code: arcane
+rarity: 3
+name:
+  prefix: arcane
+effect:
+  power: 2
+  value_mod: 70

@@ -166,7 +166,7 @@ class DungeonMaster:
             self.to_do.sort(key=lambda a: a['schedule'])
             do = self.to_do.pop(0)
             time.sleep(do['schedule'] - self.current_time)
-            self.current_time = do['schedule']
+            self.current_time = int(do['schedule'])
 
             f = getattr(self, 'action_' + do['action'])
             if callable(f):
