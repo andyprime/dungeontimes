@@ -2,6 +2,7 @@
 name: Ethicist
 code: ETHICIST
 hp: 10
+tool: academic
 moves:
   - DISCOURSE
   - INVECTIVE
@@ -9,6 +10,7 @@ moves:
 name: Muscle Man
 code: MUSCLE
 hp: 16
+# gear: belt
 moves:
   - BODYSLAM
   - FLEX
@@ -16,6 +18,7 @@ moves:
 name: Swordlord
 code: SWORDLORD
 hp: 14
+tool: sword
 moves:
   - SPINTOWIN
   - SHOWOFF
@@ -23,6 +26,7 @@ moves:
 name: Neerdowell
 code: NEERDOWELL
 hp: 12
+tool: knife
 tools: 3
 moves:
   - HIDE
@@ -31,6 +35,7 @@ moves:
 name: Magician
 code: MAGICIAN
 hp: 10
+tool: arcane
 moves:
   - PRESTIDIGITATION
   - MAGICIANSPELL
@@ -41,6 +46,7 @@ startingSpells:
 name: Polearm Dancer
 code: PDANCER
 hp: 15
+tool: pole
 moves:
   - TRIP
   - OUTRANGE
@@ -48,6 +54,7 @@ moves:
 name: Bowvangelist
 code: BOWV
 hp: 10
+tool: bow
 moves:
   - TRICKSHOT
   - FACTOID
@@ -55,6 +62,7 @@ moves:
 name: Chirurgeon
 code: CHIR
 hp: 12
+tool: knife
 moves:
   - SAW
   - PATCHUP
@@ -62,6 +70,7 @@ moves:
 name: Beastmaster
 code: BMASTER
 hp: 18
+tool: knife
 followers: 2
 moves:
   - THEWS

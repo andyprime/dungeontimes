@@ -138,10 +138,6 @@ class Spells(Model):
 class Critter(Model):
     pass
 
-
-class Delver(Critter):
-    pass
-
 class Monsters(Critter):
 
     _source = 'monsters.yaml'
@@ -167,6 +163,8 @@ class Classes(Model):
             'code': And(str, len),
             'hp': And(int, lambda h: h > 0),
             'moves': [str],
+            Optional('tool'): And(str, len),
+            Optional('gear'): And(str, len),
             Optional('startingSpells'): [str],
             Optional('tools', default=2): And(int, lambda h: h > 0),
             Optional('followers', default=1): And(int, lambda h: h > 0),
@@ -243,8 +241,9 @@ class Tool(Model):
             'code': And(str, len), 
             'rarity': And(int, lambda n: n >= 0),
             'value': And(int, lambda n: n >= 0),
-            'type': And(str, len),
+            'type': Or('melee', 'ranged', 'arcane', 'light', 'general'),
             'size': And(str, len), 
+            Optional('tags', default=[]): [str],
             'grants': Or([str], str),
             'effect': {
                 'power': And(int, lambda n: n >= 0),
@@ -262,6 +261,7 @@ class ToolMod(Model):
                 Optional('prefix'): And(str, len),
                 Optional('postfix'): And(str, len)
             },
+            Optional('requires'): And(str, len),
             'effect': {
                 Optional('pass'): 'pass', # placeholder value
                 Optional('value'): int,
@@ -273,6 +273,11 @@ class ToolMod(Model):
                 Optional('rarity'): int,
             }
         })
+
+    @classmethod
+    def random_for(self, t: Tool, rarity: int):
+        tags = [t.type, t.size] + t.tags
+        return self.random(lambda tm: tm.rarity <= rarity and (not hasattr(tm, 'requires') or tm.requires in tags))
 
 class Follower(Model):
     _source = 'follower.yaml'
