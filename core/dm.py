@@ -2,6 +2,7 @@ import random
 import time
 
 from core.dice import Dice
+from core.message import Messaging
 import core.dungeon.generate
 import core.expedition
 import core.region
@@ -27,8 +28,6 @@ class DungeonMaster:
     }
 
     def __init__(self, options):
-        self.db = options.get('db')
-        self.emitfn = options.get('rabbit')
         self.outputfn = options.get('output')
         self.band_count = options.get('bands')
         self.dungeon_count = options.get('dungeons')
@@ -40,9 +39,7 @@ class DungeonMaster:
         # build region
         self.region = core.region.RegionGenerate.generate_region()
         self.region.save()
-        self.region.register_emitter(self.emitfn)
-        self.region.register_event(self.eventsaver)
-
+        
         # build bands
         self.bands = {}
         for i in range(0, self.band_count):
@@ -131,9 +128,9 @@ class DungeonMaster:
                 print('Making new band')
                 b = self.build_party()
                 self.bands[b.id] = b
-                self.region.emit_narrative('Aspiring delvers have formed a new band, {}.'.format(b.name), b.id)
-                self.region.emit_bands()
-
+                Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b.id)
+                Messaging.emit_basic('bands', [self.region])
+                
             # 2. Check to see if any bands don't have anything to do
             for band_id, band in self.bands.items():
                 if not any(t.get('id') == band_id for t in self.to_do):
@@ -186,7 +183,7 @@ class DungeonMaster:
             exp.process_turn()
 
             self.region.remove_dungeon(exp.dungeon)
-            self.region.emit_del_dungeon(exp.dungeon.id)
+            self.region.emit_del_dungeon(exp.dungeon)
             self.region.persist()
 
             exp.dungeon.complete = True
@@ -200,13 +197,13 @@ class DungeonMaster:
             del self.dungeons[exp.dungeon.id]
 
             if exp.failed():
-                self.region.emit_narrative('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name), band.id)
+                Messaging.emit_message('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name), [self.region, band, exp])
                 del self.bands[band.id]
                 band.active = False
                 band.persist()
             else:
                 band.last_exp = self.current_time
-                self.region.emit_narrative('{} have returned from their daring dungeon expedition.'.format(band.name), band.id)
+                Messaging.emit_message('{} have returned from their daring dungeon expedition.'.format(band.name), [self.region, band, exp])
 
         else:
             delay = exp.process_turn()
@@ -224,17 +221,17 @@ class DungeonMaster:
             exp = core.expedition.Expedition(self.region, dungeon, band, None)
             exp.save()
 
-            exp.register_emitter(self.emitfn)
             exp.register_processor(self.outputfn)
             exp.emit_new()
-            self.region.emit_narrative('{} have planned an expedition to {}.'.format(band.name, dungeon.name), band.id)
+
+            Messaging.emit_message('{} have planned an expedition to {}.'.format(band.name, dungeon.name), [self.region, exp, band, dungeon])
 
             self.expeditions[band.id] = exp
 
             self.new_task('exp', band.id)
 
         else:
-            self.region.emit_narrative('{} were going to plan an expedition to the last dungeon but someone beat them to it.')
+            Messaging.emit_message('{} were going to plan an expedition to the last dungeon but someone beat them to it.'.format(band.name), [self.region, band])
 
     def action_research(self, do):
         band = self.bands[do['id']]
@@ -244,7 +241,7 @@ class DungeonMaster:
         self.region.place_dungeon(d)
         self.dungeon_changes = True
 
-        self.region.emit_narrative('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), band.id)
+        Messaging.emit_message('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), [self.region, band, d])
         self.region.emit_new_dungeon(d)
         self.region.persist()
 
@@ -271,17 +268,18 @@ class DungeonMaster:
                 print('Selling item: {} at {}'.format(item.name, item.value))
                 delver.add_wealth(item.value)
                 delver.persist()
-                self.region.emit_narrative('{} sold {} for {} coins.'.format(delver.name, item.name, item.value), band.id)
+                Messaging.emit_message('{} sold {} for {} coins.'.format(delver.name, item.name, item.value), [self.region, delver])
                 band.add_wealth(item.value)
                 band.persist()
-                self.region.emit_band(band)
+                Messaging.emit_basic('band', [self.region, band])
+
                 break
 
     def action_downtime(self, do):
         band = self.bands[do['id']]
 
-        self.region.emit_narrative('{} split up to get some things done.'.format(band.name))
-
+        Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region])
+        
         partiers = []
         for delver in band.members:
             options = ['train', 'idle']
@@ -310,7 +308,7 @@ class DungeonMaster:
     def action_downtime_end(self, do):
         # we don't really do anything here, this just gets put into the to dos so the band has an active task
         band = self.bands[do['id']]
-        self.region.emit_narrative('{} are done with their downtime.'.format(band.name))
+        Messaging.emit_message('{} are done with their downtime.'.format(band.name), [self.region, band])
 
     def action_downtime_move(self, do):
         band = self.bands[do['id']]
@@ -322,9 +320,9 @@ class DungeonMaster:
             delver.acquire_follower(follower)
 
             delver.persist()
-            self.region.emit_band(band)
+            Messaging.emit_basic('band', [self.region, band])
 
-            self.region.emit_narrative('{} did a downtime move {}.'.format(delver.name, move.name), band.id)
+            Messaging.emit_message('{} did a downtime move {}.'.format(delver.name, move.name), [self.region, delver])
         else:
             raise ValueError('Tried to process a downtime move with no known handling: {}'.format(move))
 
@@ -341,7 +339,7 @@ class DungeonMaster:
             first = ', '.join(d.name for d in delvers[0:len(delvers)-1])
             msg = '{}, and {} are going on a long bender. '.format(first, delvers[-1].name)
 
-        self.region.emit_narrative(msg, band.id)
+        Messaging.emit_message(msg, [self.region, band] + delvers)
         
     def action_shop(self, do):
         band = self.bands[do['id']]
@@ -373,11 +371,11 @@ class DungeonMaster:
 
                 delver.persist()
                 self.region.city.persist()
-                self.region.emit_band(band)
+                Messaging.emit_basic('band', [self.region, band])
                 self.region.emit_self()
-                self.region.emit_narrative('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), band.id)
+                Messaging.emit_message('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), [self.region, delver])
             else:
-                self.region.emit_narrative('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), band.id)
+                Messaging.emit_message('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), [self.region, delver])
         else:
             for fol in shop.stock:
                 if delver.will_hire(fol):
@@ -387,24 +385,24 @@ class DungeonMaster:
                     shop.remove_item(fol)
 
                     self.region.city.persist()
-                    self.region.emit_band(band)
+                    Messaging.emit_basic('band', [self.region, band])
                     self.region.emit_self()
-                    self.region.emit_narrative('{} hired {} the {} at {}.'.format(delver.name, fol.name, fol.model.name, shop.name), band.id)
+                    Messaging.emit_message('{} hired {} the {} at {}.'.format(delver.name, fol.name, fol.model.name, shop.name), [self.region, delver])
                     break
 
-            self.region.emit_narrative('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), band.id)
+            Messaging.emit_message('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), [self.region, delver])
     
     def action_idle(self, do):
         band = self.bands[do['id']]
         delver = band.get(do['extras'])
 
-        self.region.emit_narrative('{} spends their free time mostly farting around.'.format(delver.name))
+        Messaging.emit_message('{} spends their free time mostly farting around.'.format(delver.name), [self.region, delver])
 
     def action_train(self, do):
         band = self.bands[do['id']]
         delver = band.get(do['extras'])
 
-        self.region.emit_narrative('{} went on a training montage.'.format(delver.name))
+        Messaging.emit_message('{} went on a training montage.'.format(delver.name), [self.region, delver])
 
     def action_restock(self, do):
         for i in range(5):

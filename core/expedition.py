@@ -3,6 +3,8 @@ import random
 import time
 import uuid
 
+import core.message
+
 from core.battle import Battle
 from core.dungeon.dungeons import DungeonCell
 from core.mdb import Persister
@@ -93,16 +95,6 @@ class Expedition(Persister):
     def register_processor(self, callback):
         self.processors.append(callback)
 
-    def register_emitter(self, callback):
-        self.emitters.append(callback)
-
-    def register_event(self, callback):
-        self.event_saver = callback
-
-    def save_event(self, type, objects, msg):
-        if callable(self.event_saver):
-            self.event_saver(type, objects, msg)
-
     def prefix(self):
         return self.id[0:10]
 
@@ -111,54 +103,26 @@ class Expedition(Persister):
         message = '{} - {}'.format(self.prefix(), message)
         for f in self.processors:
             f(message)
-       
-    def _build_context(self):
-        context = {
-            'expedition': self.id,
-            'band': self.band.id
-        }
-        if self.indungeon:
-            context['dungeon'] = self.dungeon.id
-        return context
-
-    def emit(self, msg):
-        if not msg.get('context', False):
-            msg['context'] = self._build_context()
-        package = json.dumps(msg)
-        for e in self.emitters:
-            e(package.encode('ASCII'))
 
     def emit_cursor(self):
-        msg = {
-            'type': 'CURSOR',
-            'coords': self._get_location(),
-        }
-        self.emit(msg)
+        core.message.Messaging.emit_coords('CURSOR', self._get_location(), [self, self.band])
+        
+    def emit_narrative(self, s, delver=None):
+        if delver:
+            objs = [self, delver]
+        else:
+            objs = [self, self.band]
+        if self.indungeon:
+            objs.append(self.dungeon)
 
-    def emit_narrative(self, s, targets=[]):
-        msg = {
-            'type': 'NARRATIVE',
-            'message': s,
-        }
-
-        event_refs = [self.band.id]
-        if targets:
-            event_refs += targets
-        self.save_event('expedition', [self.band.id], s)
-        self.emit(msg)
+        core.message.Messaging.emit_message(s, objs)
 
     def emit_new(self):
-        msg = {
-            'type': 'EXPEDITION-NEW',
-        }
-        self.emit(msg)
+        core.message.Messaging.emit_basic('EXPEDITION-NEW', [self, self.band])
 
     def emit_delete(self):
-        msg = {
-            'type': 'EXPEDITION-DEL',
-        }
-        self.emit(msg)
-        
+        core.message.Messaging.emit_basic('EXPEDITION-DEL', [self, self.band])
+
     def emit_battle(self, start, roomNo):
         msg = {
             'room': roomNo,
@@ -167,13 +131,10 @@ class Expedition(Persister):
             msg['type'] = 'BATTLE-START'
         else:
             msg['type'] = 'BATTLE-END'
-        self.emit(msg)
+        core.message.Messaging.emit_custom(msg, [self, self.band, self.dungeon])
 
     def emit_band(self):
-        msg = {
-            'type': 'BAND',
-        }
-        self.emit(msg)
+        core.message.Messaging.emit_basic('BAND', [self.band])
 
     def overland(self):
         return self.status in Expedition.OVERLAND_STATES
@@ -366,7 +327,7 @@ class Expedition(Persister):
                     return Expedition.TASK_DURATIONS['round_divider']
 
         else:
-            self.battle = Battle(self.process_message, self.emit)
+            self.battle = Battle(self.process_message, [self, self.dungeon])
 
             for m in room.locals:
                 self.battle.addParticipant('monster', m)
@@ -376,7 +337,6 @@ class Expedition(Persister):
 
             self.emit_battle(True, room.num)
             self.battle.start()
-
 
     def runstate_sct(self, local):
         self.process_message('Band is scattering')
@@ -396,11 +356,6 @@ class Expedition(Persister):
             # this is piggy backing off the battle update emit for now which is why it doesn't get a dedicated function
             body = {
                 'type': 'BATTLE-UPDATE',
-                'context': {
-                    'expedition': self.id,
-                    'band': self.band.id,
-                    'dungeon': self.dungeon.id
-                },
                 'details': {
                     'source': p.id,
                     'target': p.id,
@@ -410,7 +365,7 @@ class Expedition(Persister):
                     'status': p.status
                 }
             }
-            self.emit(body)
+            core.message.Messaging.emit_custom(body, [self, self.band, self.dungeon])
         
         self._set_state(Expedition.SEARCH)
 
@@ -446,16 +401,16 @@ class Expedition(Persister):
                         else:
                             delver.wear(item, replace)
                         delver.persist()
-                        self.emit_narrative('{} found {} and put it on.'.format(delver.name, item.name), [delver.id])
+                        self.emit_narrative('{} found {} and put it on.'.format(delver.name, item.name), delver)
                         self.emit_band()
                     elif item.useless() and delver.can_hold(item):
                         # for now only keep treasure items
                         delver.give(item)
                         delver.persist()
-                        self.emit_narrative('{} found {}'.format(delver.name, item.name), [delver.id])
+                        self.emit_narrative('{} found {}'.format(delver.name, item.name), delver)
                         self.emit_band()
                 else:
-                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), [delver.id])    
+                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), delver)    
 
                 local['remaining'] = remaining - 1
 

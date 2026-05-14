@@ -2,11 +2,11 @@ import json
 import random
 import uuid
 
-import core.critters
-
-from core.dice import Dice
-# this is bad, but the emitter system needs an overhaul so we can live with this for now
+import core.message
 from core.mdb import MongoService 
+
+import core.critters
+from core.dice import Dice
 
 from definitions.model import Moves
 
@@ -53,7 +53,7 @@ class Battle:
     BATTAL = 2
     OVER = 3
 
-    def __init__(self, processCallback, emitter):
+    def __init__(self, processCallback, emit_context):
         self.teams = {}
         self.teamCount = 0
         self.conditions = []
@@ -61,7 +61,7 @@ class Battle:
         self.state = Battle.PAPERWORK
         self.roundCount = 0
         self.processCallback = processCallback
-        self.emitter = emitter
+        self.context = emit_context
 
     def start(self):
         self.processMessage('Lets fight!')
@@ -77,9 +77,15 @@ class Battle:
         if callable(self.processCallback):
             self.processCallback(message)
 
-    def emit(self, message):
-        if callable(self.emitter):
-            self.emitter(message)
+    def emit_update(self, details, participants):
+        body = {
+            'type': 'BATTLE-UPDATE',
+            'details': details
+        }
+        core.message.Messaging.emit_custom(body, participants + self.context)
+
+    def emit_message(self, msg, participants):
+        core.message.Messaging.emit_message(msg, participants + self.context, 'battle', True)
 
     def round(self):
         return self.roundCount
@@ -232,31 +238,21 @@ class Battle:
         else:
             descriptor = 'Invalid move type: {}'.format(move)
 
-        
-        # note that this doc will receive the context object when it passes through the exp layer
-        # which also means we're not jsoning it yet
         body = {
-            'type': 'BATTLE-UPDATE',
-            'details': {
-                'source': fellah.id,
-                'target': target.id,
-                'dam': appliedDamage,
-                'newhp': target.currenthp,
-                'maxhp': target.maxhp,
-                'status': target.status
-            }
+            'source': fellah.id,
+            'target': target.id,
+            'dam': appliedDamage,
+            'newhp': target.currenthp,
+            'maxhp': target.maxhp,
+            'status': target.status
         }
-        self.emit(body)
+        self.emit_update(body, [fellah, target])
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
 
         self.processMessage(descriptor)
+        self.emit_message(descriptor, [fellah, target])
 
-        MongoService.save_event('battle', [fellah.id, target.id], descriptor, True)
-        self.emit({
-            'type': 'NARRATIVE',
-            'message': descriptor
-            })
 
     def applyEffect(self, target, effect, partial=False):
         applied_damage = 0
