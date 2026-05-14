@@ -37,7 +37,6 @@ class Messaging:
 
     @classmethod
     def emit(self, msg):
-        print('<=> Emitting: ', msg)
         package = json.dumps(msg)
         self.publish(package.encode('ASCII'))
 
