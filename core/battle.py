@@ -84,8 +84,8 @@ class Battle:
         }
         core.message.Messaging.emit_custom(body, participants + self.context)
 
-    def emit_message(self, msg, participants):
-        core.message.Messaging.emit_message(msg, participants + self.context, 'battle', True)
+    def emit_message(self, msg, participants, transient=True):
+        core.message.Messaging.emit_message(msg, participants + self.context, 'battle', transient)
 
     def round(self):
         return self.roundCount
@@ -249,9 +249,11 @@ class Battle:
         self.emit_update(body, [fellah, target])
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
+        if target.currenthp == 0:
+            descriptor += ' {} was defeated!'.format(target.name)
 
         self.processMessage(descriptor)
-        self.emit_message(descriptor, [fellah, target])
+        self.emit_message(descriptor, [fellah, target], target.currenthp != 0)
 
 
     def applyEffect(self, target, effect, partial=False):
