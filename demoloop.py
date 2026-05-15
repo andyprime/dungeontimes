@@ -6,21 +6,13 @@ from functools import partial, reduce
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from bson import ObjectId
-import pika
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import core.dm
-# import core.region as region
-# from core.dice import Dice
-# import core.dungeon.generate
-# from core.dungeon.dungeons import Dungeon
+import core.message
 from core.mdb import MongoService
 
 _advHandlerSettings = {}
-
-def rabbit_handler(channel, message):
-    # print('$$$$$$$ Emit {}'.format(message))
-    channel.basic_publish(exchange='dungeon', routing_key='*', body=message)
 
 def stdout_processor(str):
     print('>>> {}'.format(str))
@@ -61,20 +53,12 @@ if __name__ == "__main__":
         mongo_host = settings.mongo_host
         rabbit_host = settings.rabbit_host
 
-    MongoService.setup('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
-    creds = pika.PlainCredentials(settings.rabbit_user, settings.rabbit_password)
-    parameters = (pika.ConnectionParameters(host=rabbit_host, credentials=creds))
+    core.message.Messaging.setup(rabbit_host, settings.rabbit_user, settings.rabbit_password)
     
-    connection = pika.BlockingConnection(parameters)
-    channel = connection.channel()
-    channel.exchange_declare('dungeon', exchange_type='fanout', durable=True)
-
+    MongoService.setup('mongodb://{}:{}@{}:{}'.format(settings.mongo_user, settings.mongo_password, mongo_host, settings.mongo_port))
     MongoService.hard_reset()
-    emitfn = partial(rabbit_handler, channel)
-
+   
     dm = core.dm.DungeonMaster({
-        'db': MongoService,
-        'rabbit': emitfn,
         'output': stdout_processor,
         'bands': args.bands,
         'dungeons': args.dungeons

@@ -11,7 +11,7 @@ import { rootUrl } from './fetching.js';
 import { LogContext } from './context.js';
 
 const REGION_EVENTS = ['REGION', 'DUNGEONS', 'DUNGEON-NEW', 'DUNGEON-DEL'];
-const EXP_EVENTS = ['EXPEDITION-NEW', 'EXPEDITIOn-DEL'];
+const EXP_EVENTS = ['EXPEDITION-NEW', 'EXPEDITION-DEL'];
 const BATTLE_EVENTS = ['BATTLE-START', 'BATTLE-END'];
 
 function Port() {
@@ -52,21 +52,25 @@ function Port() {
     } 
     // =====================================================================================
     else if (doc['type'] == 'NARRATIVE') {
-      let index = 'region';
-      if(!!doc['context']['dungeon']) {
+      let index = false;
+      if(!!doc['context']['region']) {
+        index = 'region';
+      } else if(!!doc['context']['dungeon']) {
         index = doc['context']['dungeon'];
       }
 
-      setLogs(oldLogs => {
-        let newLogs = {...oldLogs};
-        if (newLogs[index] == undefined) {
-          newLogs[index] = [];
-        }
+      if (!!index) {
+        setLogs(oldLogs => {
+          let newLogs = {...oldLogs};
+          if (newLogs[index] == undefined) {
+            newLogs[index] = [];
+          }
 
-        newLogs[index] = newLogs[index].slice(0, 19);
-        newLogs[index].unshift(doc['message']);
-        return newLogs;
-      });
+          newLogs[index] = newLogs[index].slice(0, 19);
+          newLogs[index].unshift(doc['message']);
+          return newLogs;
+        });
+      }
 
     } 
     // =====================================================================================

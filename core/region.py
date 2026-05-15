@@ -6,6 +6,7 @@ import time
 from typing import NamedTuple
 from enum import IntEnum
 
+import core.message
 from core.mdb import Persister
 import core.strings as strings
 from core.dice import Dice
@@ -20,8 +21,6 @@ class Region(Persister):
         self.name = strings.StringTool.random('region_names')
         self.id = str(uuid.uuid1())
         self.dungeons = {}
-        self.emitters = []
-        self.event_saver = None
 
     def initialize(self, height, width, terrain=None):
         if not terrain:
@@ -43,96 +42,18 @@ class Region(Persister):
     def width(self):
         return len(self.grid[0])
 
-    def register_emitter(self, callback):
-        self.emitters.append(callback)
-
-    def register_event(self, callback):
-        self.event_saver = callback
-
-    def save_event(self, type, objects, msg):
-        if callable(self.event_saver):
-            self.event_saver(type, objects, msg)
-
-    def emit(self, msg):
-        package = json.dumps(msg)
-        for e in self.emitters:
-            e(package.encode('ASCII'))
-
-    def emit_narrative(self, s, band=None):
-        msg = {
-            'type': 'NARRATIVE',
-            'message': s,
-            'context': {
-                'region': self.id,
-            }
-        }
-        if band:
-            msg['context']['band'] = band
-            self.save_event('general', [self.id, band], msg['message'])
-        else:
-            self.save_event('general', [self.id], msg['message'])
-        self.emit(msg)
-
     def emit_self(self):
-        msg = {
-            'type': 'REGION',
-            'context': {
-                'region': self.id
-            }
-        }
-        self.emit(msg)
-
-    def emit_bands(self):
-        msg = {
-            'type': 'BANDS',
-            'context': {
-                'region': self.id
-            }
-        }
-        self.emit(msg)
-
-    def emit_band(self, band):
-        msg = {
-            'type': 'BAND',
-            'context': {
-                'region': self.id,
-                'band': band.id
-            }
-        }
-        self.emit(msg)
-
+        core.message.Messaging.emit_basic('REGION', [self])
+        
     def emit_dungeon_locales(self):
-        msg = {
-            'type': 'DUNGEONS',
-            'coords': self.raw_dungeons(),
-            'context': {
-                'region': self.id
-            }
-        }
-        self.emit(msg)
-
+        core.message.Messaging.emit_coords('DUNGEONS', self.raw_dungeons(), [self])
+        
     def emit_new_dungeon(self, dungeon):
-        msg = {
-            'type': 'DUNGEON-NEW',
-            'context': {
-                'region': self.id,
-                'dungeon': dungeon.id
-            }
-        }
-        self.emit(msg)
-
-        # self.emit('DNG-NEW;{}'.format(dungeon.data_format()))
-
-    def emit_del_dungeon(self, did):
-        msg = {
-            'type': 'DUNGEON-DEL',
-            'context': {
-                'region': self.id,
-                'dungeon': did
-            }
-        }
-        self.emit(msg)
-
+        core.message.Messaging.emit_basic('DUNGEON-NEW', [self, dungeon])
+        
+    def emit_del_dungeon(self, dungeon):
+        core.message.Messaging.emit_basic('DUNGEON-DEL', [self, dungeon])
+        
     # camel name functions are compatibility holdovers from super early prototype code
     def getCell(self, y, x):
         # No negative indexing please
