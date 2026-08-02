@@ -185,23 +185,13 @@ class Battle:
             descriptor = '{act} performed a consequence move, right now those do nothing.'
         elif move.type == 'combat':
 
-            # we're gonna generate a float between 1 and 100
-            # if the result is above fullThreshold its a full success
-            # otherwise if the result is above partialThreshold its a partial sucess
-            # otherwise its a failure
-
+            threshold = 0
             if move.test == 'none':
-                partialThreshold = -1
-                fullThreshold = 0
+                threshold = 2
             else:
-                partialThreshold, fullThreshold = fellah.testThresholds(move.test)
+                threshold = fellah.perform_test(move.test['primary'], move.test['secondary']) 
 
-            # TODO - remove this once proper external testing is done
-            assert(fullThreshold > partialThreshold)
-
-            roll = random.uniform(1, 100)
-
-            if roll >= fullThreshold:
+            if threshold > 1:
                 effect = move.effect
 
                 appliedDamage = self.applyEffect(target, effect)
@@ -210,7 +200,7 @@ class Battle:
                 if appliedDamage:
                     descriptor += ' It did {dam} hp.'
 
-            elif roll >= partialThreshold:
+            elif threshold > 0:
                 effect = move.effect
 
                 appliedDamage = self.applyEffect(target, effect, True)

@@ -10,11 +10,33 @@ import definitions.model as model
 
 class Creature(Persister):
 
-    ATTRIBUTES = []
+    CATEGORIES = ['MUSCULARITY', 'AGILITY', 'FACULTY', 'WISDOM', 'WILLPOWER', 'GUILE', 'TOUGHNESS', 'PIZAZZ']
+    ATTRIBUTE_MAP = {
+        'MUSCULARITY': ['BEEFINESS', 'ATHLETICISM', 'PUISSANCE'],
+        'AGILITY': ['PROWESS', 'ADROITNESS', 'ELASTICITY', 'SPRYNESS'],
+        'FACULTY': ['PEDANTRY', 'MENTALITY', 'PERSPICACITY', 'ERUDITION'],
+        'DILIGENCE': ['RECTITUDE', 'GRAVITAS', 'MOXIE', 'GRACE'],
+        'WILLPOWER': ['COOL', 'MANDATE', 'BRAVADO', 'DISAFFECTION'],
+        'GUILE': ['CRAFTINESS', 'DISSIMULATION', 'CROOKERY', 'CONFIDENTIALITY'],
+        'TOUGHNESS': ['OBDURACY', 'IMMUNITY', 'PONDEROSITY', 'WEIRD'],
+        'PIZAZZ': ['GLAMOUR', 'MAGNETISM', 'PULCHRITUDE', 'STAGEPRESENCE']
+    }
+    SECONDARIES = ['ARMOR', 'EVADE', 'STYLE']
 
     @classmethod
-    def _build_attr(self):
-        return {attr: Dice.roll('3d6') for attr in self.ATTRIBUTES}
+    def _build_full_attr(self):
+        at = {}
+        for parent, attrs in Creature.ATTRIBUTE_MAP.items():
+            for attr in attrs:
+                at[attr] = Dice.roll('3d6')
+        return at
+
+    @classmethod
+    def _build_limited_attr(self):
+        at = {}
+        for attr in Creature.CATEGORIES:
+            at[attr] = Dice.roll('3d6')
+        return at
 
     def __init__(self):
         self.status = []
@@ -78,18 +100,31 @@ class Creature(Persister):
         self.currenthp = self.maxhp
         self.clearStatus()
 
-    def attribute(self, name):
-        return {
-            'base': self.attr[name],
-            'current': self.calc_attr(name)
-        }
+    def get_prop(self, name):
+        if name in Creature.CATEGORIES:
+            return self.calc_parent(name)
+        elif name in Creature.SECONDARIES:
+            return self.calc_secondary(name)
+        else:
+            return self.calc_attr(name)
 
-    def attributes(self):
-        return { name: self.attribute(name) for name in type(self).ATTRIBUTES}
+    def parent_attr(self, name):
+        for parent, attrs in Creature.ATTRIBUTE_MAP.items():
+            if name.upper() in attrs:
+                return parent
+        raise ValueError(f'Trying to find parent attribute for unrecognized attribute: {name}')
+
+    def calc_parent(self, name):
+        # non delvers default all attributes to the parent value
+        return self.attr.get(name.upper(), None)
 
     def calc_attr(self, name):
-        # currently we're not modifying these but we will soon
-        return self.attr[name]
+        # non delvers currently do no have any bonuses
+        return self.calc_parent(self.parent_attr(name.upper()))
+
+    def calc_secondary(self, name):
+        # non delvers will have their secondaries stored as attributes
+        return self.attr.get(name.upper(), None)
 
     def moves(self):
         pass
@@ -99,13 +134,25 @@ class Creature(Persister):
             types = [types]
         return [move for move in self.moves() if move.type in types]
 
-    # To be implemented by children. Return a 2-tuple of ints 0-100 that indicate the partial and full success thresholds for the given test.
-    # The roll is d100 (1-100) trying to roll above or equal to the threshold numbers.
-    # The first number is the partial threshold, it will always be lower than the full threshold
-    # The second tuple element is the full threshold
-    # Example: if the tuple is (45, 75) a failure is a roll of 1-44, a partial success is 45-74 and a full is 75-100
-    def testThresholds(self, test):
-        pass
+    def perform_test(self, primary, secondary, auxiliaries=[]):
+
+        print(f'PERFORM TEST - {primary}-{self.get_prop(primary)}, {secondary}-{self.get_prop(secondary)}')
+
+        full_value = self.get_prop(primary) + int(self.get_prop(secondary) / 2)
+        for aux in auxiliaries:
+            full_value += self.get_prop(aux)
+
+        chance = Dice.diminish100(full_value)
+
+        success = 0
+        total = 0
+
+        while total < chance:
+            total += Dice.roll('1d100')
+            if total < chance:
+                success += 1
+
+        return success
 
     def statusString(self):
         t = '['
@@ -116,9 +163,8 @@ class Creature(Persister):
         t += ']'
         return t
 
-class Delver(Creature):
 
-    ATTRIBUTES = ['muscularity', 'prowess', 'pendantry', 'diligence', 'cool', 'guile', 'obduracy', 'pizazz']
+class Delver(Creature):
 
     @classmethod
     def random(self, c=None):
@@ -154,7 +200,7 @@ class Delver(Creature):
         self.followers = []
         self.wealth = 0
         self.lifetime_wealth = 0
-        self.attr = Delver._build_attr()
+        self.attr = Delver._build_full_attr()
         self.gear = {}
         self.tools = []
         self.minutia = {
@@ -189,6 +235,19 @@ class Delver(Creature):
 
         return moves
 
+    def filter_moves(self, **kwargs):
+        valid = []
+
+        type = kwargs.get('type')
+
+        for move in self.moves():
+            if type and move.type != type:
+                continue
+
+            valid.append(move)
+
+        return valid
+
     def valid_moves(self, types):
         moves = super().valid_moves(types)
 
@@ -201,9 +260,46 @@ class Delver(Creature):
 
         return moves
 
-    def testThresholds(self, test):
-        return (33, 66)
-        
+    def calc_attr(self, name):
+        running = self.attr[name.upper()]
+
+        parent = self.parent_attr(name)
+        for move in self.filter_moves(type=model.Moves.PASSIVE):
+            if hasattr(move, 'bonus'):
+                for bonus in move.bonus:
+                    if bonus[0] in [name, parent]:
+                        running += bonus[1]
+
+        for item in self.tools + list(self.gear.values()):
+            # items have attr bonuses like this
+            # effect:
+            #   attribute: ['muscularity', 1]
+            attr = item.effect.get('attribute', None)
+            if attr and attr[0] in [name, parent]:
+                running += attr[1]
+
+        return running
+
+    def calc_parent(self, name):
+        # this shouldn't get used much but we're just averaging all the related attributes
+        total = 0
+        for attr in Creature.ATTRIBUTE_MAP[name]:
+            total += self.calc_attr(attr)
+
+        return int(total / len(Creature.ATTRIBUTE_MAP[name]))
+
+    def calc_secondary(self, name):
+        running = 0
+
+        if name == 'armor':
+            pass
+        elif name == 'style':
+            pass
+        elif name == 'evade':
+            pass
+
+        return running
+
     def getSpells(self):
 
         spellIds = []
@@ -348,7 +444,7 @@ class Delver(Creature):
             'job': self.job.code,
             'maxhp': self.maxhp,
             'currenthp': self.currenthp,
-            'attributes': self.attributes(),
+            'attributes': self.attr,
             'tools': [t.data_format() for t in self.tools],
             'gear': [i.data_format() for i in self.gear.values()],
             'inventory': [i.data_format() for i in self.inventory],
@@ -451,6 +547,7 @@ class Monster(Creature):
             self.stock  = template.name
             self.maxhp = template.hp
             self.currenthp = template.hp
+            self.attr = Monster._build_limited_attr()
         self.id = Monster.idgen()
 
     def moves(self):
@@ -458,9 +555,6 @@ class Monster(Creature):
         for move in self._template.moves:
             moves.append(model.Moves.find(move))
         return moves
-
-    def testThresholds(self, test):
-        return (60, 80)
 
     def serialize(self, stringify=False):
         c = {

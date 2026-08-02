@@ -17,7 +17,8 @@ code: GLOBBOMB
 name: Glob Bomb
 type: consequence
 target: any
-test: crafty
+test: 
+  primary: crafty
 consequence:
   max targets: 3
   damage: 2
@@ -27,7 +28,8 @@ code: BRISTLE
 name: Bristle
 target: melee
 type: consequence
-test: thicc
+test:
+  primary: beefiness
 consequence:
   max targets: 2
   damage: 2
@@ -36,7 +38,12 @@ code: STABBITY
 name: Stabbity
 type: combat
 target: any
-test: prowess
+test: 
+  primary: prowess
+  secondary: craftiness
+resist:
+  primary: pass
+  aux: pass
 effect:
   max targets: 1
   damage: 2
@@ -45,7 +52,12 @@ code: SPINTOWIN
 name: Spin To Win
 type: combat
 target: any
-test: prowess
+test: 
+  primary: prowess
+  secondary: spryness
+resist:
+  primary: elasticity
+  aux: evade
 effect:
   max targets: 3
   damage: 2
@@ -54,7 +66,12 @@ code: DISCOURSE
 name: Discourse
 type: combat
 target: ranged
-test: ego
+test: 
+  primary: erudition
+  secondary: bravado
+resist:
+  primary: pedantry
+  aux: academia
 effect:
   max targets: 1
   status: CONFUSE
@@ -63,7 +80,12 @@ code: BODYSLAM
 name: Body Slam
 type: combat
 target: melee
-test: swole
+test: 
+  primary: beefiness
+  secondary: stagepresence
+resist:
+  primary: beefiness
+  aux: pass
 effect:
   max targets: 1
   damage: 4
@@ -72,7 +94,9 @@ code: FLEX
 name: Flex
 type: combat
 target: self
-test: swole
+test: 
+  primary: athleticism
+  secondary: glamour
 effect:
   max targets: 1
   status: PUMPED
@@ -82,7 +106,9 @@ code: HIDE
 name: Hide
 type: combat
 target: self
-test: crafty
+test: 
+  primary: dissimulation
+  secondary: cool
 effect:
   max targets: 1
   status: HIDDEN
@@ -91,7 +117,8 @@ code: COLDAURA
 name: Cold Aura
 type: consequence
 target: melee
-test: magic
+test: 
+  primary: mandate
 consequence:
   max targets: 5
   status: CHILLY
@@ -102,7 +129,11 @@ code: PUMMEL
 name: Pummel
 type: combat
 target: melee
-test: prowess
+test: 
+  primary: puissance
+  secondary: adroitness
+resist:
+  primary: obduracy
 effect:
   max targets: 1
   damage: 1
@@ -111,7 +142,12 @@ code: ABSORBTRAIT
 name: Absorb Quality
 type: combat
 target: ranged
-test: magic
+test: 
+  primary: mandate
+  secondary: magnetism
+resist:
+  primary: grace
+  aux: arcane
 effect:
   max targets: 1
   special: UNIMPLEMENTED
@@ -121,7 +157,8 @@ code: ABSORBMAGIC
 name: Absorb Magic
 type: consequence
 target: magic
-test: magic
+test: 
+  primary: mandate
 consequence:
   max targets: 2
   special: ABSORB
@@ -131,7 +168,8 @@ code: MAUL
 name: Maul
 type: consequence
 target: melee
-test: thicc
+test: 
+  primary: beefiness
 consequence:
   max targets: 1
   damage: 2
@@ -141,7 +179,9 @@ code: SQUARK
 name: Mighty Squark
 type: combat
 target: self
-test: bravado
+test: 
+  primary: bravado
+  secondary: stagepresence
 effect:
   status: CONFIDANT
   duration: 2
@@ -158,7 +198,8 @@ code: ENGULF
 name: Engulf in Goo
 type: consequence
 target: self
-test: none
+test: 
+  primary: weird
 consequence:
   status: [PINNED, ACID]
   duration: 10
@@ -167,7 +208,12 @@ code: INVECTIVE
 name: Invective
 type: combat
 target: ranged
-test: personality
+test: 
+  primary: pedantry
+  secondary: disaffection
+resist:
+  primary: cool
+  aux: pass
 effect:
   max targets: 1
   damage: 1
@@ -176,7 +222,12 @@ code: SHOWOFF
 name: Show Off
 type: combat
 target: melee
-test: prowess
+test: 
+  primary: prowess
+  secondary: stagepresence
+resist:
+  primary: cool
+  aux: pass
 effect:
   max targets: 1
   damage: 4
@@ -186,7 +237,9 @@ code: PRESTIDIGITATION
 name: Prestidigitation
 type: combat
 target: ranged
-test: crafty
+test: 
+  primary: craftiness
+  secondary: stagepresence
 effect:
   max targets: 1
   status: SHOCKED
@@ -195,13 +248,17 @@ code: MAGICIANSPELL
 name: Cast Spell
 type: spellcasting
 target: self # spells have their own real target info
-test: spellcasting
+test: none
 ---
 code: THWOMP
 name: Thwomp
 type: combat
 target: melee
-test: thicc
+test:
+  primary: beefiness
+  secondary: prowess
+resist:
+  primary: spryness
 effect:
   max targets: 1
   damage: 3
@@ -210,7 +267,12 @@ code: TRIP
 name: Trip
 type: combat
 target: melee
-test: pass
+test: 
+  primary: craftiness
+  secondary: prowess
+resist:
+  primary: perspicacity
+  aux: pass
 effect:
   max targets: 2
   damage: 1
@@ -220,7 +282,12 @@ code: OUTRANGE
 name: Outrange
 type: combat
 target: melee
-test: pass
+test: 
+  primary: craftiness
+  secondary: elasticity
+resist:
+  primary: puissance
+  aux: pass
 effect:
   max targets: 1
   damage: 3
@@ -230,7 +297,11 @@ code: TRICKSHOT
 name: Trick Shot
 type: combat
 target: ranged
-test: pass
+test:
+  primary: adroitness
+  secondary: bravado
+resist:
+  primary: spryness
 effect:
   max targets: 3
   damage: 2
@@ -239,7 +310,12 @@ code: FACTOID
 name: Archery Factoid
 type: combat
 target: ranged
-test: pass
+test:
+  primary: pedantry
+  secondary: glamour
+resist:
+  primary: erudition
+  aux: academia
 effect:
   special: pass
   # not sure how to do this yet
@@ -248,7 +324,12 @@ code: SAW
 name: Saw
 type: combat
 target: melee
-test: pass
+test:
+  primary: prowess
+  secondary: craftiness
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -257,7 +338,9 @@ code: PATCHUP
 name: Patch Up
 type: rest
 target: friendly
-test: pass
+test: 
+  primary: rectitude
+  secondary: immunity
 effect:
   healing: 2d6
 failure:
@@ -267,7 +350,9 @@ code: THEWS
 name: Mighty Thews
 type: combat
 target: self
-test: pass
+test:
+  primary: beefiness
+  secondary: gravitas
 effect:
   healing: 1d4
   status: PUMPED
@@ -277,7 +362,9 @@ code: BEFRIEND
 name: Befriend Beast
 type: downtime
 target: self
-test: pass
+test: 
+  primary: magnetism
+  secondary: perspicacity
 when: follower_cap
 summon: 
   type: beast
@@ -290,7 +377,12 @@ code: STAB
 name: Stab
 type: combat
 target: melee
-test: crafty
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 1
@@ -299,7 +391,12 @@ code: HEW
 name: Hew
 type: combat
 target: melee
-test: thicc
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -308,7 +405,12 @@ code: BONK
 name: Bonk
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 1
@@ -317,7 +419,12 @@ code: SLING
 name: Sling
 type: combat
 target: ranged
-test: prowess
+test:
+  primary: adroitness
+  secondary: moxie
+resist:
+  primary: athleticism
+  aux: evade
 effect:
   max targets: 1
   damage: 1
@@ -326,7 +433,12 @@ code: HACK
 name: Hack
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -335,7 +447,12 @@ code: CLUB
 name: Club
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -344,7 +461,12 @@ code: POKE
 name: Poke
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -353,7 +475,12 @@ code: ALIGHT
 name: Alight
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 2
   damage: 1
@@ -362,7 +489,9 @@ code: PONDER
 name: Ponder
 type: combat
 target: self
-test: prowess
+test:
+  primary: mentality
+  secondary: mandate
 effect:
   max targets: 1
   status: SOMETHING
@@ -371,7 +500,9 @@ code: BRIGHT
 name: Bright
 type: combat
 target: self
-test: prowess
+test: 
+  primary: moxie
+  secondary: glamour
 effect:
   max targets: 1
   status: BRIGHT
@@ -383,7 +514,12 @@ code: BITE
 name: Bite
 type: combat
 target: melee
-test: prowess
+test:
+  primary: prowess
+  secondary: puissance
+resist:
+  primary: spryness
+  aux: evade
 effect:
   max targets: 1
   damage: 2
@@ -394,4 +530,4 @@ type: passive
 target: self
 test: none
 bonus:
-  - [guile, 5]
+  - [GUILE, 5]
