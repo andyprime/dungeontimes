@@ -128,7 +128,7 @@ class DungeonMaster:
                 print('Making new band')
                 b = self.build_party()
                 self.bands[b.id] = b
-                Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b.id)
+                Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b)
                 Messaging.emit_basic('bands', [self.region])
                 
             # 2. Check to see if any bands don't have anything to do

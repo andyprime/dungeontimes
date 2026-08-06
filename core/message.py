@@ -43,6 +43,11 @@ class Messaging:
     @classmethod
     def _build_context(self, objs):
         try:
+            iterator = iter(objs)
+        except TypeError:
+            iterator = [objs]
+
+        try:
             return {CONTEXT_MAP[type(o)]: o.id for o in objs}
         except KeyError as e:
             e.add_note('Problem children: {}'.format(objs))
@@ -58,7 +63,6 @@ class Messaging:
         self.emit(msg)
         if event_type:
             core.mdb.MongoService.save_event(event_type, [o.id for o in context_objects], message, event_transient)
-
 
     @classmethod
     def emit_basic(self, type, context_objects):

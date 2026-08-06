@@ -187,6 +187,7 @@ class Stocks(Model):
     _source = 'stocks.yaml'
 
     _schema = Schema({
+            'code': And(str, len),
             'name': And(str, len)
         })
 

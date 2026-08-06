@@ -71,6 +71,21 @@ class Dice:
             return total
 
     @classmethod
+    def perform_test_100(self, undiminished_value):
+        chance = Dice.diminish100(undiminished_value)
+
+        success = 0
+        total = 0
+
+        while total < chance:
+            total += Dice.roll('1d100')
+            if total < chance:
+                success += 1
+
+        return success
+
+
+    @classmethod
     def diminish100(self, x):
         if x < 0:
             return 0

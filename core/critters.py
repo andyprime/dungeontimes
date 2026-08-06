@@ -12,7 +12,7 @@ class Creature(Persister):
 
     CATEGORIES = ['MUSCULARITY', 'AGILITY', 'FACULTY', 'WISDOM', 'WILLPOWER', 'GUILE', 'TOUGHNESS', 'PIZAZZ']
     ATTRIBUTE_MAP = {
-        'MUSCULARITY': ['BEEFINESS', 'ATHLETICISM', 'PUISSANCE'],
+        'MUSCULARITY': ['BEEFINESS', 'ATHLETICISM', 'PUISSANCE', 'PLACEHOLDER'],
         'AGILITY': ['PROWESS', 'ADROITNESS', 'ELASTICITY', 'SPRYNESS'],
         'FACULTY': ['PEDANTRY', 'MENTALITY', 'PERSPICACITY', 'ERUDITION'],
         'DILIGENCE': ['RECTITUDE', 'GRAVITAS', 'MOXIE', 'GRACE'],
@@ -23,19 +23,27 @@ class Creature(Persister):
     }
     SECONDARIES = ['ARMOR', 'EVADE', 'STYLE']
 
+    STATIC_ATTR_VALUE = 10
+
     @classmethod
-    def _build_full_attr(self):
+    def _build_full_attr(self, method='random'):
         at = {}
         for parent, attrs in Creature.ATTRIBUTE_MAP.items():
             for attr in attrs:
-                at[attr] = Dice.roll('3d6')
+                if method == 'random':
+                    at[attr] = Dice.roll('3d6')
+                elif method == 'static':
+                    at[attr] = self.STATIC_ATTR_VALUE
         return at
 
     @classmethod
-    def _build_limited_attr(self):
+    def _build_limited_attr(self, method='random'):
         at = {}
         for attr in Creature.CATEGORIES:
-            at[attr] = Dice.roll('3d6')
+            if method == 'random':
+                at[attr] = Dice.roll('3d6')
+            elif method == 'static':
+                at[attr] = self.STATIC_ATTR_VALUE
         return at
 
     def __init__(self):
@@ -122,6 +130,9 @@ class Creature(Persister):
         # non delvers currently do no have any bonuses
         return self.calc_parent(self.parent_attr(name.upper()))
 
+    def set_attr(self, name, value):
+        self.attr[name] = value
+
     def calc_secondary(self, name):
         # non delvers will have their secondaries stored as attributes
         return self.attr.get(name.upper(), None)
@@ -134,7 +145,7 @@ class Creature(Persister):
             types = [types]
         return [move for move in self.moves() if move.type in types]
 
-    def perform_test(self, primary, secondary, auxiliaries=[]):
+    def calc_test_value(self, primary, secondary, auxiliaries=[]):
 
         print(f'PERFORM TEST - {primary}-{self.get_prop(primary)}, {secondary}-{self.get_prop(secondary)}')
 
@@ -142,17 +153,7 @@ class Creature(Persister):
         for aux in auxiliaries:
             full_value += self.get_prop(aux)
 
-        chance = Dice.diminish100(full_value)
-
-        success = 0
-        total = 0
-
-        while total < chance:
-            total += Dice.roll('1d100')
-            if total < chance:
-                success += 1
-
-        return success
+        return full_value
 
     def statusString(self):
         t = '['
@@ -184,8 +185,13 @@ class Delver(Creature):
             hobbies.append(strings.StringTool.random('hobbies'))
         return list(set(hobbies))
 
+    @classmethod
+    def test_delver(self):
+        s = model.Stocks.find('HUMAN')
+        c = model.Classes.find('SWORDLORD')
+        return Delver('The Test Delver', s, c, method='static')
 
-    def __init__(self, name=None, stock=None, job=None):
+    def __init__(self, name=None, stock=None, job=None, **kwargs):
         super().__init__()
 
         self.name = name
@@ -198,9 +204,13 @@ class Delver(Creature):
         self.encumberence = 10
         self.inventory = []
         self.followers = []
+        self.learned_moves = []
         self.wealth = 0
         self.lifetime_wealth = 0
-        self.attr = Delver._build_full_attr()
+        if kwargs.get('method') == 'static':
+            self.attr = Delver._build_full_attr('static')
+        else:
+            self.attr = Delver._build_full_attr()
         self.gear = {}
         self.tools = []
         self.minutia = {
@@ -227,6 +237,9 @@ class Delver(Creature):
         for move in self.job.moves:
             moves.append(model.Moves.find(move))
 
+        for move in self.learned_moves:
+            moves.append(model.Moves.find(move))
+
         for tool in self.tools:
             moves.append(model.Moves.find(tool.grants))
         
@@ -234,6 +247,11 @@ class Delver(Creature):
             moves.append(model.Moves.find(fol.grants))
 
         return moves
+
+    def add_move(self, move):
+        if type(move) == model.Moves:
+            move = move.code
+        self.learned_moves.append(move)
 
     def filter_moves(self, **kwargs):
         valid = []

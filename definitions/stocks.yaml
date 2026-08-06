@@ -1,13 +1,19 @@
 # These will do something eventually
 ---
 name: 'Human'
+code: 'HUMAN'
 ---
 name: 'Elf'
+code: 'ELF'
 ---
 name: 'Hobbit'
+code: 'HOBBIT'
 ---
 name: 'Dwarf'
+code: 'DWARF'
 ---
 name: 'Gnome'
+code: 'GNOME'
 ---
 name: 'Goblin'
+code: 'GOBLIN'

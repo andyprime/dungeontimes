@@ -189,7 +189,8 @@ class Battle:
             if move.test == 'none':
                 threshold = 2
             else:
-                threshold = fellah.perform_test(move.test['primary'], move.test['secondary']) 
+                v = fellah.calc_test_value(move.test['primary'], move.test['secondary']) 
+                threshold = Dice.perform_test_100(v)
 
             if threshold > 1:
                 effect = move.effect

@@ -86,7 +86,6 @@ class MongoService:
 
     @classmethod
     def save_event(self, type, uuids, msg, transient=False):
-        print('Save {}, {}'.format(type, msg))
         self.db.events.insert_one({
             'message': msg,
             'object': uuids,

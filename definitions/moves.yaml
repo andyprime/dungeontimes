@@ -531,3 +531,11 @@ target: self
 test: none
 bonus:
   - [GUILE, 5]
+---
+code: REGIMEN
+name: Fitness Regimen
+type: passive
+target: self
+test: none
+bonus:
+  - [ATHLETICISM, 5]
