@@ -73,6 +73,12 @@ class Model:
 
 class Moves(Model):
 
+    COMBAT = 'combat'
+    PASSIVE = 'passive'
+    REST = 'rest'
+    DOWNTIME = 'downtime'
+    CONSEQUENCE = 'consequence'
+
     _source = 'moves.yaml'
 
     _schema = Schema({
@@ -80,7 +86,14 @@ class Moves(Model):
             'code': And(str, len),
             'type': Or('combat', 'consequence', 'rest', 'downtime', 'passive', 'spellcasting'),
             'target': Or('any', 'melee', 'ranged', 'self', 'magic', 'friendly', 'none'),
-            'test': And(str, len),
+            'test': Or('none', {
+                'primary': And(str, len),
+                Optional('secondary'): And(str, len)
+            }),
+            Optional('resist'): {
+                'primary': And(str, len),
+                Optional('aux'): And(str, len)
+            },
             Optional('when'): And(str, len),
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
@@ -174,6 +187,7 @@ class Stocks(Model):
     _source = 'stocks.yaml'
 
     _schema = Schema({
+            'code': And(str, len),
             'name': And(str, len)
         })
 

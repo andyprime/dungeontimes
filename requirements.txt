@@ -1,5 +1,5 @@
-# The DM service has been moved to it's own container but this is the requirements file for running it yourself
-# if you want to do it locally
+# The DM service has been moved to it's own container but this is the requirements file for running things
+# locally for development purposes or whatnot
 
 # Using schema for basic YAML validation. Its just for ease of finding mistakes, so we don't want anything heavier
 schema
@@ -7,3 +7,9 @@ pymongo
 pyyaml
 pika
 pydantic-settings
+
+# math tools not currently used for analysis outside of usual application processes
+numpy
+matplotlib
+# pyqt is for display of matplotlib graphs, may not work on non-linux hosts, I dunno
+PyQt6

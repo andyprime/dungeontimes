@@ -70,6 +70,44 @@ class Dice:
                 total += random.randint(1, size)
             return total
 
+    @classmethod
+    def perform_test_100(self, undiminished_value):
+        chance = Dice.diminish100(undiminished_value)
+
+        success = 0
+        total = 0
+
+        while total < chance:
+            total += Dice.roll('1d100')
+            if total < chance:
+                success += 1
+
+        return success
+
+
+    @classmethod
+    def diminish100(self, x):
+        if x < 0:
+            return 0
+        elif x >= 0 and x < 20:
+            return 1.75*x
+        elif x >= 20 and x < 38:
+            return 1.1*x + 13.0
+        elif x >= 38 and x < 53:
+            return 0.7*x + 28.2
+        elif x >= 53 and x < 68:
+            return 0.5*x + 38.8
+        elif x >= 68 and x < 80:
+            return 0.4*x + 45.6
+        elif x >= 80 and x < 90:
+            return 0.35*x + 49.6
+        elif x >= 90 and x < 100:
+            return 0.3*x + 54.1
+        elif x >= 100 and x < 120:
+            return 0.295*x + 54.6
+        elif x >= 120:
+            return 90
+
 if __name__ == "__main__":
 
     mean = 3
