@@ -7,6 +7,8 @@ pymongo
 pyyaml
 pika
 pydantic-settings
+flake8
+pytest
 
 # math tools not currently used for analysis outside of usual application processes
 numpy
