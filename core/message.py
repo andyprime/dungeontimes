@@ -45,7 +45,7 @@ class Messaging:
         try:
             iterator = iter(objs)
         except TypeError:
-            iterator = [objs]
+            objs = [objs]
 
         try:
             return {CONTEXT_MAP[type(o)]: o.id for o in objs}
