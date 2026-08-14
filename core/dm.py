@@ -281,6 +281,7 @@ class DungeonMaster:
     def action_downtime(self, do):
         band = self.bands[do['id']]
 
+        band.last_downtime = self.current_time
         Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region])
         
         partiers = []
@@ -321,11 +322,16 @@ class DungeonMaster:
         delver = band.get(do['extras'])
 
         if delver.can_advance():
-            delver.advance()
+            increase = delver.advance()
             
             delver.persist()
-            Messaging.emit_basic('band', [self.region, band])
+            
+            name1 = core.critters.Creature.ATTRIBUTE_NAMES[increase[0][0]]
+            name2 = core.critters.Creature.ATTRIBUTE_NAMES[increase[1][0]]
+
             Messaging.emit_message('{} has advanced to level {}.'.format(delver.name, delver.level), [self.region, delver])
+            Messaging.emit_message('{} has increased {} by {} and {} by {}.'.format(delver.name, name1, increase[0][1], name2, increase[1][1]), [self.region, delver])
+            Messaging.emit_basic('band', [self.region, band])
         else:
             raise ValueError('Somehow tried to advance someone that can not: {} {}'.format(delver.name, delver.id))
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, Outlet, useParams } from 'react-router';
 
 import { getBands, getBand, getDelvers, getDelver, getDelverEvents, getBandEvents } from './fetching.js'
-import { JOB_NAMES } from './constants.js'
+import { JOB_NAMES, ATTRIBUTES, ATTRIBUTE_NAMES } from './constants.js'
 
 const rootUrl = window.location.hostname + ':8081';
 
@@ -78,6 +78,13 @@ const DelverCard = function({ d }) {
     )
 }
 
+const avg = function(delver, cat, attrs) {
+  let values = attrs.map((attr) => delver.attributes[attr]);
+  let sum = values.reduce((part, a) => part + a, 0);
+  let mean = sum / attrs.length;
+  return Math.round(mean * 100) / 100;
+}
+
 const Delver = function({ d }) {
   let params = useParams();
   let delverQuery = useQuery({ queryKey: ['delver', params.did], queryFn: getDelver});
@@ -87,7 +94,7 @@ const Delver = function({ d }) {
   if (delverQuery.isPending) {
     return <span>Hang on .... </span>
   }
-
+  
   if (delverQuery.isSuccess) {
 
     let delver = delverQuery.data
@@ -96,17 +103,11 @@ const Delver = function({ d }) {
       <>
         <h1>{delver.name}</h1>
         <div>{delver.stock} {JOB_NAMES[delver.job]}</div>
+        <div>Level {delver.level}, {delver.advancement['xp']} XP</div>
         <div>
           <table>
             <tbody>
-              <tr><td>Muscularity</td><td>{delver.attributes['muscularity'].current}</td></tr>
-              <tr><td>Prowess</td><td>{delver.attributes['prowess'].current}</td></tr>
-              <tr><td>Pendantry</td><td>{delver.attributes['pendantry'].current}</td></tr>
-              <tr><td>Diligence</td><td>{delver.attributes['diligence'].current}</td></tr>
-              <tr><td>Cool</td><td>{delver.attributes['cool'].current}</td></tr>
-              <tr><td>Guile</td><td>{delver.attributes['guile'].current}</td></tr>
-              <tr><td>Obduracy</td><td>{delver.attributes['obduracy'].current}</td></tr>
-              <tr><td>Pizazz</td><td>{delver.attributes['pizazz'].current}</td></tr>
+              { Object.keys(ATTRIBUTES).map((attr) => ( <tr key={attr}><td>{ATTRIBUTE_NAMES[attr]}</td><td>{avg(delver, attr, ATTRIBUTES[attr])}</td></tr> )) }
             </tbody>
           </table>
         </div>

@@ -23,6 +23,49 @@ class Creature(Persister):
     }
     SECONDARIES = ['ARMOR', 'EVADE', 'STYLE']
 
+    ATTRIBUTE_NAMES = {
+        'MUSCULARITY': 'Muscularity', 
+        'BEEFINESS': 'Beefiness', 
+        'ATHLETICISM': 'Athleticism', 
+        'PUISSANCE': 'Puissance', 
+        'PLACEHOLDER': 'Placeholder',
+        'AGILITY': 'Agility',
+        'PROWESS': 'Prowess', 
+        'ADROITNESS': 'Adroitness', 
+        'ELASTICITY': 'Elasticity', 
+        'SPRYNESS': 'Spryness',
+        'FACULTY': 'Faculty',
+        'PEDANTRY': 'Pedantry', 
+        'MENTALITY': 'Mentality', 
+        'PERSPICACITY': 'Perspicacity', 
+        'ERUDITION': 'Erudition',
+        'DILIGENCE': 'Diligence',
+        'RECTITUDE': 'Rectitude', 
+        'GRAVITAS': 'Gravitas', 
+        'MOXIE': 'Moxie', 
+        'GRACE': 'Grace',
+        'WILLPOWER': 'Willpower',
+        'COOL': 'Cool', 
+        'MANDATE': 'Mandate', 
+        'BRAVADO': 'Bravado', 
+        'DISAFFECTION': 'Disaffection',
+        'GUILE': 'Guile',
+        'CRAFTINESS': 'Craftiness', 
+        'DISSIMULATION': 'Dissimulation', 
+        'CROOKERY': 'Crookery', 
+        'CONFIDENTIALITY': 'Confidentiality',
+        'TOUGHNESS': 'Toughness',
+        'OBDURACY': 'Obduracy', 
+        'IMMUNITY': 'Immunity', 
+        'PONDEROSITY': 'Ponderosity', 
+        'WEIRD': 'Weird',
+        'PIZAZZ': 'Pizazz',
+        'GLAMOUR': 'Glamour', 
+        'MAGNETISM': 'Magnetism', 
+        'PULCHRITUDE': 'Pulchritude', 
+        'STAGEPRESENCE': 'Stage Presence'
+    }
+
     STATIC_ATTR_VALUE = 10
 
     @classmethod
@@ -486,18 +529,19 @@ class Delver(Creature):
 
         # for now we're just giving a +1d6 bonus to two random attributes
         previous = []
+        info = []
         for i in range(2):
-            cat = random.choice(self.attrs.values())
-            attr = random.choice([a for a in cat if a not in previous])
-
+            attr = random.choice([a for a in self.attr.keys() if a not in previous])
             previous.append(attr)
 
-            add = dice.roll('1d6')
-            self.attrs[attr] += add
+            amt = Dice.roll('1d6')
+            self.attr[attr] += amt
+            info.append((attr, amt))
 
             print('/'*50)
-            print(f'Delver {self.name} adding {add} to {attr}')
+            print(f'Delver {self.name} adding {amt} to {attr}')
             print('/'*50)
+        return info
 
     def data_format(self):
         return {
@@ -513,6 +557,7 @@ class Delver(Creature):
             'inventory': [i.data_format() for i in self.inventory],
             'followers': [f.data_format() for f in self.followers],
             'minutia': self.minutia,
+            'level': self.level,
             'advancement': self.advancement
         }
 
