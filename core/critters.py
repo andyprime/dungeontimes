@@ -23,6 +23,49 @@ class Creature(Persister):
     }
     SECONDARIES = ['ARMOR', 'EVADE', 'STYLE']
 
+    ATTRIBUTE_NAMES = {
+        'MUSCULARITY': 'Muscularity', 
+        'BEEFINESS': 'Beefiness', 
+        'ATHLETICISM': 'Athleticism', 
+        'PUISSANCE': 'Puissance', 
+        'PLACEHOLDER': 'Placeholder',
+        'AGILITY': 'Agility',
+        'PROWESS': 'Prowess', 
+        'ADROITNESS': 'Adroitness', 
+        'ELASTICITY': 'Elasticity', 
+        'SPRYNESS': 'Spryness',
+        'FACULTY': 'Faculty',
+        'PEDANTRY': 'Pedantry', 
+        'MENTALITY': 'Mentality', 
+        'PERSPICACITY': 'Perspicacity', 
+        'ERUDITION': 'Erudition',
+        'DILIGENCE': 'Diligence',
+        'RECTITUDE': 'Rectitude', 
+        'GRAVITAS': 'Gravitas', 
+        'MOXIE': 'Moxie', 
+        'GRACE': 'Grace',
+        'WILLPOWER': 'Willpower',
+        'COOL': 'Cool', 
+        'MANDATE': 'Mandate', 
+        'BRAVADO': 'Bravado', 
+        'DISAFFECTION': 'Disaffection',
+        'GUILE': 'Guile',
+        'CRAFTINESS': 'Craftiness', 
+        'DISSIMULATION': 'Dissimulation', 
+        'CROOKERY': 'Crookery', 
+        'CONFIDENTIALITY': 'Confidentiality',
+        'TOUGHNESS': 'Toughness',
+        'OBDURACY': 'Obduracy', 
+        'IMMUNITY': 'Immunity', 
+        'PONDEROSITY': 'Ponderosity', 
+        'WEIRD': 'Weird',
+        'PIZAZZ': 'Pizazz',
+        'GLAMOUR': 'Glamour', 
+        'MAGNETISM': 'Magnetism', 
+        'PULCHRITUDE': 'Pulchritude', 
+        'STAGEPRESENCE': 'Stage Presence'
+    }
+
     STATIC_ATTR_VALUE = 10
 
     @classmethod
@@ -155,6 +198,13 @@ class Creature(Persister):
 
         return full_value
 
+    def apply_xp(self, amount:int):
+        # non delvers don't account xp
+        pass
+
+    def can_advance(self):
+        return False
+
     def statusString(self):
         t = '['
         x = []
@@ -198,6 +248,7 @@ class Delver(Creature):
         self.gear_priority = random.choice(['armor', 'style'])
         self.stock = stock.name
         self.job = job
+        self.level = 1
         self.maxhp = job.hp
         self.currenthp = job.hp
         self.id = str(uuid.uuid1())
@@ -216,6 +267,11 @@ class Delver(Creature):
         self.minutia = {
             'hobbies': Delver.random_hobbies(),
             'sign': strings.StringTool.random('astrology')
+        }
+
+        self.advancement = {
+            'xp': 0,
+            'treasure': 0
         }
 
         if hasattr(self.job, 'tool'):
@@ -346,6 +402,11 @@ class Delver(Creature):
         self.wealth += amt
         self.lifetime_wealth += amt
 
+        self.advancement['treasure'] += amt
+        if self.advancement['treasure'] > 100:
+            self.advancement['treasure'] = 0
+            self.apply_xp(1)
+
     def spend_wealth(self, amt):
         if amt <= self.wealth:
             self.wealth -= amt
@@ -454,6 +515,34 @@ class Delver(Creature):
     def give(self, item):
         self.inventory.append(item)
 
+    def apply_xp(self, amount:int):
+        self.advancement['xp'] += amount
+
+    def can_advance(self):
+        return self.advancement['xp'] >= 10 + self.level * 10
+
+    def advance(self):
+        self.advancement['xp'] = 0
+        self.advancement['treasure'] = 0
+
+        self.level += 1
+
+        # for now we're just giving a +1d6 bonus to two random attributes
+        previous = []
+        info = []
+        for i in range(2):
+            attr = random.choice([a for a in self.attr.keys() if a not in previous])
+            previous.append(attr)
+
+            amt = Dice.roll('1d6')
+            self.attr[attr] += amt
+            info.append((attr, amt))
+
+            print('/'*50)
+            print(f'Delver {self.name} adding {amt} to {attr}')
+            print('/'*50)
+        return info
+
     def data_format(self):
         return {
             'id': self.id,
@@ -467,7 +556,9 @@ class Delver(Creature):
             'gear': [i.data_format() for i in self.gear.values()],
             'inventory': [i.data_format() for i in self.inventory],
             'followers': [f.data_format() for f in self.followers],
-            'minutia': self.minutia
+            'minutia': self.minutia,
+            'level': self.level,
+            'advancement': self.advancement
         }
 
     def serialize(self, stringify=False):
@@ -605,6 +696,7 @@ class Band(Persister):
         self.wealth = 0
         self.lifetime_wealth = 0
         self.active = True
+        self.last_downtime = 0
         self.last_exp = None
 
     def has_money(self):
@@ -629,6 +721,10 @@ class Band(Persister):
             self.wealth -= amt
         else:
             raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
+
+    def wants_downtime(self, current_time):
+        # this can be tuned to the band later
+        return current_time - self.last_downtime > 500
 
     def has_loot(self):
         return any([True for mem in self.members if mem.has_loot()])

@@ -19,6 +19,7 @@ class DungeonMaster:
         'shop': (20,30),
         'train': (60.80),
         'idle': (60, 80),
+        'advance': 20,
         'offload': 20,
         'restock': (5000, 8000),
         'downtime': 50,
@@ -144,6 +145,8 @@ class DungeonMaster:
 
                     if band.has_loot():
                         selected = 'offload'
+                    elif band.wants_downtime(self.current_time):
+                        selected = 'downtime'
                     else:
                         options = ['downtime']
 
@@ -278,19 +281,23 @@ class DungeonMaster:
     def action_downtime(self, do):
         band = self.bands[do['id']]
 
+        band.last_downtime = self.current_time
         Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region])
         
         partiers = []
         for delver in band.members:
-            options = ['train', 'idle']
-            if delver.will_carouse():
-                options.append('carouse')
-            if delver.will_shop():
-                options.append('shop')
+            if delver.can_advance():
+                options = ['advance']
+            else:
+                options = ['train', 'idle']
+                if delver.will_carouse():
+                    options.append('carouse')
+                if delver.will_shop():
+                    options.append('shop')
 
-            moves = delver.valid_moves('downtime')
+                options += delver.valid_moves('downtime')
 
-            selection = random.choice(options + moves)
+            selection = random.choice(options)
             if selection == 'carouse':
                 partiers.append(delver)
             else:
@@ -309,6 +316,24 @@ class DungeonMaster:
         # we don't really do anything here, this just gets put into the to dos so the band has an active task
         band = self.bands[do['id']]
         Messaging.emit_message('{} are done with their downtime.'.format(band.name), [self.region, band])
+
+    def action_advance(self, do):
+        band = self.bands[do['id']]
+        delver = band.get(do['extras'])
+
+        if delver.can_advance():
+            increase = delver.advance()
+            
+            delver.persist()
+            
+            name1 = core.critters.Creature.ATTRIBUTE_NAMES[increase[0][0]]
+            name2 = core.critters.Creature.ATTRIBUTE_NAMES[increase[1][0]]
+
+            Messaging.emit_message('{} has advanced to level {}.'.format(delver.name, delver.level), [self.region, delver])
+            Messaging.emit_message('{} has increased {} by {} and {} by {}.'.format(delver.name, name1, increase[0][1], name2, increase[1][1]), [self.region, delver])
+            Messaging.emit_basic('band', [self.region, band])
+        else:
+            raise ValueError('Somehow tried to advance someone that can not: {} {}'.format(delver.name, delver.id))
 
     def action_downtime_move(self, do):
         band = self.bands[do['id']]

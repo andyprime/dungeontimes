@@ -30,3 +30,25 @@ class TestDelver:
         assert d.calc_parent('MUSCULARITY') == 12
         assert d.calc_test_value('BEEFINESS', 'ATHLETICISM') == 21
 
+    def test_advancement(self):
+
+        d = core.critters.Delver.test_delver()
+
+        assert not d.can_advance()
+
+        d.apply_xp(20)
+
+        assert d.can_advance()
+
+        pre_advance = d.attr.copy()        
+        raises = d.advance()
+
+        assert len(raises) == 2
+
+        # verify that two attributes changed
+        c = 0
+        for name, value in d.attr.items():
+            if pre_advance[name] != value:
+                c += 1
+
+        assert c == 2

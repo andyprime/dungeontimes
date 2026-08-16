@@ -45,7 +45,7 @@ class Messaging:
         try:
             iterator = iter(objs)
         except TypeError:
-            iterator = [objs]
+            objs = [objs]
 
         try:
             return {CONTEXT_MAP[type(o)]: o.id for o in objs}
@@ -55,6 +55,11 @@ class Messaging:
 
     @classmethod
     def emit_message(self, message, context_objects, event_type='general', event_transient=False):
+        try:
+            iterator = iter(context_objects)
+        except TypeError:
+            context_objects = [context_objects]
+
         msg = {
             'type': 'NARRATIVE',
             'message': message,

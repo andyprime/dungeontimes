@@ -20,6 +20,9 @@ class Team:
     def add(self, c):
         self.members.append(c)
 
+    def contains(self, fellah):
+        return fellah in self.members
+
     def validMembers(self, alive=None, exclude=None):
         options = []
 
@@ -52,6 +55,9 @@ class Battle:
     PAPERWORK = 1
     BATTAL = 2
     OVER = 3
+
+    XP_RATE = 10
+    DEFEAT_BONUS = 1
 
     def __init__(self, processCallback, emit_context):
         self.teams = {}
@@ -241,6 +247,11 @@ class Battle:
 
         descriptor = descriptor.format(act=fellah.name, move=move.name, trg=target.name, dam=appliedDamage)
         if target.currenthp == 0:
+            if type(fellah) == core.critters.Delver:
+                xp_value = int(target.maxhp / Battle.XP_RATE)
+                [delver.apply_xp(xp_value) for delver in self.team_for(fellah).members]
+                fellah.apply_xp(Battle.DEFEAT_BONUS)
+
             descriptor += ' {} was defeated!'.format(target.name)
 
         self.processMessage(descriptor)
@@ -302,6 +313,12 @@ class Battle:
 
     def getTeam(self, teamCode):
         return self.teams[teamCode]
+
+    def team_for(self, fellah):
+        for code, team in self.teams.items():
+            if team.contains(fellah):
+                return team
+        return None
 
     def getOppositeTeam(self, teamCode):
         teams = list(self.teams.keys())
