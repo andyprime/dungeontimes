@@ -2,6 +2,8 @@ import json
 import random
 import uuid
 
+from enum import Enum
+
 import core.strings as strings
 from core.dice import Dice
 from core.doodads import Tool
@@ -214,6 +216,11 @@ class Creature(Persister):
         t += ']'
         return t
 
+class DelverStatus(Enum):
+    FINE = 'fine'
+    MISSING = 'missing'
+    RETIRED = 'retired'
+    DECEASED = 'deceased'
 
 class Delver(Creature):
 
@@ -245,6 +252,7 @@ class Delver(Creature):
         super().__init__()
 
         self.name = name
+        self.condition = DelverStatus.FINE
         self.gear_priority = random.choice(['armor', 'style'])
         self.stock = stock.name
         self.job = job
@@ -547,6 +555,7 @@ class Delver(Creature):
         return {
             'id': self.id,
             'name': self.name,
+            'condition': self.condition.value,
             'stock': self.stock,
             'job': self.job.code,
             'maxhp': self.maxhp,

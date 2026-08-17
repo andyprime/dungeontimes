@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Union
 from uuid import UUID
 import asyncio
@@ -59,6 +60,13 @@ class ConnectionManager:
             else:
                 await connection.send_text(message.body)
 
+class DelverCondition(str, Enum):
+    any = 'any'
+    fine = 'fine'
+    missing = 'missing'
+    retired = 'retired'
+    deceased = 'deceased'
+
 manager = ConnectionManager()
 settings = Settings()
 app = FastAPI()
@@ -90,9 +98,12 @@ def read_root():
     return {"Oh": "Hello there"}
 
 @app.get('/delver/')
-def read_delvers(db: Database = Depends(db_session)):
+def read_delvers(db: Database = Depends(db_session), condition:DelverCondition = 'any'):
     ds = []
-    for d in db.delvers.find():
+    clause = {}
+    if condition != 'any':
+        clause['condition'] = condition
+    for d in db.delvers.find(clause):
         d.pop('_id')
         ds.append(d)
     return ds
