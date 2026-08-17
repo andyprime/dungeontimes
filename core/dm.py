@@ -25,7 +25,8 @@ class DungeonMaster:
         'downtime': 50,
         'downtime_end': 100,
         'downtime_move': (20, 30),
-        'exp_delay': 500 # time after an expedition before a band can start another to allow downtime
+        'band_homework': (100, 200),
+        'exp_delay': 500 # time after an expedition before a band can start another to allow downtime        
     }
 
     def __init__(self, options):
@@ -46,6 +47,7 @@ class DungeonMaster:
         for i in range(0, self.band_count):
             b = self.build_party()
             self.bands[b.id] = b
+        self.mia = []
 
         self.dungeons = {}
         self.expeditions = {}
@@ -66,7 +68,7 @@ class DungeonMaster:
         for venue in self.region.city.venues:
             self.new_task('restock', venue.id)
             
-    def new_task(self, action, item, **kwargs):
+    def new_task(self, action, item=None, **kwargs):
         task = {
             'action': action,
             'id': item,
@@ -120,19 +122,15 @@ class DungeonMaster:
         return band
 
     def run(self):
+
+        # setup longrunning checks
+        self.new_task('band_homework')
+
         while True:
             print('New loop, time: {}'.format(self.current_time))
             dungeon_changes = False
 
-            # 1. Check to see if we lost a band and create a replacement
-            if len(self.bands) < self.band_count:
-                print('Making new band')
-                b = self.build_party()
-                self.bands[b.id] = b
-                Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b)
-                Messaging.emit_basic('bands', [self.region])
-                
-            # 2. Check to see if any bands don't have anything to do
+            # Check to see if any bands don't have anything to do
             for band_id, band in self.bands.items():
                 if not any(t.get('id') == band_id for t in self.to_do):
                     print('Band {} has nothing to do'.format(band.name))
@@ -172,10 +170,29 @@ class DungeonMaster:
             if callable(f):
                 f(do)
 
-            # we batch the emission of the dungeon entrance message
-            if dungeon_changes:
-                self.region.emit_dungeon_locales()
+    def action_band_homework(self, do):
+        print('/'*50)
+         # 1. Check to see if we lost a band and create a replacement
+        if len(self.bands) < self.band_count:
+            print('Making new band')
+            b = self.build_party()
+            self.bands[b.id] = b
+            Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b)
+            Messaging.emit_basic('bands', [self.region])
+        elif len(self.mia):
+            survivor = self.mia.pop()
+            state = random.choice([core.critters.DelverStatus.RETIRED, core.critters.DelverStatus.DECEASED])
+            print('/'*50)
+            print(survivor)
+            print('/'*50)
+            survivor.condition = state
+            survivor.persist()
+            if state == core.critters.DelverStatus.RETIRED:
+                Messaging.emit_message('The missing delver {} has escaped the failed expedition but has retired.'.format(survivor.name), [self.region, survivor])
+            else:
+                Messaging.emit_message('The missing delver {} has not been found and is presumed dead.'.format(survivor.name), [self.region, survivor])
 
+        self.new_task('band_homework')
 
     def action_exp(self, do):
         band = self.bands[do['id']]
@@ -194,15 +211,18 @@ class DungeonMaster:
 
             exp.emit_delete()
             exp.persist()
-            dungeon_changes = True
 
             del self.expeditions[band.id]
             del self.dungeons[exp.dungeon.id]
 
             if exp.failed():
-                Messaging.emit_message('{} have been defeated with the dungeon, who knows if any survive.'.format(band.name), [self.region, band, exp])
+                Messaging.emit_message('{} have been defeated within the dungeon, who knows if any survive.'.format(band.name), [self.region, band, exp])
                 del self.bands[band.id]
                 band.active = False
+                
+                for member in band.members:
+                    member.condition = core.critters.DelverStatus.MISSING
+                    self.mia.append(member)
                 band.persist()
             else:
                 band.last_exp = self.current_time
@@ -242,8 +262,7 @@ class DungeonMaster:
         d = self.build_dungeon()
         self.dungeons[d.id] = d
         self.region.place_dungeon(d)
-        self.dungeon_changes = True
-
+        
         Messaging.emit_message('{} have been asking around and heard rumors about the location of {}.'.format(band.name, d.name), [self.region, band, d])
         self.region.emit_new_dungeon(d)
         self.region.persist()
