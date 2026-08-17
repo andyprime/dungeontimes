@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, Outlet, useParams } from 'react-router';
 
-import { getBands, getBand, getDelvers, getDelver, getDelverEvents, getBandEvents } from './fetching.js'
+import { getBands, getBand, getDelvers, getDelver, getDeadDelvers, getDelverEvents, getBandEvents } from './fetching.js'
 import { JOB_NAMES, ATTRIBUTES, ATTRIBUTE_NAMES } from './constants.js'
 
 const rootUrl = window.location.hostname + ':8081';
@@ -10,9 +10,12 @@ const Bands = function() {
   
   let query = useQuery({ queryKey: ['bands'], queryFn: getBands });
 
+  let deadQuery = useQuery({ queryKey: ['delvers', 'deceased'], queryFn: getDeadDelvers });
+
   return (
     <>
-      <div><h1>Registered Bands</h1></div>
+      <div><h1>Delver's Guild Registry</h1></div>
+      <div><h2>Registered Bands</h2></div>
 
       <div className="grid grid-cols-4 gap-4">
         { query.data?.map((band) => (
@@ -20,6 +23,13 @@ const Bands = function() {
           )) }
       </div>
       
+      <div>
+        <h2>In Memorium</h2>
+          { deadQuery.data?.map((delver) => (
+            <div key={delver.id}>RIP {delver.name}</div>
+            )) }
+      </div>
+
       <Outlet />
     </>
     );

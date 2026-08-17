@@ -344,7 +344,7 @@ class Expedition(Persister):
         self._set_state(Expedition.FAIL)
 
     def runstate_fai(self, local):
-        self.process_message('Entering expeditoin failure state.')
+        self.process_message('Entering expedition failure state.')
 
     # Recover, general post-battle business
     def runstate_rec(self, local):

@@ -112,6 +112,15 @@ const getDelvers = async function({ queryKey }) {
   return response.json();
 }
 
+const getDeadDelvers = async function({ queryKey }) {
+  let [_key] = queryKey;
+  let response = await fetch('//' + rootUrl + '/delver?condition=deceased');
+  if (!response.ok) {
+    throw new Error('Dead delvers fetch failed.');
+  }
+  return response.json();
+}
+
 const getDelver = async function({queryKey}) {
   let [_key, dId] = queryKey;
   let response = await fetch('//' + rootUrl + '/delver/' + dId);
@@ -138,4 +147,4 @@ const getExpeditions = async function({ queryKey }) {
   return response.json();
 }
 
-export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getBandEvents, getDelvers, getDelver, getDelverEvents, getExpeditions }
+export { rootUrl, getRegion, getDungeon, getDungeons, getBands, getBand, getBandEvents, getDelvers, getDeadDelvers, getDelver, getDelverEvents, getExpeditions }

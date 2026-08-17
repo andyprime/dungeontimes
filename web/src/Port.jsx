@@ -53,6 +53,7 @@ function Port() {
     // =====================================================================================
     else if (doc['type'] == 'NARRATIVE') {
       let index = false;
+
       if(!!doc['context']['region']) {
         index = 'region';
       } else if(!!doc['context']['dungeon']) {
