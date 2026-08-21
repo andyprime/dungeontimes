@@ -68,7 +68,7 @@ function Port() {
           }
 
           newLogs[index] = newLogs[index].slice(0, 19);
-          newLogs[index].unshift(doc['message']);
+          newLogs[index].unshift(doc);
           return newLogs;
         });
       }

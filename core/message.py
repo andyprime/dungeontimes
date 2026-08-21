@@ -54,20 +54,21 @@ class Messaging:
             raise
 
     @classmethod
-    def emit_message(self, message, context_objects, event_type='general', event_transient=False):
+    def emit_message(self, message, context_objects, type='general', transient=False):
         try:
             iterator = iter(context_objects)
         except TypeError:
             context_objects = [context_objects]
 
-        msg = {
-            'type': 'NARRATIVE',
+        shared = {
+            'transient': transient,
             'message': message,
-            'context': self._build_context(context_objects)
+            'context': self._build_context(context_objects),
+            'names': {o.id: o.name for o in context_objects if hasattr(o, 'name')}
         }
-        self.emit(msg)
-        if event_type:
-            core.mdb.MongoService.save_event(event_type, [o.id for o in context_objects], message, event_transient)
+
+        self.emit({'type': 'NARRATIVE'} | shared)
+        core.mdb.MongoService.save_event(type, [o.id for o in context_objects], shared)
 
     @classmethod
     def emit_basic(self, type, context_objects):
