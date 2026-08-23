@@ -67,7 +67,7 @@ function Port() {
             newLogs[index] = [];
           }
 
-          newLogs[index] = newLogs[index].slice(0, 19);
+          newLogs[index] = newLogs[index].slice(0, 39);
           newLogs[index].unshift(doc);
           return newLogs;
         });

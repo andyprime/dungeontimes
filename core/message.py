@@ -1,21 +1,14 @@
 import json
 import pika
+from enum import Enum
 
 import core.mdb
 
-import core.region
-import core.dungeon.dungeons
-import core.critters
-import core.expedition
 
-CONTEXT_MAP = {
-    core.region.Region: 'region',
-    core.dungeon.dungeons.Dungeon: 'dungeon',
-    core.critters.Delver: 'delver',
-    core.critters.Band: 'band',
-    core.critters.Monster: 'monster',
-    core.expedition.Expedition: 'expedition'
-}
+class MessageLevel(str, Enum):
+    MINOR = 'minor'
+    MAJOR = 'major'
+    TRANSIENT = 'transient'
 
 class Messaging:
 
@@ -48,27 +41,27 @@ class Messaging:
             objs = [objs]
 
         try:
-            return {CONTEXT_MAP[type(o)]: o.id for o in objs}
+            return {type(o).__name__.lower(): o.id for o in objs}
         except KeyError as e:
             e.add_note('Problem children: {}'.format(objs))
             raise
 
     @classmethod
-    def emit_message(self, message, context_objects, type='general', transient=False):
+    def emit_message(self, message, context_objects, level=MessageLevel.MINOR):
         try:
             iterator = iter(context_objects)
         except TypeError:
             context_objects = [context_objects]
 
         shared = {
-            'transient': transient,
+            'level': level,
             'message': message,
             'context': self._build_context(context_objects),
             'names': {o.id: o.name for o in context_objects if hasattr(o, 'name')}
         }
 
         self.emit({'type': 'NARRATIVE'} | shared)
-        core.mdb.MongoService.save_event(type, [o.id for o in context_objects], shared)
+        core.mdb.MongoService.save_event('general', [o.id for o in context_objects], shared)
 
     @classmethod
     def emit_basic(self, type, context_objects):

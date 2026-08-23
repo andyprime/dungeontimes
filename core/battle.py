@@ -90,8 +90,8 @@ class Battle:
         }
         core.message.Messaging.emit_custom(body, participants + self.context)
 
-    def emit_message(self, msg, participants, transient=True):
-        core.message.Messaging.emit_message(msg, participants + self.context, 'battle', transient)
+    def emit_message(self, msg, participants, level=core.message.MessageLevel.TRANSIENT):
+        core.message.Messaging.emit_message(msg, participants + self.context, level)
 
     def round(self):
         return self.roundCount
