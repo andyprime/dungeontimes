@@ -85,10 +85,9 @@ class MongoService:
             raise ValueError('Did not find collection map for type "{}"'.format(collection))        
 
     @classmethod
-    def save_event(self, type, uuids, doc):
+    def save_event(self, uuids, doc):
         self.db.events.insert_one({
             'object': uuids,
-            'type': type,
             'time': time.time()
             } | doc)
 

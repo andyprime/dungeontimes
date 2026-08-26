@@ -10,6 +10,12 @@ class MessageLevel(str, Enum):
     MAJOR = 'major'
     TRANSIENT = 'transient'
 
+class MessageType(str, Enum):
+    GENERAL = 'general'
+    CITY = 'city'
+    DUNGEON = 'dungeon'
+    COMBAT = 'combat'
+
 class Messaging:
 
     connection = None
@@ -47,21 +53,22 @@ class Messaging:
             raise
 
     @classmethod
-    def emit_message(self, message, context_objects, level=MessageLevel.MINOR):
+    def emit_message(self, message, context_objects, mtype=MessageType.GENERAL, level=MessageLevel.MINOR):
         try:
             iterator = iter(context_objects)
         except TypeError:
             context_objects = [context_objects]
 
-        shared = {
+        base_event = {
             'level': level,
+            'type': mtype,
             'message': message,
             'context': self._build_context(context_objects),
             'names': {o.id: o.name for o in context_objects if hasattr(o, 'name')}
         }
 
-        self.emit({'type': 'NARRATIVE'} | shared)
-        core.mdb.MongoService.save_event('general', [o.id for o in context_objects], shared)
+        self.emit({'type': 'NARRATIVE', 'event': base_event})
+        core.mdb.MongoService.save_event([o.id for o in context_objects], base_event)
 
     @classmethod
     def emit_basic(self, type, context_objects):

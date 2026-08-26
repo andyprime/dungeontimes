@@ -177,7 +177,7 @@ class DungeonMaster:
             print('Making new band')
             b = self.build_party()
             self.bands[b.id] = b
-            Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b, MessageLevel.MAJOR)
+            Messaging.emit_message('Aspiring delvers have formed a new band, {}.'.format(b.name), b, level=MessageLevel.MAJOR)
             Messaging.emit_basic('bands', [self.region])
         elif len(self.mia):
             survivor = self.mia.pop()
@@ -188,9 +188,9 @@ class DungeonMaster:
             survivor.condition = state
             survivor.persist()
             if state == core.critters.DelverStatus.RETIRED:
-                Messaging.emit_message('The missing delver {} has escaped the failed expedition but has retired.'.format(survivor.name), [self.region, survivor], MessageLevel.MAJOR)
+                Messaging.emit_message('The missing delver {} has escaped the failed expedition but has retired.'.format(survivor.name), [self.region, survivor], level=MessageLevel.MAJOR)
             else:
-                Messaging.emit_message('The missing delver {} has not been found and is presumed dead.'.format(survivor.name), [self.region, survivor], MessageLevel.MAJOR)
+                Messaging.emit_message('The missing delver {} has not been found and is presumed dead.'.format(survivor.name), [self.region, survivor], level=MessageLevel.MAJOR)
 
         self.new_task('band_homework')
 
@@ -216,7 +216,7 @@ class DungeonMaster:
             del self.dungeons[exp.dungeon.id]
 
             if exp.failed():
-                Messaging.emit_message('{} have been defeated within the dungeon, who knows if any survive.'.format(band.name), [self.region, band, exp], MessageLevel.MAJOR)
+                Messaging.emit_message('{} have been defeated within the dungeon, who knows if any survive.'.format(band.name), [self.region, band, exp], level=MessageLevel.MAJOR)
                 del self.bands[band.id]
                 band.active = False
                 
@@ -226,7 +226,7 @@ class DungeonMaster:
                 band.persist()
             else:
                 band.last_exp = self.current_time
-                Messaging.emit_message('{} have returned from their daring dungeon expedition.'.format(band.name), [self.region, band, exp], MessageLevel.MAJOR)
+                Messaging.emit_message('{} have returned from their daring dungeon expedition.'.format(band.name), [self.region, band, exp], level=MessageLevel.MAJOR)
 
         else:
             delay = exp.process_turn()
@@ -247,7 +247,7 @@ class DungeonMaster:
             exp.register_processor(self.outputfn)
             exp.emit_new()
 
-            Messaging.emit_message('{} have planned an expedition to {}.'.format(band.name, dungeon.name), [self.region, exp, band, dungeon], MessageLevel.MAJOR)
+            Messaging.emit_message('{} have planned an expedition to {}.'.format(band.name, dungeon.name), [self.region, exp, band, dungeon], level=MessageLevel.MAJOR)
 
             self.expeditions[band.id] = exp
 
@@ -300,7 +300,7 @@ class DungeonMaster:
         band = self.bands[do['id']]
 
         band.last_downtime = self.current_time
-        Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region], MessageLevel.TRANSIENT)
+        Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region], level=MessageLevel.TRANSIENT)
         
         partiers = []
         for delver in band.members:
@@ -333,7 +333,7 @@ class DungeonMaster:
     def action_downtime_end(self, do):
         # we don't really do anything here, this just gets put into the to dos so the band has an active task
         band = self.bands[do['id']]
-        Messaging.emit_message('{} are done with their downtime.'.format(band.name), [self.region, band], MessageLevel.TRANSIENT)
+        Messaging.emit_message('{} are done with their downtime.'.format(band.name), [self.region, band], level=MessageLevel.TRANSIENT)
 
     def action_advance(self, do):
         band = self.bands[do['id']]
@@ -347,7 +347,7 @@ class DungeonMaster:
             name1 = core.critters.Creature.ATTRIBUTE_NAMES[increase[0][0]]
             name2 = core.critters.Creature.ATTRIBUTE_NAMES[increase[1][0]]
 
-            Messaging.emit_message('{} has advanced to level {}.'.format(delver.name, delver.level), [self.region, delver], MessageLevel.MAJOR)
+            Messaging.emit_message('{} has advanced to level {}.'.format(delver.name, delver.level), [self.region, delver], level=MessageLevel.MAJOR)
             Messaging.emit_message('{} has increased {} by {} and {} by {}.'.format(delver.name, name1, increase[0][1], name2, increase[1][1]), [self.region, delver])
             Messaging.emit_basic('band', [self.region, band])
         else:
@@ -418,7 +418,7 @@ class DungeonMaster:
                 self.region.emit_self()
                 Messaging.emit_message('{} bought a brand new {} at {}.'.format(delver.name, item.name, shop.name), [self.region, delver])
             else:
-                Messaging.emit_message('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), [self.region, delver], MessageLevel.TRANSIENT)
+                Messaging.emit_message('{} went shopping at {} but nothing looked good.'.format(delver.name, shop.name), [self.region, delver], level=MessageLevel.TRANSIENT)
         else:
             for fol in shop.stock:
                 if delver.will_hire(fol):
@@ -433,7 +433,7 @@ class DungeonMaster:
                     Messaging.emit_message('{} hired {} the {} at {}.'.format(delver.name, fol.name, fol.model.name, shop.name), [self.region, delver])
                     break
 
-            Messaging.emit_message('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), [self.region, delver], MessageLevel.TRANSIENT)
+            Messaging.emit_message('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), [self.region, delver], level=MessageLevel.TRANSIENT)
     
     def action_idle(self, do):
         band = self.bands[do['id']]

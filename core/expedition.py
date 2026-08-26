@@ -114,7 +114,7 @@ class Expedition(Persister):
         if self.indungeon:
             objs.append(self.dungeon)
 
-        Messaging.emit_message(s, objs, level)
+        Messaging.emit_message(s, objs, level=level)
 
     def emit_new(self):
         Messaging.emit_basic('EXPEDITION-NEW', [self, self.band])
