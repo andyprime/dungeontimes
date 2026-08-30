@@ -3,8 +3,7 @@ import random
 import time
 import uuid
 
-import core.message
-
+from core.message import Messaging, MessageLevel
 from core.battle import Battle
 from core.dungeon.dungeons import DungeonCell
 from core.mdb import Persister
@@ -105,9 +104,9 @@ class Expedition(Persister):
             f(message)
 
     def emit_cursor(self):
-        core.message.Messaging.emit_coords('CURSOR', self._get_location(), [self, self.band])
+        Messaging.emit_coords('CURSOR', self._get_location(), [self, self.band])
         
-    def emit_narrative(self, s, delver=None):
+    def emit_narrative(self, s, delver=None, level=MessageLevel.MINOR):
         if delver:
             objs = [self, delver]
         else:
@@ -115,13 +114,13 @@ class Expedition(Persister):
         if self.indungeon:
             objs.append(self.dungeon)
 
-        core.message.Messaging.emit_message(s, objs)
+        Messaging.emit_message(s, objs, level=level)
 
     def emit_new(self):
-        core.message.Messaging.emit_basic('EXPEDITION-NEW', [self, self.band])
+        Messaging.emit_basic('EXPEDITION-NEW', [self, self.band])
 
     def emit_delete(self):
-        core.message.Messaging.emit_basic('EXPEDITION-DEL', [self, self.band])
+        Messaging.emit_basic('EXPEDITION-DEL', [self, self.band])
 
     def emit_battle(self, start, roomNo):
         msg = {
@@ -131,10 +130,10 @@ class Expedition(Persister):
             msg['type'] = 'BATTLE-START'
         else:
             msg['type'] = 'BATTLE-END'
-        core.message.Messaging.emit_custom(msg, [self, self.band, self.dungeon])
+        Messaging.emit_custom(msg, [self, self.band, self.dungeon])
 
     def emit_band(self):
-        core.message.Messaging.emit_basic('BAND', [self.band])
+        Messaging.emit_basic('BAND', [self.band])
 
     def overland(self):
         return self.status in Expedition.OVERLAND_STATES
@@ -316,7 +315,7 @@ class Expedition(Persister):
 
                     self._set_state(Expedition.RECOVER)
                 else:
-                    self.emit_narrative('Sadly the band has been bested by the local miscreants.')
+                    self.emit_narrative('Sadly the band has been bested by the local miscreants.', None, MessageLevel.MAJOR)
                     self._set_state(Expedition.SCATTERED)
                 self.emit_battle(False, room.num)
             else:
@@ -340,7 +339,7 @@ class Expedition(Persister):
 
     def runstate_sct(self, local):
         self.process_message('Band is scattering')
-        self.emit_narrative('Our intrepid band has been scattered to the five winds. Who knows what will become of them.')
+        self.emit_narrative('Our intrepid band has been scattered to the five winds. Who knows what will become of them.', None, MessageLevel.MAJOR)
         self._set_state(Expedition.FAIL)
 
     def runstate_fai(self, local):
@@ -365,7 +364,7 @@ class Expedition(Persister):
                     'status': p.status
                 }
             }
-            core.message.Messaging.emit_custom(body, [self, self.band, self.dungeon])
+            Messaging.emit_custom(body, [self, self.band, self.dungeon])
         
         self._set_state(Expedition.SEARCH)
 
@@ -410,13 +409,13 @@ class Expedition(Persister):
                         self.emit_narrative('{} found {}'.format(delver.name, item.name), delver)
                         self.emit_band()
                 else:
-                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), delver)    
+                    self.emit_narrative('{} found {}, but it is worthless.'.format(delver.name, strings.StringTool.random('junk', indefinite=True)), delver, MessageLevel.TRANSIENT)    
 
                 local['remaining'] = remaining - 1
 
             else:
                 self.save_local({})
-                self.emit_narrative('There is no more loot to find here.')
+                self.emit_narrative('There is no more loot to find here.', None, MessageLevel.TRANSIENT)
                 self._set_state(Expedition.EXPLORE)
 
         else:

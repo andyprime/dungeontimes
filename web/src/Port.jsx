@@ -53,11 +53,12 @@ function Port() {
     // =====================================================================================
     else if (doc['type'] == 'NARRATIVE') {
       let index = false;
-
-      if(!!doc['context']['region']) {
+      let event = doc['event'];
+      
+      if(!!event['context']['region']) {
         index = 'region';
-      } else if(!!doc['context']['dungeon']) {
-        index = doc['context']['dungeon'];
+      } else if(!!event['context']['dungeon']) {
+        index = event['context']['dungeon'];
       }
 
       if (!!index) {
@@ -67,8 +68,8 @@ function Port() {
             newLogs[index] = [];
           }
 
-          newLogs[index] = newLogs[index].slice(0, 19);
-          newLogs[index].unshift(doc['message']);
+          newLogs[index] = newLogs[index].slice(0, 39);
+          newLogs[index].unshift(event);
           return newLogs;
         });
       }

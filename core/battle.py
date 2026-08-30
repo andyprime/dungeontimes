@@ -90,8 +90,8 @@ class Battle:
         }
         core.message.Messaging.emit_custom(body, participants + self.context)
 
-    def emit_message(self, msg, participants, transient=True):
-        core.message.Messaging.emit_message(msg, participants + self.context, 'battle', transient)
+    def emit_message(self, msg, participants, level=core.message.MessageLevel.TRANSIENT, mtype=core.message.MessageType.COMBAT):
+        core.message.Messaging.emit_message(msg, participants + self.context, level=level, mtype=mtype)
 
     def round(self):
         return self.roundCount
@@ -255,8 +255,16 @@ class Battle:
             descriptor += ' {} was defeated!'.format(target.name)
 
         self.processMessage(descriptor)
-        self.emit_message(descriptor, [fellah, target], target.currenthp != 0)
 
+        if target.currenthp != 0:
+            level = core.message.MessageLevel.TRANSIENT
+        else:
+            if type(fellah) == core.critters.Delver:
+                level = core.message.MessageLevel.MAJOR
+            else:    
+                level = core.message.MessageLevel.MINOR
+
+        self.emit_message(descriptor, [fellah, target], level=level)
 
     def applyEffect(self, target, effect, partial=False):
         applied_damage = 0
