@@ -60,7 +60,6 @@ function Message({doc}) {
   // React treats the links as children that need unique keys
   // a simple counter is predictable enough
   let j = 1;
-  // console.log(doc);
   LinkableTypes.forEach((t) => {
     let id = doc['context'][t];
     if (!!id) {

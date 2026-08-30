@@ -34,9 +34,6 @@ class DungeonMaster:
         self.band_count = options.get('bands')
         self.dungeon_count = options.get('dungeons')
     
-    # def eventsaver(self, type, object, msg, transient=False):
-    #     self.db.save_event(type, object, msg, transient)
-
     def setup(self):
         # build region
         self.region = core.region.RegionGenerate.generate_region()
