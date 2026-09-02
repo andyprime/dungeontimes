@@ -11,6 +11,8 @@ import core.strings as strings
 from core.dice import Dice
 import core.doodads as doodads
 
+from definitions.model import Condition
+
 class Expedition(Persister):
 
     PREP = 'pre'
@@ -349,19 +351,28 @@ class Expedition(Persister):
     def runstate_rec(self, local):
         self.emit_narrative('The band takes a little breather after a fight.')
         # for now we're just gonna heal the entire party so we don't die every other fight
-        for p in self.band.members:
-            p.recuperate()
+        for delver in self.band.members:
+            if delver.currenthp == 0:
+                # being defeated gives a delver a random condition
+                condition = Condition.random(lambda c: c.type in ['injury', 'mental'])
+                print('<'*50)
+                print('{} got condition {}'.format(delver.name, condition.name))
+                delver.apply_condition(condition)
+                self.emit_narrative('{} has recovered but has developed a {}'.format(delver.name, condition.name), delver, MessageLevel.MAJOR)
+
+            delver.recuperate()
+            delver.persist()
 
             # this is piggy backing off the battle update emit for now which is why it doesn't get a dedicated function
             body = {
                 'type': 'BATTLE-UPDATE',
                 'details': {
-                    'source': p.id,
-                    'target': p.id,
+                    'source': delver.id,
+                    'target': delver.id,
                     'dam': -1,
-                    'newhp': p.maxhp,
-                    'maxhp': p.maxhp,
-                    'status': p.status
+                    'newhp': delver.maxhp,
+                    'maxhp': delver.maxhp,
+                    'status': delver.status
                 }
             }
             Messaging.emit_custom(body, [self, self.band, self.dungeon])

@@ -16,6 +16,7 @@ class DungeonMaster:
         'plan': 20,
         'research': 20,
         'carouse': 60,
+        'medicate': 60,
         'shop': (20,30),
         'train': (60.80),
         'idle': (60, 80),
@@ -168,8 +169,7 @@ class DungeonMaster:
                 f(do)
 
     def action_band_homework(self, do):
-        print('/'*50)
-         # 1. Check to see if we lost a band and create a replacement
+        # 1. Check to see if we lost a band and create a replacement
         if len(self.bands) < self.band_count:
             print('Making new band')
             b = self.build_party()
@@ -179,9 +179,6 @@ class DungeonMaster:
         elif len(self.mia):
             survivor = self.mia.pop()
             state = random.choice([core.critters.DelverStatus.RETIRED, core.critters.DelverStatus.DECEASED])
-            print('/'*50)
-            print(survivor)
-            print('/'*50)
             survivor.condition = state
             survivor.persist()
             if state == core.critters.DelverStatus.RETIRED:
@@ -303,6 +300,8 @@ class DungeonMaster:
         for delver in band.members:
             if delver.can_advance():
                 options = ['advance']
+            elif len(delver.conditions) > 0:
+                options = ['medicate']
             else:
                 options = ['train', 'idle']
                 if delver.will_carouse():
@@ -310,7 +309,7 @@ class DungeonMaster:
                 if delver.will_shop():
                     options.append('shop')
 
-                options += delver.valid_moves('downtime')
+                options += [('move', m) for m in delver.valid_moves('downtime')]
 
             selection = random.choice(options)
             if selection == 'carouse':
@@ -320,7 +319,8 @@ class DungeonMaster:
                 if type(selection) == str:
                     self.new_task(selection, band.id, extras=delver.id)
                 else:
-                    self.new_task('downtime_move', band.id, extras = {'delver': delver.id, 'move': selection})
+                    # there's only one tuple option atm so no need to fuss
+                    self.new_task('downtime_move', band.id, extras = {'delver': delver.id, 'move': selection[1]})
 
         if len(partiers):
             self.new_task('carouse', band.id, extras=[d.id for d in partiers])
@@ -349,6 +349,16 @@ class DungeonMaster:
             Messaging.emit_basic('band', [self.region, band])
         else:
             raise ValueError('Somehow tried to advance someone that can not: {} {}'.format(delver.name, delver.id))
+
+    def action_medicate(self, do):
+        band = self.bands[do['id']]
+        delver = band.get(do['extras'])
+
+        # for the moment just heal 1 condition regardless of type
+        removed = delver.heal_condition('any', 1)[0]
+        delver.persist()
+
+        Messaging.emit_message('{} visit the local temple and has been cured of their {}.'.format(delver.name, removed.name), [self.region, delver])
 
     def action_downtime_move(self, do):
         band = self.bands[do['id']]

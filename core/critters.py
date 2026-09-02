@@ -18,9 +18,9 @@ class Creature(Persister):
         'AGILITY': ['PROWESS', 'ADROITNESS', 'ELASTICITY', 'SPRYNESS'],
         'FACULTY': ['PEDANTRY', 'MENTALITY', 'PERSPICACITY', 'ERUDITION'],
         'DILIGENCE': ['RECTITUDE', 'GRAVITAS', 'MOXIE', 'GRACE'],
-        'WILLPOWER': ['COOL', 'MANDATE', 'BRAVADO', 'DISAFFECTION'],
+        'WILLPOWER': ['COOL', 'MANDATE', 'BRAVADO', 'WEIRD'],
         'GUILE': ['CRAFTINESS', 'DISSIMULATION', 'CROOKERY', 'CONFIDENTIALITY'],
-        'TOUGHNESS': ['OBDURACY', 'IMMUNITY', 'PONDEROSITY', 'WEIRD'],
+        'TOUGHNESS': ['OBDURACY', 'IMMUNITY', 'PONDEROSITY', 'DISAFFECTION'],
         'PIZAZZ': ['GLAMOUR', 'MAGNETISM', 'PULCHRITUDE', 'STAGEPRESENCE']
     }
     SECONDARIES = ['ARMOR', 'EVADE', 'STYLE']
@@ -93,6 +93,7 @@ class Creature(Persister):
 
     def __init__(self):
         self.status = []
+        self.conditions = []
 
     def generateInitiative(self):
         return Dice.roll('1d20')
@@ -141,6 +142,23 @@ class Creature(Persister):
                 'duration': duration
             })
 
+    def apply_condition(self, condition):
+        if type(condition) == str:
+            condition = model.Condition.find(condition)
+        if condition not in self.conditions:
+            self.conditions.append(condition)
+
+    def heal_condition(self, method, count=999):
+        nix = []
+        for c in self.conditions:
+            print(f'{method} vs {c.heal}')
+            if method in c.heal or method == 'any':
+                nix.append(c)
+                if len(nix) >= count:
+                    break
+        self.conditions = [c for c in self.conditions if c not in nix]
+        return nix
+        
     def healthCheck(self):
         if self.currenthp == 0:
             return 'dead'
@@ -252,7 +270,7 @@ class Delver(Creature):
         super().__init__()
 
         self.name = name
-        self.condition = DelverStatus.FINE
+        self.state = DelverStatus.FINE
         self.gear_priority = random.choice(['armor', 'style'])
         self.stock = stock.name
         self.job = job
@@ -360,6 +378,12 @@ class Delver(Creature):
             if attr and attr[0] in [name, parent]:
                 running += attr[1]
 
+        for condition in self.conditions:
+            if condition.effect.get('all'):
+                running += condition.effect['all']
+            elif name.lower() in condition.effect.keys():
+                running += condition.effect[name.lower()]
+        
         return running
 
     def calc_parent(self, name):
@@ -555,7 +579,9 @@ class Delver(Creature):
         return {
             'id': self.id,
             'name': self.name,
-            'condition': self.condition.value,
+            'state': self.state.value,
+            'status': self.status,
+            'conditions': [c.name for c in self.conditions],
             'stock': self.stock,
             'job': self.job.code,
             'maxhp': self.maxhp,

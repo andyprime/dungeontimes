@@ -48,6 +48,20 @@ effect:
   max targets: 1
   damage: 2
 ---
+code: VENOMBITE
+name: Venomous Bite
+type: combat
+target: melee
+test:
+  primary: spryness
+  secondary: craftiness
+resist:
+  primary: immunity
+effect:
+  max targets: 1
+  damage: 1
+  condition: ENVENOMED
+---
 code: SPINTOWIN
 name: Spin To Win
 type: combat

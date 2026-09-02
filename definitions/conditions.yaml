@@ -1,0 +1,63 @@
+---
+name: common cold
+code: COLD
+type: disease
+heal: [rest]
+severity: low
+effect:
+  all: -2
+---
+name: broken arm
+code: BARM
+type: injury
+heal: [vacation, magic]
+severity: medium
+effect:
+  tools: -1 # unimplemented
+  hp: -5
+  prowess: -5
+  puissance: -5
+  athleticism: -5
+  crookery: -5
+---
+name: laceration
+code: LACERATE
+type: injury
+heal: [firstaid]
+severity: low
+effect:
+  hp: -5
+---
+name: sprained ankle
+code: SPRAIN
+type: injury
+heal: [rest]
+severity: low
+effect:
+  spryness: -5
+  elasticity: -5
+  athleticism: -5
+  ponderosity: -5
+---
+name: depressed
+code: DEPRESSED
+type: mental
+heal: [vacation]
+severity: medium
+effect:
+  bravado: -5
+  moxie: -5
+  ponderosity: -5
+  stragepresence: -5
+  disaffection: 5
+---
+name: envenomed
+code: ENVENOMED
+type: venom
+heal: [antivenom]
+severity: medium
+effect:
+  poisontick: 300 # unimplemented
+  immunity: -5
+  beefiness: -5
+
