@@ -41,13 +41,26 @@ class Model:
         return self._records
 
     @classmethod
-    def find(self, id):
+    def find(self, id:str):
         if len(self._records) == 0:
             self.load()
         for r in self._records:
             if r.code == id:
                 return r
         raise ValueError('Asked for missing {} with id: {}'.format(self._source, id))
+
+    @classmethod
+    def find_all(self, ids:list):
+        if len(self._records) == 0:
+            self.load()
+        records = []
+        for r in self._records:
+            if r.code in ids:
+                records.append(r)
+        if len(records):
+            return records
+        else:        
+            raise ValueError('Asked for missing {} with ids: {}'.format(self._source, ids))
 
     @classmethod
     def random(self, filter=None):
@@ -98,6 +111,7 @@ class Moves(Model):
             Optional('effect'): {
                 Optional('max targets'): And(int, lambda n: n > 0),
                 Optional('status'): Or(str, [str]),
+                Optional('condition'): Or(str, [str]),
                 Optional('damage'): Or(And(str, len), And(int, lambda n: n > 0)),
                 Optional('duration'): And(int, lambda n: n > 0),
                 Optional('healing'): And(str, len),
@@ -305,6 +319,18 @@ class Follower(Model):
             'power': And(int, lambda n: n >= 0),
             'grants': Or([str], str),
             Optional('salary'): And(str, len)
+        })
+
+class Condition(Model):
+    _source = 'conditions.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            'type': Or('disease', 'injury', 'mental', 'venom'),
+            'severity': Or('low', 'medium'),
+            'heal': [Or('rest', 'vacation', 'magic', 'firstaid', 'antivenom')],
+            'effect': dict
         })
 
 if __name__ == "__main__":

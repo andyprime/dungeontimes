@@ -52,3 +52,41 @@ class TestDelver:
                 c += 1
 
         assert c == 2
+
+    def test_conditions(self):
+
+        d = core.critters.Delver.test_delver()
+
+        cold = model.Condition.find('COLD')
+
+        d.apply_condition(cold)
+
+        assert len(d.conditions) == 1
+
+        assert d.calc_attr('BEEFINESS') == 8
+        assert d.calc_attr('COOL') == 8
+
+        d.heal_condition('rest')
+
+        assert len(d.conditions) == 0
+
+        dep = model.Condition.find('DEPRESSED')
+        d.apply_condition(dep)
+
+        assert d.calc_attr('BRAVADO') == 5
+        assert d.calc_attr('DISAFFECTION') == 15
+
+        d.heal_condition('any')
+
+        assert len(d.conditions) == 0
+
+        sprain = model.Condition.find('SPRAIN')
+        d.apply_condition(cold)
+        d.apply_condition(sprain)
+
+        assert len(d.conditions) == 2
+
+        d.heal_condition('rest', 1)
+
+        assert len(d.conditions) == 1
+

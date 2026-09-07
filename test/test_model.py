@@ -3,7 +3,7 @@ import pytest
 import definitions
 
 
-@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower'])
+@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower', 'Condition'])
 def test_coreModelFeatures(className):
     # Just testing to make sure all models load and parse according to their schemas
     c = getattr(definitions.model, className)
@@ -42,3 +42,11 @@ def test_tool_granting():
             pytest.fail(f'Unable to find move "{tool.grants}" specified in tool "{tool.code}"')
         assert tool.grants == move.code, "Nope"
         
+def test_filter():
+
+    types = []
+    for i in range(100):
+        c = definitions.model.Condition.random(lambda c: c.type in ['injury'])
+        types.append(c.type)
+
+    assert len(set(types)) == 1

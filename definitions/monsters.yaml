@@ -84,7 +84,17 @@ traits:
 moves:
   - TRUNDLE
   - ENGULF
-
+---
+name: Moss Spider
+code: MSPIDER
+category: bug
+hp: 8
+traits:
+  - Kinda cute
+  - Not poisonous
+  - Leggy
+moves:
+  - VENOMBITE
 
 
 # Todo

@@ -121,6 +121,9 @@ const Delver = function({ d }) {
             </tbody>
           </table>
         </div>
+
+        { delver.conditions.length > 0 && <div><h2>Conditions</h2> {delver.conditions.map((condition) => (<p key="{condition}">{condition}</p>)) } </div>}
+
         <div>
           <h2>Inventory</h2>
           <ul>

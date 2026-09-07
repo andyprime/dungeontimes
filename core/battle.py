@@ -272,6 +272,9 @@ class Battle:
         if effect.get('status', None):
             target.applyStatus(effect['status'])
 
+        if effect.get('condition', None) and type(target) == core.critters.Delver:
+            target.apply_condition(effect.get('condition'))
+
         if effect.get('healing', None):
             target.apply_healing(Dice.xroll(effect['healing']))
 
