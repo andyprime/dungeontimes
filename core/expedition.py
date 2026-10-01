@@ -21,6 +21,7 @@ class Expedition(Persister):
     EXPLORE = 'exp'
     ENCOUNTER = 'enc'
     BATTLE = 'bat'
+    TRAP = 'trp'
     RECOVER = 'rec'
     SEARCH = 'src'
     EXITING = 'ext'
@@ -42,6 +43,7 @@ class Expedition(Persister):
         'exp': 1.5,
         'enc': 2,
         'bat': 0.1,
+        'trp': 2,
         'rec': 2,
         'ext': 2,
         'sct': 2,
@@ -268,7 +270,8 @@ class Expedition(Persister):
                 for cell in self.dungeon.roomBrethren(self.dungeon_cursor):
                     if cell not in self.history:
                         self.history.append(cell)
-
+            elif self.dungeon_cursor in self.dungeon.traps.keys():
+                self._set_state(Expedition.TRAP)
             else:
                 self.history.append(self.dungeon_cursor)
         else:
@@ -338,6 +341,124 @@ class Expedition(Persister):
 
             self.emit_battle(True, room.num)
             self.battle.start()
+
+    def runstate_trp(self, local):
+        Messaging.cprint('*'*30)
+        trap = self.dungeon.traps[self.dungeon_cursor]
+
+        Messaging.cprint(trap)
+        if trap.safe():
+            # Test Safe - trap is no longer dangerous, move on
+            Messaging.cprint('Safe')
+
+            self.emit_narrative('The trap has been dealt with and the band moves on.')
+            # finally mark the trap cell as explored
+            self.history.append(self.dungeon_cursor)
+            self._set_state(Expedition.EXPLORE)
+        elif trap.spotted():
+            # Test Spotted - trap is detected and still dangerous, select a resolution method       
+            Messaging.cprint('Spotted')
+
+            disabler = local.get('disabler')
+            bypass = local.get('bypass')
+
+            if disabler:
+                Messaging.cprint('Disabler selected')
+                v = disabler.calc_test_value(trap.model.avoid[0], trap.model.avoid[1])
+                threshold = Dice.perform_test_100(v)
+                if threshold > 0:
+                    Messaging.cprint('Disarmed')
+                    trap.disable()
+                    self.emit_narrative('{} has successfully disabled the trap.')
+                    disabler.apply_xp(1)
+
+                else:
+                    Messaging.cprint('Disarm failed')
+                    s, d = self._apply_trap(trap, disabler)
+                    self.emit_narrative(s)
+
+            elif bypass:
+
+                Messaging.cprint('Bypassing')
+                if trap.model.bypass == 'AUTO':
+                    trap.bypass()
+                    self.emit_narrative('The band is able to easily bypass this trap.')
+                else:
+                    
+                    for delver in self.band.members_by_health():
+                        v = delver.calc_test_value(trap.model.bypass[0], trap.model.bypass[1])
+                        threshold = Dice.perform_test_100(v)
+                        if threshold > 0:
+                            self.emit_narrative('{} has scooted past the trap safely.'.format(delver.name))
+                            Messaging.cprint('{} by pass success'.format(delver.name))
+                        else:
+                            s, d = self._apply_trap(trap, delver)
+                            self.emit_narrative(s)
+                            
+                        if trap.safe():
+                            self.emit_narrative('The trap is spent and the remaining delvers may pass by.')
+                            break
+
+                    trap.bypass()
+            
+            else:
+                # check for disable volunteers
+                for delver in self.band.members_random():
+                    
+                    if delver.gauge_task(trap.model.disable[0], trap.model.disable[1]):
+                        local['disabler'] = delver
+                        self.emit_narrative('{} has volunteered to disable the trap.'.format(delver.name))
+                        Messaging.cprint('Disabler selected')
+                        break
+                # if no one wants to disable the only option right now is bypass
+                if not local.get('disabler'):
+                    local['bypass'] = True
+                    Messaging.cprint('Bypass selected')
+                    self.emit_narrative('No one wishes to disable the trap so the band will attempt to bypass it.')
+
+        else:
+            # Trap Hidden - base state, test for spotting
+
+            Messaging.cprint('They dont see it yet')
+
+            spotter = None
+            randos = self.band.members_random()
+            for delver in randos:
+                v = delver.calc_test_value('PERSPICACITY', trap.model.spot) 
+                threshold = Dice.perform_test_100(v)
+                if threshold > 0:
+                    spotter = delver
+                    break
+            if spotter:
+                # End Case - trap found, move on to solution next turn
+                trap.spot()
+                self.emit_narrative('The band is creeping along when suddenly {} spots a {} trap.'.format(spotter.name, trap.name))
+            else:
+                # End Case - trap fires, next turn its new state will be evaluated
+                self.emit_narrative('The band have walked into a {} trap unaware.'.format(trap.name))
+                hit = randos[0:trap.model.targets]
+                for delver in hit:
+                    v = delver.calc_test_value(trap.model.avoid[0], trap.model.avoid[1])
+                    threshold = Dice.perform_test_100(v)
+                    if threshold > 0:
+                        self.emit_narrative('{} managed to scoot out of the way.'.format(delver.name))
+                    else:
+                        s, d = self._apply_trap(trap, delver)
+                        self.emit_narrative(s)
+
+    def _apply_trap(self, trap, delver):
+        trap.spring()
+        d = 0
+        addendum = '.'
+        if trap.model.effect.get('condition'):
+            c = Condition.find(trap.model.effect['condition'])
+            delver.apply_condition(trap.model.effect['condition'])
+            addendum = ', and was affected by {}.'.format(c.name)
+        if trap.model.effect.get('damage'):
+            d = Dice.roll(trap.model.effect['damage'])
+            delver.apply_damage(d)
+        s = '{} was caught and received {} damage{}'.format(delver.name, d, addendum)
+        return s, d
 
     def runstate_sct(self, local):
         self.process_message('Band is scattering')
@@ -472,7 +593,10 @@ class Expedition(Persister):
                     elif cell in self.history:
                         display += '\033[94m' + cell.positiveSymbol() + '\033[0m'
                     else:
-                        display += cell.symbol()
+                        if cell in self.dungeon.traps.keys():
+                            display += '*'
+                        else:
+                            display += cell.symbol()
                 print(display)
         else:
             self.region.prettyPrint(self.region_cursor, self.path)

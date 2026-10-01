@@ -91,3 +91,8 @@ class Messaging:
     def emit_custom(self, message, context_objects):
         message['context'] = self._build_context(context_objects)
         self.emit(message)
+
+    @classmethod
+    def cprint(self, s, style='38;5;196'):
+        print('\033[{}m'.format(style) + str(s) + '\033[0m')
+        # display += '\033[93m' + cell.positiveSymbol() + '\033[0m'

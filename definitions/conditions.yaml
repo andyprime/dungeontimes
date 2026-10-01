@@ -61,3 +61,49 @@ effect:
   immunity: -5
   beefiness: -5
 
+---
+name: flammable
+code: FLAMMABLE
+type: complication
+heal: [clean]
+severity: low
+effect:
+  fire damage: +5 # unimplemented
+---
+name: chemical burn
+code: CHEMBURN
+type: injury
+heal: [vacation, magic]
+severity: medium
+effect:
+  spryness: -5
+  elasticity: -5
+---
+name: concussion
+code: CONCUSSION
+type: injury
+heal: [vacation, magic]
+severity: medium
+effect:
+  mentality: -10
+  perspicacity: -10
+  bravado: -10
+  stragepresence: -5
+  crookery: -5
+---
+name: bruised
+code: BRUISED
+type: injury
+heal: [rest]
+severity: low
+effect:
+  athleticism: -5
+---
+name: laceration
+code: LACERATION
+type: injury
+heal: [rest]
+severity: low
+effect:
+  beefiness: -5
+  prowess: -5
