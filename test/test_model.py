@@ -3,7 +3,7 @@ import pytest
 import definitions
 
 
-@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower', 'Condition'])
+@pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower', 'Condition', 'Trap'])
 def test_coreModelFeatures(className):
     # Just testing to make sure all models load and parse according to their schemas
     c = getattr(definitions.model, className)
@@ -50,3 +50,13 @@ def test_filter():
         types.append(c.type)
 
     assert len(set(types)) == 1
+
+def test_trap_conditions():
+
+    for trap in definitions.model.Trap.all():
+        code = trap.effect.get('condition')
+        if code:
+            try:
+                condition = definitions.model.Condition.find(code)
+            except ValueError:
+                pytest.fail(f'Unable to find condition "{code}" specified in trap "{trap.code}"')

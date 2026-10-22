@@ -19,6 +19,7 @@ class Dungeon(Persister):
         self.id = str(uuid.uuid1())        
         self.grid = []
         self.rooms = []
+        self.traps = {}
         # I'm still not a big fan of the region stuff living in here but not
         # gonna solve that right now
         self.regionPalette = 1
@@ -142,6 +143,8 @@ class Dungeon(Persister):
             for cell in row:
                 if cell == highlight:
                     display += 'P'
+                elif cell in self.traps.keys():
+                    display += '*'
                 elif cell.type == Tiles.ROOM:
                     room = self.roomAt(cell)
                     roomNumber = self.rooms.index(room) + 1

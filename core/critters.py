@@ -209,13 +209,11 @@ class Creature(Persister):
         return [move for move in self.moves() if move.type in types]
 
     def calc_test_value(self, primary, secondary, auxiliaries=[]):
-
-        print(f'PERFORM TEST - {primary}-{self.get_prop(primary)}, {secondary}-{self.get_prop(secondary)}')
-
         full_value = self.get_prop(primary) + int(self.get_prop(secondary) / 2)
         for aux in auxiliaries:
             full_value += self.get_prop(aux)
 
+        print(f'TEST CALC - {primary}-{self.get_prop(primary)}, {secondary}-{self.get_prop(secondary)} = {full_value}')
         return full_value
 
     def apply_xp(self, amount:int):
@@ -234,7 +232,7 @@ class Creature(Persister):
         t += ']'
         return t
 
-class DelverStatus(Enum):
+class DelverStatus(str, Enum):
     FINE = 'fine'
     MISSING = 'missing'
     RETIRED = 'retired'
@@ -405,6 +403,16 @@ class Delver(Creature):
             pass
 
         return running
+
+    def gauge_task(self, primary, secondary):
+        # this is a check to see if the delver will volounteer for a task based on
+        # the provided attributes
+        # for the moment this will a real simple bit of math based on stats but is
+        # intended to take into account personality traits and other once implemented
+
+        value = self.calc_test_value(primary, secondary)
+        range = Dice.roll('2d3')
+        return value + random.randint(-1*range, range) > 20
 
     def getSpells(self):
 
@@ -773,6 +781,16 @@ class Band(Persister):
     def random_member(self, skip=[]):
         real = [member for member in self.members if member not in skip]
         return random.choice(real)
+
+    def members_random(self):
+        copy = [member for member in self.members]
+        random.shuffle(copy)
+        return copy
+
+    def members_by_health(self):
+        copy = [member for member in self.members]
+        copy.sort(reverse=True, key=lambda d: d.currenthp)
+        return copy
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.id)

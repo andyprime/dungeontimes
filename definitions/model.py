@@ -327,10 +327,29 @@ class Condition(Model):
     _schema = Schema({
             'name': And(str, len),
             'code': And(str, len),
-            'type': Or('disease', 'injury', 'mental', 'venom'),
+            'type': Or('disease', 'injury', 'mental', 'venom', 'complication'),
             'severity': Or('low', 'medium'),
-            'heal': [Or('rest', 'vacation', 'magic', 'firstaid', 'antivenom')],
+            'heal': [Or('rest', 'vacation', 'magic', 'firstaid', 'antivenom', 'clean')],
             'effect': dict
+        })
+
+class Trap(Model):
+    _source = 'traps.yaml'
+
+    _schema = Schema({
+            'name': And(str, len),
+            'code': And(str, len),
+            Optional('diff', default=1): int,
+            'spot':  And(str, len),
+            'disable': [And(str, len), And(str, len)],
+            'bypass': Or('AUTO', [And(str, len), And(str, len)]),
+            'avoid': [And(str, len), And(str, len)],
+            Optional('targets', default=1): int,
+            Optional('charges', default=1): int,
+            'effect': {
+                Optional('damage'): Or(int, And(str, len)),
+                Optional('condition'): And(str, len)
+            }
         })
 
 if __name__ == "__main__":

@@ -5,9 +5,11 @@ from core.dungeon.dungeons import Dungeon
 from core.dungeon.dungeons import Room
 from core.dungeon.dungeons import DungeonCell
 from core.dungeon.dungeons import Tiles
+from core.dungeon.trap import Trap
 import core.critters
 import strings
 
+from definitions.model import Trap as TrapModel
 
 
 class DungeonFactoryAlpha:
@@ -27,6 +29,8 @@ class DungeonFactoryAlpha:
     # DEFAULT_HEIGHT = 60
     # DEFAULT_WIDTH = 150
 
+    FULL_DIAG = False
+
     DEFAULT_SETTINGS = {
         'DEFAULT_HEIGHT': 40,
         'DEFAULT_WIDTH': 60,
@@ -42,12 +46,16 @@ class DungeonFactoryAlpha:
         # percent chance to let a dead end live
         'CHANCE_KEEP_DEADEND': 5,
         # max number of runs of the sparseness removal process, -1 for no limit
-        'MAX_SPARENESS_RUNS': 20
+        'MAX_SPARENESS_RUNS': 20,
+        # percent of passage tiles to have traps
+        'TRAP_RATE_RANGE': (5, 6)
     }       
     CURRENT_SETTINGS = {}
 
     @classmethod
-    def generateDungeon(self, options={}):
+    def generateDungeon(self, options={}, diag=False):
+        self.FULL_DIAG = diag
+
         self.CURRENT_SETTINGS = self.DEFAULT_SETTINGS.copy()
         self.CURRENT_SETTINGS.update(options)
 
@@ -227,8 +235,7 @@ class DungeonFactoryAlpha:
                             relevantConnectorCoords = []
 
                 if not remediated:
-                    # T he previous solution will work in all possible scenarios but we should make a fuss
-                    # since it will stack trace later regardless
+                    # The previous solution will not work in all possible scenarios so raise an explicit fuss when it doesn't
                     raise RuntimeError('Map generation detected a divided region scenario it was unable to remediate.')
             else:
                 # this is the regular scenario section for when the distance problem doesn't occur      
@@ -345,6 +352,21 @@ class DungeonFactoryAlpha:
         entrance = random.choice(halls)
         dungeon.update_cell(entrance, Tiles.ENTRANCE)
         
+
+        # =============================================================================================
+        # Traps
+        self.header('Stage 6: Traps')
+
+        # recount total hallway cells
+        halls = dungeon.allCells(Tiles.PASSAGE)
+        rate = random.uniform(self.CURRENT_SETTINGS['TRAP_RATE_RANGE'][0], self.CURRENT_SETTINGS['TRAP_RATE_RANGE'][1])
+        trapcount = round(len(halls) * (rate / 100))
+
+        random.shuffle(halls)
+        for square in halls[0:trapcount]:
+            trap = Trap(TrapModel.random())
+            dungeon.traps[square] = trap
+
         # print('Now with entrance')
         # dungeon.prettyPrint()
 
@@ -465,16 +487,31 @@ class DungeonFactoryAlpha:
         }
 
     @classmethod
-    def header(self, title):
-        diff = int( (self.CURRENT_SETTINGS['DEFAULT_WIDTH'] + 4 - len(title)) / 2)
+    def diag(self, s):
+        if self.FULL_DIAG:
+            print(s)
 
-        s = ' ' + '=' * (diff - 1)
-        s += ' {} '.format(title)
-        s = s.ljust(156, '=')
-        # print(s)
+    @classmethod
+    def header(self, title):
+        if self.FULL_DIAG:
+            diff = int( (self.CURRENT_SETTINGS['DEFAULT_WIDTH'] + 4 - len(title)) / 2)
+
+            s = ' ' + '=' * (diff - 1)
+            s += ' {} '.format(title)
+            s = s.ljust(156, '=')
+            print(s)
 
 if __name__ == "__main__":
 
-    dungeon = DungeonFactoryAlpha.generateDungeon()
+    mini = {
+        'DEFAULT_HEIGHT': 10,
+        'DEFAULT_WIDTH': 30,
+        'ROOM_HEIGHT_RANGE': (3,4),
+        'ROOM_WIDTH_RANGE': (3,8),
+        'MAX_SPARENESS_RUNS': 5,
+        'MAX_ROOM_ATTEMPTS': 100
+    }
+
+    dungeon = DungeonFactoryAlpha.generateDungeon({}, True)
 
     dungeon.prettyPrint()

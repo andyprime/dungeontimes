@@ -1,0 +1,89 @@
+---
+name: rock fall
+code: ROCKFALL
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: [SPRYNESS, CRAFTINESS]
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: CONCUSSION
+---
+name: arrow shot
+code: ARROWSHOT
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: [SPRYNESS, CRAFTINESS]
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+---
+name: acid spray
+code: ACIDSPRAY
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: [SPRYNESS, CRAFTINESS]
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: CHEMBURN
+---
+name: pit
+code: PIT
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: [SPRYNESS, CRAFTINESS]
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: BRUISED
+---
+name: pit with spikes
+code: PITSPIKES
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: AUTO
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: LACERATION
+---
+name: pit with acid
+code: PITACID
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: AUTO
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: CHEMBURN
+---
+name: pit with snake
+code: PITSNAKE
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: AUTO
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: ENVENOMED
+---
+name: pit with spiders
+code: PITSPIDER
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: AUTO
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: ENVENOMED
+---
+name: pit with oil
+code: PITOIL
+spot: CROOKERY
+disable: [CRAFTINESS, COOL]
+bypass: AUTO
+avoid: [SPRYNESS, ELASTICITY]
+effect:
+  damage: 2d6
+  condition: FLAMMABLE
