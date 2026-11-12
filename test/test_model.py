@@ -2,6 +2,7 @@ import pytest
 
 import definitions
 
+import core.critters
 
 @pytest.mark.parametrize('className', ['Classes', 'Monsters', 'Moves', 'Spells', 'Stocks', 'Gear', 'GearMod', 'Tool', 'ToolMod', 'Consumable', 'Follower', 'Condition', 'Trap'])
 def test_coreModelFeatures(className):
@@ -17,6 +18,12 @@ def test_coreModelFeatures(className):
     assert type(a[0]) == c
 
     assert type(c.random()) == c
+
+def test_classes():
+    # just makin' sure all the attributes specified in class definitions are real
+    for cl in definitions.model.Classes.all():
+        for attr in cl.attrs['primary'] + cl.attrs['secondary']:
+            assert attr in core.critters.Creature.ATTRIBUTE_NAMES.keys()
 
 def test_class_moves():
 
