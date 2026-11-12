@@ -190,6 +190,10 @@ class Classes(Model):
             'code': And(str, len),
             'hp': And(int, lambda h: h > 0),
             'moves': [str],
+            'attrs': {
+                'primary': [str],
+                'secondary': [str]
+            },
             Optional('tool'): And(str, len),
             Optional('gear'): And(str, len),
             Optional('startingSpells'): [str],

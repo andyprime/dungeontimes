@@ -14,21 +14,22 @@ class TestDelver:
 
         d = core.critters.Delver.test_delver()
 
+        # test attributes with class bonus involved (+5 to puissance)
         assert d.calc_attr('BEEFINESS') == 10
-        assert d.calc_parent('MUSCULARITY') == 10
+        assert d.calc_parent('MUSCULARITY') == 11
 
         d.set_attr('BEEFINESS', 14)
 
         assert d.calc_attr('BEEFINESS') == 14
-        assert d.calc_parent('MUSCULARITY') == 11
+        assert d.calc_parent('MUSCULARITY') == 12
 
         assert d.calc_test_value('BEEFINESS', 'COOL') == 19
 
         d.add_move(model.Moves.find('REGIMEN'))
 
-        assert d.calc_attr('ATHLETICISM') == 15
-        assert d.calc_parent('MUSCULARITY') == 12
-        assert d.calc_test_value('BEEFINESS', 'ATHLETICISM') == 21
+        assert d.calc_attr('AEROBICISM') == 15
+        assert d.calc_parent('MUSCULARITY') == 13
+        assert d.calc_test_value('BEEFINESS', 'AEROBICISM') == 21
 
     def test_advancement(self):
 
@@ -73,7 +74,8 @@ class TestDelver:
         dep = model.Condition.find('DEPRESSED')
         d.apply_condition(dep)
 
-        assert d.calc_attr('BRAVADO') == 5
+        # recall SL has +5 bravado
+        assert d.calc_attr('BRAVADO') == 9
         assert d.calc_attr('DISAFFECTION') == 15
 
         d.heal_condition('any')

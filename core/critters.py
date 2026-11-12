@@ -14,7 +14,7 @@ class Creature(Persister):
 
     CATEGORIES = ['MUSCULARITY', 'AGILITY', 'FACULTY', 'WISDOM', 'WILLPOWER', 'GUILE', 'TOUGHNESS', 'PIZAZZ']
     ATTRIBUTE_MAP = {
-        'MUSCULARITY': ['BEEFINESS', 'ATHLETICISM', 'PUISSANCE', 'PLACEHOLDER'],
+        'MUSCULARITY': ['BEEFINESS', 'AEROBICISM', 'PUISSANCE', 'ANAEROBICISM'],
         'AGILITY': ['PROWESS', 'ADROITNESS', 'ELASTICITY', 'SPRYNESS'],
         'FACULTY': ['PEDANTRY', 'MENTALITY', 'PERSPICACITY', 'ERUDITION'],
         'DILIGENCE': ['RECTITUDE', 'GRAVITAS', 'MOXIE', 'GRACE'],
@@ -28,9 +28,9 @@ class Creature(Persister):
     ATTRIBUTE_NAMES = {
         'MUSCULARITY': 'Muscularity', 
         'BEEFINESS': 'Beefiness', 
-        'ATHLETICISM': 'Athleticism', 
+        'AEROBICISM': 'Aerobicism', 
         'PUISSANCE': 'Puissance', 
-        'PLACEHOLDER': 'Placeholder',
+        'ANAEROBICISM': 'Anaerobicism',
         'AGILITY': 'Agility',
         'PROWESS': 'Prowess', 
         'ADROITNESS': 'Adroitness', 
@@ -71,7 +71,7 @@ class Creature(Persister):
     STATIC_ATTR_VALUE = 10
 
     @classmethod
-    def _build_full_attr(self, method='random'):
+    def _build_full_attr(self, method='random', job=None):
         at = {}
         for parent, attrs in Creature.ATTRIBUTE_MAP.items():
             for attr in attrs:
@@ -79,6 +79,11 @@ class Creature(Persister):
                     at[attr] = Dice.roll('3d6')
                 elif method == 'static':
                     at[attr] = self.STATIC_ATTR_VALUE
+        if job:
+            for attr in job.attrs.get('primary'):
+                at[attr] += 4
+            for attr in job.attrs.get('secondary'):
+                at[attr] += 2
         return at
 
     @classmethod
@@ -283,9 +288,9 @@ class Delver(Creature):
         self.wealth = 0
         self.lifetime_wealth = 0
         if kwargs.get('method') == 'static':
-            self.attr = Delver._build_full_attr('static')
+            self.attr = Delver._build_full_attr('static', job=self.job)
         else:
-            self.attr = Delver._build_full_attr()
+            self.attr = Delver._build_full_attr(job=self.job)
         self.gear = {}
         self.tools = []
         self.minutia = {
