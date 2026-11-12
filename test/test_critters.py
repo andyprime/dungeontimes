@@ -27,9 +27,9 @@ class TestDelver:
 
         d.add_move(model.Moves.find('REGIMEN'))
 
-        assert d.calc_attr('ATHLETICISM') == 15
+        assert d.calc_attr('AEROBICISM') == 15
         assert d.calc_parent('MUSCULARITY') == 13
-        assert d.calc_test_value('BEEFINESS', 'ATHLETICISM') == 21
+        assert d.calc_test_value('BEEFINESS', 'AEROBICISM') == 21
 
     def test_advancement(self):
 

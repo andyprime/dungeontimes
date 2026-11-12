@@ -109,7 +109,7 @@ name: Flex
 type: combat
 target: self
 test: 
-  primary: athleticism
+  primary: anaerobicism
   secondary: glamour
 effect:
   max targets: 1
@@ -437,7 +437,7 @@ test:
   primary: adroitness
   secondary: moxie
 resist:
-  primary: athleticism
+  primary: aerobicism
   aux: evade
 effect:
   max targets: 1
@@ -552,4 +552,4 @@ type: passive
 target: self
 test: none
 bonus:
-  - [ATHLETICISM, 5]
+  - [AEROBICISM, 5]

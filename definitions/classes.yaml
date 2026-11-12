@@ -16,7 +16,7 @@ hp: 16
 # gear: belt
 attrs: 
   primary: [BEEFINESS, STAGEPRESENCE]
-  secondary: [ATHLETICISM, PONDEROSITY]
+  secondary: [AEROBICISM, PONDEROSITY]
 moves:
   - BODYSLAM
   - FLEX
@@ -64,7 +64,7 @@ hp: 15
 tool: pole
 attrs: 
   primary: [ELASTICITY, STAGEPRESENCE]
-  secondary: [SPRYNESS, ATHLETICISM]
+  secondary: [SPRYNESS, ANAEROBICISM]
 moves:
   - TRIP
   - OUTRANGE
@@ -75,7 +75,7 @@ hp: 10
 tool: bow
 attrs: 
   primary: [PEDANTRY, ADROITNESS]
-  secondary: [PLACEHOLDER, MOXIE]
+  secondary: [ANAEROBICISM, MOXIE]
 moves:
   - TRICKSHOT
   - FACTOID
@@ -97,7 +97,7 @@ hp: 18
 tool: knife
 followers: 2
 attrs: 
-  primary: [ATHLETICISM, MAGNETISM]
+  primary: [AEROBICISM, MAGNETISM]
   secondary: [BEEFINESS, SPRYNESS]
 moves:
   - THEWS

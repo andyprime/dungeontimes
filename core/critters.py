@@ -14,7 +14,7 @@ class Creature(Persister):
 
     CATEGORIES = ['MUSCULARITY', 'AGILITY', 'FACULTY', 'WISDOM', 'WILLPOWER', 'GUILE', 'TOUGHNESS', 'PIZAZZ']
     ATTRIBUTE_MAP = {
-        'MUSCULARITY': ['BEEFINESS', 'ATHLETICISM', 'PUISSANCE', 'PLACEHOLDER'],
+        'MUSCULARITY': ['BEEFINESS', 'AEROBICISM', 'PUISSANCE', 'ANAEROBICISM'],
         'AGILITY': ['PROWESS', 'ADROITNESS', 'ELASTICITY', 'SPRYNESS'],
         'FACULTY': ['PEDANTRY', 'MENTALITY', 'PERSPICACITY', 'ERUDITION'],
         'DILIGENCE': ['RECTITUDE', 'GRAVITAS', 'MOXIE', 'GRACE'],
@@ -28,9 +28,9 @@ class Creature(Persister):
     ATTRIBUTE_NAMES = {
         'MUSCULARITY': 'Muscularity', 
         'BEEFINESS': 'Beefiness', 
-        'ATHLETICISM': 'Athleticism', 
+        'AEROBICISM': 'Aerobicism', 
         'PUISSANCE': 'Puissance', 
-        'PLACEHOLDER': 'Placeholder',
+        'ANAEROBICISM': 'Anaerobicism',
         'AGILITY': 'Agility',
         'PROWESS': 'Prowess', 
         'ADROITNESS': 'Adroitness', 
