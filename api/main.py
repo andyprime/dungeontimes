@@ -58,7 +58,11 @@ class ConnectionManager:
             if connection.application_state == WebSocketState.DISCONNECTED:
                 LOG.info('Skipping disconnected websocket {}'.format(connection))
             else:
-                await connection.send_text(message.body)
+                # connection doesn't test type and can come in different depending on pika
+                if type(message.body) == bytes:
+                    await connection.send_bytes(message.body)
+                else:
+                    await connection.send_text(message.body)
 
 class DelverCondition(str, Enum):
     any = 'any'

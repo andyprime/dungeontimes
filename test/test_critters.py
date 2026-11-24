@@ -1,4 +1,6 @@
 import core.critters
+import core.doodads
+import core.time as Time
 import definitions.model as model
 
 # delver stuff
@@ -90,3 +92,61 @@ class TestDelver:
 
         assert len(d.conditions) == 1
 
+    def test_business(self):
+        d = core.critters.Delver.test_delver()
+
+        assert not d.is_busy()
+        assert d.is_ready()
+
+        # for now just test the non-random todos
+        d.conditions.append(model.Condition.random())
+        d.apply_xp(1000)
+        d.give(core.doodads.Valuable.generate())
+
+        td = d.generate_todos()
+        assert len(td) == 1
+        assert td[0].action == 'medicate'
+
+        d.todo.clear()
+        d.heal_condition('any')
+        td = d.generate_todos()
+        assert td[0].action == 'advance'
+
+        d.todo.clear()
+        d.advance()
+        td = d.generate_todos()
+        assert td[0].action == 'offload'
+
+class TestBand:
+
+    def test_business(self):
+        band = core.critters.Band()
+
+        for i in range(4):
+            band.members.append(core.critters.Delver.random())
+
+        assert band.is_ready()
+        assert not band.is_busy()
+
+        # these don't actually need to be real dungeons yet
+        fake_dungeons = [1, 2, 3, 4]
+        td = band.generate_todos(fake_dungeons, 1.0)
+        assert len(td) == 1
+        assert td[0].action == 'plan'
+
+        assert band.is_busy()
+        assert not band.is_ready()
+
+        # all three things have to be addressed for the band to be ready again
+        # set a valid last expedition time
+        band.last_exp = 1
+        assert not band.is_ready()
+
+        # move the clock past the expedition delay
+        Time.clock.advance(Time.clock.now + Time.TIME_MAP['exp_delay'] * 2)
+        assert not band.is_ready()
+
+        # remove any existing todos
+        band.todo.clear()
+
+        assert band.is_ready()
