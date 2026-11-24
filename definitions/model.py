@@ -333,6 +333,9 @@ class Condition(Model):
             'effect': dict
         })
 
+    def __repr__(self):
+        return 'Condition - {}'.format(self.name)
+
 class Trap(Model):
     _source = 'traps.yaml'
 

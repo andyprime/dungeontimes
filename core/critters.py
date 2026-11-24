@@ -1,8 +1,11 @@
+import functools
 import json
 import random
 import uuid
 
 from enum import Enum
+
+import core.time as Time
 
 import core.strings as strings
 from core.dice import Dice
@@ -150,6 +153,7 @@ class Creature(Persister):
 
     def heal_condition(self, method, count=999):
         nix = []
+        print(self.conditions)
         for c in self.conditions:
             print(f'{method} vs {c.heal}')
             if method in c.heal or method == 'any':
@@ -293,6 +297,7 @@ class Delver(Creature):
             'sign': strings.StringTool.random('astrology')
         }
 
+        self.todo = []
         self.advancement = {
             'xp': 0,
             'treasure': 0
@@ -583,6 +588,51 @@ class Delver(Creature):
             print('/'*50)
         return info
 
+    def is_busy(self):
+        self.todo = [t for t in self.todo if not t.done] 
+        return len(self.todo) > 0
+
+    def is_ready(self):
+        # delvers are ready as long as they don't have pending non-trivial tasks
+        todos = not any([True for t in self.todo if not t.trivial])
+        # and if they need to shop
+        shopping = not self.will_shop()
+        return todos and shopping
+
+    def generate_todos(self):
+        options = []
+
+        # priority stuff first
+        if len(self.conditions) > 0:
+            print('Conditions', len(self.conditions))
+            options = ['medicate']
+        elif self.can_advance():
+            options = ['advance']
+        elif self.has_loot():
+            options = ['offload']
+        else:
+            options = ['train', 'idle']
+            if self.will_carouse():
+                options.append('carouse')
+            if self.will_shop():
+                options.append('shop')
+
+            options += [('downtime_move', m) for m in self.valid_moves('downtime')]
+
+        selection = random.choice(options)
+        
+        if type(selection) == str:
+            todo = Time.Todo(selection, self)
+        else:
+            # there's only one tuple option atm so no need to fuss
+            todo = Time.Todo(selection[0], self, extras = {'move': selection[1]})
+        self.todo.append(todo)
+        return [todo]
+
+    def active_todos(self):
+        self.todo = [t for t in self.todo if not t.done]
+        return self.todo
+
     def data_format(self):
         return {
             'id': self.id,
@@ -734,12 +784,14 @@ class Band(Persister):
         self.id = str(uuid.uuid1())
         self.name = strings.StringTool.random('band_names')
         self.members = []
+        self.todo = []
         self.completed = 0
         # wealth and lifetime wealth are the same thing until band level acquisitions become a thing
         self.wealth = 0
         self.lifetime_wealth = 0
         self.active = True
-        self.last_downtime = 0
+        self.last_downtime = 1
+        # the completion time of the most recent expedition
         self.last_exp = None
 
     def has_money(self):
@@ -765,10 +817,6 @@ class Band(Persister):
         else:
             raise ValueError('Attempt to spend {} wealth when only {} is present.'.format(amt, self.wealth))
 
-    def wants_downtime(self, current_time):
-        # this can be tuned to the band later
-        return current_time - self.last_downtime > 500
-
     def has_loot(self):
         return any([True for mem in self.members if mem.has_loot()])
 
@@ -791,6 +839,51 @@ class Band(Persister):
         copy = [member for member in self.members]
         copy.sort(reverse=True, key=lambda d: d.currenthp)
         return copy
+
+    def all_todos(self):
+        todos = []
+        todos += [t for t in self.todo if not t.done]
+        for member in self.members:
+            todos += member.active_todos()
+        return todos
+
+    def generate_todos(self, dungeons=[], ratio=1):
+        if self.is_ready():
+            options = []
+            print('???', len(dungeons), ratio)
+            if len(dungeons) > 0:
+                options.append('plan')
+            if ratio <= .25:
+                options.append('research')
+            
+
+            # if the members have any todos remaining schedule this for after they're done
+            delay = None
+            todos = self.all_todos()
+            if len(todos):
+                delay = max(t.end for t in todos)
+                print('!!!!!!!!! Delaying start of band todo until: {}'.format(delay))
+
+            todo = Time.Todo(random.choice(options), self, start=delay)
+            self.todo.append(todo)
+            return [todo]
+        else:
+            todos = []
+            for member in self.members:
+                if not member.is_busy():
+                    todos += member.generate_todos()
+            return todos
+
+    def is_busy(self):
+        self.todo = [t for t in self.todo if not t.done] 
+        return len(self.todo) > 0
+
+    def is_ready(self):
+        # there is a hard coded minimum time spent in town after an expedition
+        time = not self.last_exp or Time.clock.now - self.last_exp > Time.TIME_MAP['exp_delay']
+        todo = not self.is_busy()
+        delvers = functools.reduce(lambda x, y: x and y.is_ready(), self.members)
+        return time and todo and delvers
 
     def __str__(self):
         return '{} ({})'.format(self.name, self.id)

@@ -1,6 +1,8 @@
 import random
 import time
 
+import core.time as Time
+
 from core.dice import Dice
 from core.message import Messaging, MessageLevel
 import core.dungeon.generate
@@ -8,27 +10,13 @@ import core.expedition
 import core.region
 import core.critters
 
+# def finisher(func):
+#     def inner(*args):
+#         func(*args)
+#         args[1].finish()
+#     return inner
 
 class DungeonMaster:
-
-    TIME_MAP = {
-        'exp': 20,
-        'plan': 20,
-        'research': 20,
-        'carouse': 60,
-        'medicate': 60,
-        'shop': (20,30),
-        'train': (60.80),
-        'idle': (60, 80),
-        'advance': 20,
-        'offload': 20,
-        'restock': (5000, 8000),
-        'downtime': 50,
-        'downtime_end': 100,
-        'downtime_move': (20, 30),
-        'band_homework': (100, 200),
-        'exp_delay': 500 # time after an expedition before a band can start another to allow downtime        
-    }
 
     def __init__(self, options):
         self.outputfn = options.get('output')
@@ -59,33 +47,11 @@ class DungeonMaster:
         self.region.persist()
         self.region.emit_dungeon_locales()
 
-        self.to_do = []
-        self.current_time = 1
-
+        self.todo = []
+        
         # setup initial recurring todos
         for venue in self.region.city.venues:
-            self.new_task('restock', venue.id)
-            
-    def new_task(self, action, item=None, **kwargs):
-        task = {
-            'action': action,
-            'id': item,
-            }
-        if kwargs.get('extras', False):
-            task['extras'] = kwargs['extras']
-        if kwargs.get('schedule', False):
-            task['schedule'] = self.current_time + kwargs.get('schedule')
-        else:
-            duration = DungeonMaster.TIME_MAP[action]
-            if type(duration) == tuple:
-                time = random.uniform(duration[0], duration[1])
-            elif type(duration) == str:
-                time = Dice.roll(duration)
-            else:
-                time = duration
-            task['schedule'] = self.current_time + time
-
-        self.to_do.append(task)
+            self.todo.append(Time.Todo('restock', venue))
 
     def build_dungeon(self):
         dungeon = core.dungeon.generate.DungeonFactoryAlpha.generateDungeon({
@@ -119,54 +85,56 @@ class DungeonMaster:
 
         return band
 
+    def band_for(self, delver):
+        for band in self.bands.values():
+            if delver in band.members:
+                return band
+        return False
+
+    def available_dungeons(self):
+        occupied_dungeons = [e.dungeon.id for e in self.expeditions.values()]
+        return [d for d in self.dungeons.values() if d.id not in occupied_dungeons]        
+
     def run(self):
-
         # setup longrunning checks
-        self.new_task('band_homework')
-
+        self.todo.append(Time.Todo('band_homework'))
+        
         while True:
-            print('New loop, time: {}'.format(self.current_time))
-            dungeon_changes = False
+            print('New loop, time: {}'.format(Time.clock.now))
+            # dungeon_changes = False
+
+            self.todo = [t for t in self.todo if not t.done]
 
             # Check to see if any bands don't have anything to do
             for band_id, band in self.bands.items():
-                if not any(t.get('id') == band_id for t in self.to_do):
-                    print('Band {} has nothing to do'.format(band.name))
+                options = ['downtime']
 
-                    # possible actions
-                    #   - offload loot, takes precedence
-                    #   - plan expedition
-                    #   - downtime
-                    #   - research dungeons
+                if not band.is_busy():
+                    print('Generating todos for {}'.format(band))
+                    d = self.available_dungeons()
+                    band.generate_todos(d, len(d) / self.dungeon_count)
 
-                    if band.has_loot():
-                        selected = 'offload'
-                    elif band.wants_downtime(self.current_time):
-                        selected = 'downtime'
-                    else:
-                        options = ['downtime']
+            todos = []
+            for band in self.bands.values():
+                x = band.all_todos()
+                print(band.name, x)
+                todos += x
+            print('Final', len(todos))
+            if len(todos) > 30:
+                pizza.ham()
+            todos += self.todo
 
-                        occupied_dungeons = [e.dungeon.id for e in self.expeditions.values()]
-                        available_dungeons = [d for d in self.dungeons.values() if d.id not in occupied_dungeons]
-                        if len(available_dungeons) > 0 and (band.last_exp == None or band.last_exp + DungeonMaster.TIME_MAP['exp_delay'] < self.current_time):
-                            options.append('plan')
-                        if len(available_dungeons) < int(self.dungeon_count/2):
-                            options.append('research')
+            # Find the soonest action
+            todos.sort(key=lambda a: a.end)
+            do = todos.pop(0)
+            print('We chose: {}'.format(do))
+            time.sleep(do.end - Time.clock.now)
+            Time.clock.advance(int(do.end))
 
-                        selected = random.choice(options)
-
-                    self.new_task(selected, band_id)
-                    
-            # 3. Find the soonest action
-
-            self.to_do.sort(key=lambda a: a['schedule'])
-            do = self.to_do.pop(0)
-            time.sleep(do['schedule'] - self.current_time)
-            self.current_time = int(do['schedule'])
-
-            f = getattr(self, 'action_' + do['action'])
+            f = getattr(self, 'action_' + do.action)
             if callable(f):
                 f(do)
+            do.finish()
 
     def action_band_homework(self, do):
         # 1. Check to see if we lost a band and create a replacement
@@ -186,11 +154,11 @@ class DungeonMaster:
             else:
                 Messaging.emit_message('The missing delver {} has not been found and is presumed dead.'.format(survivor.name), [self.region, survivor], level=MessageLevel.MAJOR)
 
-        self.new_task('band_homework')
+        self.todo.append(Time.Todo('band_homework'))
 
     def action_exp(self, do):
-        band = self.bands[do['id']]
-        exp = self.expeditions[do['id']]
+        band = do.doer
+        exp = self.expeditions[band.id]
 
         if exp.over():
             # process the turn so we don't skip tasks in the final step
@@ -219,18 +187,16 @@ class DungeonMaster:
                     self.mia.append(member)
                 band.persist()
             else:
-                band.last_exp = self.current_time
+                band.last_exp = Time.clock.now
                 Messaging.emit_message('{} have returned from their daring dungeon expedition.'.format(band.name), [self.region, band, exp], level=MessageLevel.MAJOR)
 
         else:
             delay = exp.process_turn()
-            self.new_task('exp', band.id, schedule=delay)
+            band.todo.append(Time.Todo('exp', band, schedule=delay))
 
     def action_plan(self, do):
-        band = self.bands[do['id']]
-
-        occupied_dungeons = [e.dungeon.id for e in self.expeditions.values()]
-        available_dungeons = [d for d in self.dungeons.values() if d.id not in occupied_dungeons]
+        band = do.doer
+        available_dungeons = self.available_dungeons()
 
         if len(available_dungeons) > 0:
             dungeon = random.choice(available_dungeons)
@@ -245,13 +211,15 @@ class DungeonMaster:
 
             self.expeditions[band.id] = exp
 
-            self.new_task('exp', band.id)
-
+            next = Time.Todo('exp', band)
+            
+            band.todo.append(next)
+            
         else:
             Messaging.emit_message('{} were going to plan an expedition to the last dungeon but someone beat them to it.'.format(band.name), [self.region, band])
 
     def action_research(self, do):
-        band = self.bands[do['id']]
+        band = do.doer
 
         d = self.build_dungeon()
         self.dungeons[d.id] = d
@@ -263,18 +231,25 @@ class DungeonMaster:
 
         # adding a little extra chance to keep the dungeon count topped up
         if random.choice([True, False]):
-            self.new_task('research', band.id)
+            band.todo.append(Time.Todo('research', band))
 
     def action_offload(self, do):
         # sell a random loot item from one of the band
-        band = self.bands[do['id']]
+        
+        if type(do.doer) == core.critters.Band:
+            band = do.doer
+            participants = band.members()
+        else:
+            # single delver
+            participants = [do.doer]
+            band = self.band_for(do.doer)
 
         # make sure to search the members in a random order so this process isn't deterministic
-        order = list(range(0, len(band.members)))
+        order = list(range(0, len(participants)))
         random.shuffle(order)
 
         for i in order:
-            delver = band.members[i]
+            delver = participants[i]
 
             loot = [i for i in delver.inventory if i.useless()]
 
@@ -290,51 +265,8 @@ class DungeonMaster:
 
                 break
 
-    def action_downtime(self, do):
-        band = self.bands[do['id']]
-
-        band.last_downtime = self.current_time
-        Messaging.emit_message('{} split up to get some things done.'.format(band.name), [band, self.region], level=MessageLevel.TRANSIENT)
-        
-        partiers = []
-        for delver in band.members:
-            if delver.can_advance():
-                options = ['advance']
-            elif len(delver.conditions) > 0:
-                options = ['medicate']
-            else:
-                options = ['train', 'idle']
-                if delver.will_carouse():
-                    options.append('carouse')
-                if delver.will_shop():
-                    options.append('shop')
-
-                options += [('move', m) for m in delver.valid_moves('downtime')]
-
-            selection = random.choice(options)
-            if selection == 'carouse':
-                partiers.append(delver)
-            else:
-
-                if type(selection) == str:
-                    self.new_task(selection, band.id, extras=delver.id)
-                else:
-                    # there's only one tuple option atm so no need to fuss
-                    self.new_task('downtime_move', band.id, extras = {'delver': delver.id, 'move': selection[1]})
-
-        if len(partiers):
-            self.new_task('carouse', band.id, extras=[d.id for d in partiers])
-
-        self.new_task('downtime_end', band.id)
-
-    def action_downtime_end(self, do):
-        # we don't really do anything here, this just gets put into the to dos so the band has an active task
-        band = self.bands[do['id']]
-        Messaging.emit_message('{} are done with their downtime.'.format(band.name), [self.region, band], level=MessageLevel.TRANSIENT)
-
     def action_advance(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras'])
+        delver = do.doer
 
         if delver.can_advance():
             increase = delver.advance()
@@ -351,19 +283,21 @@ class DungeonMaster:
             raise ValueError('Somehow tried to advance someone that can not: {} {}'.format(delver.name, delver.id))
 
     def action_medicate(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras'])
+        delver = do.doer
 
         # for the moment just heal 1 condition regardless of type
-        removed = delver.heal_condition('any', 1)[0]
-        delver.persist()
+        removed = delver.heal_condition('any', 1)
+        if removed:
+            delver.persist()
+            Messaging.emit_message('{} visit the local temple and has been cured of their {}.'.format(delver.name, removed[0].name), [self.region, delver])
+        else:
+            raise ValueError('Delver with no conditions just tried to medicate: {}'.format(delver.name))
 
-        Messaging.emit_message('{} visit the local temple and has been cured of their {}.'.format(delver.name, removed.name), [self.region, delver])
 
     def action_downtime_move(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras']['delver'])
-        move = do['extras']['move']
+        delver = do.doer
+        band = self.band_for(delver)
+        move = do.extras['move']
 
         if hasattr(move, 'summon'):
             follower = core.critters.Follower.generate(move.summon['type'], move.summon['rank'])
@@ -377,23 +311,15 @@ class DungeonMaster:
             raise ValueError('Tried to process a downtime move with no known handling: {}'.format(move))
 
     def action_carouse(self, do):
-        band = self.bands[do['id']]
-        delvers = [band.get(d) for d in do['extras']]
+        delver = do.doer
+        delver.spend_wealth(min(delver.wealth, Dice.roll('3d20')))
 
-        for delver in delvers:
-            delver.spend_wealth(min(delver.wealth, Dice.roll('3d20')))
-
-        if len(delvers) == 1:
-            msg = '{} is going on a long bender.'.format(delvers[0].name)
-        else:
-            first = ', '.join(d.name for d in delvers[0:len(delvers)-1])
-            msg = '{}, and {} are going on a long bender. '.format(first, delvers[-1].name)
-
-        Messaging.emit_message(msg, [self.region, band] + delvers)
+        msg = '{} is going on a long bender.'.format(delver.name)
+        Messaging.emit_message(msg, [self.region, delver] )
         
     def action_shop(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras'])
+        delver = do.doer
+        band = self.band_for(delver)
 
         shops = [v for v in self.region.city.venues if v.type == core.region.Venue.SHOP]
         guilds = [v for v in self.region.city.venues if v.type == core.region.Venue.GUILD]
@@ -443,24 +369,19 @@ class DungeonMaster:
             Messaging.emit_message('{} went to {} but decided against hiring anyone.'.format(delver.name, shop.name), [self.region, delver], level=MessageLevel.TRANSIENT)
     
     def action_idle(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras'])
+        delver = do.doer
 
         Messaging.emit_message('{} spends their free time mostly farting around.'.format(delver.name), [self.region, delver])
 
     def action_train(self, do):
-        band = self.bands[do['id']]
-        delver = band.get(do['extras'])
+        delver = do.doer
 
         Messaging.emit_message('{} went on a training montage.'.format(delver.name), [self.region, delver])
 
     def action_restock(self, do):
-        for i in range(5):
-            print('!'*50)
-
-        venue = next(v for v in self.region.city.venues if v.id == do['id'])
+        venue = do.doer
         venue.restock()
         self.region.city.persist()
         self.region.emit_self()
 
-        self.new_task('restock', venue.id)
+        self.todo.append(Time.Todo('restock', venue))
