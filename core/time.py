@@ -40,7 +40,7 @@ normal_time = {
     'exp_delay': 500 # time after an expedition before a band can start another to allow downtime        
 }
 
-TIME_MAP = short_circuit
+TIME_MAP = normal_time
 
 INTERRUPTIBLE = ['train', 'idle', 'carouse']
 

@@ -101,8 +101,6 @@ class DungeonMaster:
         
         while True:
             print('New loop, time: {}'.format(Time.clock.now))
-            # dungeon_changes = False
-
             self.todo = [t for t in self.todo if not t.done]
 
             # Check to see if any bands don't have anything to do
@@ -116,12 +114,7 @@ class DungeonMaster:
 
             todos = []
             for band in self.bands.values():
-                x = band.all_todos()
-                print(band.name, x)
-                todos += x
-            print('Final', len(todos))
-            if len(todos) > 30:
-                pizza.ham()
+                todos += band.all_todos()
             todos += self.todo
 
             # Find the soonest action
