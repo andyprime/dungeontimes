@@ -260,6 +260,7 @@ class DungeonMaster:
 
     def action_advance(self, do):
         delver = do.doer
+        band = self.band_for(delver)
 
         if delver.can_advance():
             increase = delver.advance()
